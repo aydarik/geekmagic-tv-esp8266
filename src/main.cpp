@@ -321,8 +321,7 @@ void setup() {
     Serial.begin(115200);
     delay(100);
     loggerInit();
-    logPrint(F("========================================"));
-    logPrint(F("SmartClock Starting..."));
+    logPrint(F("Starting..."));
     logPrintf("Firmware Version: %d", FIRMWARE_VERSION);
 
     // Initialize EEPROM and boot counter
@@ -332,10 +331,8 @@ void setup() {
 
     // Check for user-initiated factory reset (5 quick power cycles)
     if (powerCycleCounterCheckReset()) {
-        Serial.println(F("========================================"));
         Serial.println(F("USER RESET: 5 quick power cycles detected!"));
         Serial.println(F("Performing factory reset..."));
-        Serial.println(F("========================================"));
 
         // Factory reset sequence
         WiFi.disconnect(true);
@@ -357,10 +354,8 @@ void setup() {
 
     // Check for boot failure threshold
     if (bootCounterCheckFailsafe()) {
-        Serial.println(F("========================================"));
         Serial.println(F("CRITICAL: Boot failure threshold reached!"));
         Serial.println(F("Performing emergency EEPROM reset..."));
-        Serial.println(F("========================================"));
 
         // Emergency reset
         settingsReset(appSettings);

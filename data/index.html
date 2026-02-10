@@ -162,6 +162,30 @@
             margin-bottom: 0
         }
 
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th, td {
+            border: 1px solid #155e63;
+            padding: 8px 12px;
+        }
+
+        th {
+            background: #0c3235;
+            text-align: left;
+        }
+
+        tr:hover {
+            background: #0f5d6a;
+        }
+
+        .size {
+            text-align: right;
+            font-family: monospace;
+        }
+
         .spacer {
             height: 10px
         }
@@ -173,10 +197,12 @@
         <div class="card-header">Status & Info</div>
         <div class="card-body">
             <div class="version-info">Firmware Version: <strong id="firmwareVersion">Loading...</strong></div>
-            <div class="button-group"><a href="/app.json" class="button">App JSON</a><a href="/space.json"
-                                                                                        class="button">Storage
-                Info</a><a href="/brt.json" class="button">Brightness JSON</a><a href="/log" class="button">View
-                Logs</a></div>
+            <div class="button-group">
+                <a href="/app.json" class="button">App JSON</a>
+                <a href="/space.json" class="button">Storage Info</a>
+                <a href="/brt.json" class="button">Brightness JSON</a>
+                <a href="/log" class="button">View Logs</a>
+            </div>
         </div>
     </div>
     <div class="card">
@@ -185,11 +211,13 @@
             <button class="button" onclick="scanWiFi()">Scan Networks</button>
             <div id="scanStatus"></div>
             <div id="wifiSection" style="display: none; margin-top: 15px;">
-                <div class="input-group"><label for="wifiNetwork">Select Network:</label><select
-                        id="wifiNetwork"></select></div>
-                <div class="input-group"><label for="wifiPassword">Password:</label><input type="password"
-                                                                                           id="wifiPassword"
-                                                                                           placeholder="Enter WiFi password">
+                <div class="input-group">
+                    <label for="wifiNetwork">Select Network:</label>
+                    <select id="wifiNetwork"></select>
+                </div>
+                <div class="input-group">
+                    <label for="wifiPassword">Password:</label>
+                    <input type="password" id="wifiPassword" placeholder="Enter WiFi password"/>
                 </div>
                 <button class="button" onclick="connectWiFi()">Connect</button>
             </div>
@@ -198,15 +226,25 @@
         </div>
     </div>
     <div class="card">
+        <div class="card-header">Themes</div>
+        <div class="card-body">
+            <div class="version-info">Current theme: <strong id="currentTheme">Loading...</strong></div>
+            <div class="button-group">
+                <button class="button" onclick="setTheme(1)">1. Clock</button>
+                <button class="button" onclick="setTheme(2)">2. Message</button>
+                <button class="button" onclick="setTheme(3)">3. Image</button>
+            </div>
+        </div>
+    </div>
+    <div class="card">
         <div class="card-header">Settings</div>
         <div class="card-body">
-            <div class="input-group"><label for="brightness">Brightness (0-100):</label><input type="number"
-                                                                                               id="brightness" min="0"
-                                                                                               max="100">
+            <div class="input-group"><label for="brightness">Brightness (0-100):</label>
+                <input type="number" id="brightness" min="0" max="100">
                 <button class="button" onclick="setBrightness()">Set Brightness</button>
             </div>
-            <div class="input-group"><label for="gmtOffset">GMT Offset (seconds):</label><input type="number"
-                                                                                                id="gmtOffset">
+            <div class="input-group"><label for="gmtOffset">GMT Offset (seconds):</label>
+                <input type="number" id="gmtOffset">
                 <button class="button" onclick="setTimezone()">Set Timezone</button>
             </div>
         </div>
@@ -215,19 +253,28 @@
         <div class="card-header">Image Management</div>
         <div class="card-body">
             <form action="/doUpload?dir=/image/" method="POST" enctype="multipart/form-data">
-                <div class="input-group"><label for="fileUpload">Upload JPEG Image:</label><input type="file"
-                                                                                                  name="file"
-                                                                                                  accept="image/jpeg"
-                                                                                                  id="fileUpload"><input
-                        type="submit" value="Upload" class="button"></div>
+                <div class="input-group">
+                    <label for="fileUpload">Upload JPEG Image:</label>
+                    <input type="file" name="file" accept="image/jpeg" id="fileUpload"/>
+                    <input type="submit" value="Upload" class="button"/>
+                </div>
             </form>
-            <div class="info">Uploaded images are stored on LittleFS and cleared on reboot unless set as default.</div>
+            <div class="info">
+                <div id="imageList">Loading image list...</div>
+                <div class="spacer"></div>
+                <table id="filesTable">
+                    <thead>
+                    <tr>
+                        <th>Path</th>
+                        <th>Size</th>
+                        <th>Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
             <div class="input-group">
                 <button class="button" onclick="displayTestImage()">Display Test Image</button>
-            </div>
-            <div class="input-group"><label for="imagePath">Display Image Path (e.g.,
-                /image/my_image.jpg):</label><input type="text" id="imagePath">
-                <button class="button" onclick="displayImage()">Display Image</button>
             </div>
         </div>
     </div>
@@ -238,98 +285,133 @@
         </div>
     </div>
 </div>
-<script>function setBrightness() {
-    var brightness = document.getElementById("brightness").value;
-    fetch('/set?brt=' + brightness).then(response => response.text()).then(data => alert('Brightness set: ' + data)).catch(error => console.error('Error:', error));
-}
 
-function reconfigureWiFi() {
-    if (confirm("Are you sure you want to reconfigure WiFi? This will restart the device into AP mode.")) {
-        fetch('/reconfigurewifi').then(response => response.text()).then(data => alert('WiFi Reconfiguration triggered: ' + data)).catch(error => console.error('Error:', error));
+<script>
+    function setBrightness() {
+        var brightness = document.getElementById("brightness").value;
+        fetch('/set?brt=' + brightness).then(response => response.text()).then(data => alert('Brightness set: ' + data)).catch(error => console.error('Error:', error));
     }
-}
 
-function setTimezone() {
-    var gmtOffset = document.getElementById("gmtOffset").value;
-    fetch('/set?gmt=' + gmtOffset).then(response => response.text()).then(data => alert('Timezone set: ' + data)).catch(error => console.error('Error:', error));
-}
-
-function displayImage() {
-    var imagePath = document.getElementById("imagePath").value;
-    fetch('/set?img=' + imagePath).then(response => response.text()).then(data => alert('Image display triggered: ' + data)).catch(error => console.error('Error:', error));
-}
-
-function displayTestImage() {
-    fetch('/test').then(response => response.text()).then(data => alert('Test Image display triggered: ' + data)).catch(error => console.error('Error:', error));
-}
-
-function factoryReset() {
-    if (confirm("WARNING: Are you sure you want to perform a factory reset? This will erase all settings and files and restart the device.")) {
-        fetch('/factoryreset').then(response => response.text()).then(data => alert('Factory Reset triggered: ' + data)).catch(error => console.error('Error:', error));
-    }
-}
-
-function scanWiFi() {
-    document.getElementById('scanStatus').textContent = 'Scanning for networks...';
-    document.getElementById('wifiSection').style.display = 'none';
-    fetch('/scan').then(response => response.json()).then(data => {
-        const select = document.getElementById('wifiNetwork');
-        select.innerHTML = '<option value="">--Select a network--</option>';
-        if (data.length === 0) {
-            document.getElementById('scanStatus').textContent = 'No networks found';
-            return;
+    function reconfigureWiFi() {
+        if (confirm("Are you sure you want to reconfigure WiFi? This will restart the device into AP mode.")) {
+            fetch('/reconfigurewifi').then(response => response.text()).then(data => alert('WiFi Reconfiguration triggered: ' + data)).catch(error => console.error('Error:', error));
         }
-        data.sort((a, b) => b.rssi - a.rssi);
-        data.forEach(network => {
-            if (network.ssid && network.ssid.trim() !== '') {
-                const option = document.createElement('option');
-                option.value = network.ssid;
-                let signalBars = '';
-                if (network.rssi > -60) signalBars = '++++'; else if (network.rssi > -70) signalBars = '+++'; else if (network.rssi > -80) signalBars = '++'; else signalBars = '+';
-                const encryption = network.encryption === 7 ? '[Open]' : '[Secure]';
-                option.textContent = `${network.ssid} ${signalBars} ${encryption}`;
-                select.appendChild(option);
-            }
-        });
-        document.getElementById('scanStatus').textContent = `Found ${data.length} network(s)`;
-        document.getElementById('wifiSection').style.display = 'block';
-    }).catch(error => {
-        console.error('Error:', error);
-        document.getElementById('scanStatus').textContent = 'Scan failed';
-    });
-}
-
-function connectWiFi() {
-    const ssid = document.getElementById('wifiNetwork').value;
-    const password = document.getElementById('wifiPassword').value;
-    if (!ssid) {
-        alert('Please select a network');
-        return;
     }
-    if (confirm(`Connect to ${ssid}? The device will restart if the connection is successful.`)) {
-        document.getElementById('scanStatus').textContent = 'Connecting...';
-        fetch(`/connect?ssid=${encodeURIComponent(ssid)}&password=${encodeURIComponent(password)}`).then(response => response.text()).then(data => {
-            alert(data);
-            document.getElementById('scanStatus').textContent = 'Connection attempt sent. Please wait for device to restart...';
+
+    function setTimezone() {
+        var gmtOffset = document.getElementById("gmtOffset").value;
+        fetch('/set?gmt=' + gmtOffset).then(response => response.text()).then(data => alert('Timezone set: ' + data)).catch(error => console.error('Error:', error));
+    }
+
+    function displayImage(imagePath) {
+        fetch('/set?img=' + imagePath).then(response => response.text()).then(data => alert('Image display triggered: ' + data)).catch(error => console.error('Error:', error));
+    }
+
+    function deleteImage(imagePath) {
+        fetch('/delete?file=' + imagePath).then(response => response.text()).then(data => alert('Image deleted: ' + data)).catch(error => console.error('Error:', error));
+    }
+
+    function setTheme(id) {
+        fetch('/set?theme=' + id).then(response => response.text()).then(_ => document.getElementById('currentTheme').textContent = id).catch(error => console.error('Error:', error));
+    }
+
+    function displayTestImage() {
+        fetch('/test').then(response => response.text()).then(data => alert('Test Image display triggered: ' + data)).catch(error => console.error('Error:', error));
+    }
+
+    function factoryReset() {
+        if (confirm("WARNING: Are you sure you want to perform a factory reset? This will erase all settings and files and restart the device.")) {
+            fetch('/factoryreset').then(response => response.text()).then(data => alert('Factory Reset triggered: ' + data)).catch(error => console.error('Error:', error));
+        }
+    }
+
+    function scanWiFi() {
+        document.getElementById('scanStatus').textContent = 'Scanning for networks...';
+        document.getElementById('wifiSection').style.display = 'none';
+        fetch('/scan').then(response => response.json()).then(data => {
+            const select = document.getElementById('wifiNetwork');
+            select.innerHTML = '<option value="">--Select a network--</option>';
+            if (data.length === 0) {
+                document.getElementById('scanStatus').textContent = 'No networks found';
+                return;
+            }
+            data.sort((a, b) => b.rssi - a.rssi);
+            data.forEach(network => {
+                if (network.ssid && network.ssid.trim() !== '') {
+                    const option = document.createElement('option');
+                    option.value = network.ssid;
+                    let signalBars = '';
+                    if (network.rssi > -60) signalBars = '++++'; else if (network.rssi > -70) signalBars = '+++'; else if (network.rssi > -80) signalBars = '++'; else signalBars = '+';
+                    const encryption = network.encryption === 7 ? '[Open]' : '[Secure]';
+                    option.textContent = `${network.ssid} ${signalBars} ${encryption}`;
+                    select.appendChild(option);
+                }
+            });
+            document.getElementById('scanStatus').textContent = `Found ${data.length} network(s)`;
+            document.getElementById('wifiSection').style.display = 'block';
         }).catch(error => {
             console.error('Error:', error);
-            document.getElementById('scanStatus').textContent = 'Connection failed';
+            document.getElementById('scanStatus').textContent = 'Scan failed';
         });
     }
-}
 
-window.onload = function () {
-    fetch('/app.json').then(response => response.json()).then(data => {
-        document.getElementById('brightness').value = data.brt;
-        document.getElementById('gmtOffset').value = data.gmtOffset;
-        document.getElementById('imagePath').value = data.img;
-    }).catch(error => console.error('Error fetching app data:', error));
-    fetch('/version.json').then(response => response.json()).then(data => {
-        document.getElementById('firmwareVersion').textContent = data.version;
-    }).catch(error => {
-        console.error('Error fetching version:', error);
-        document.getElementById('firmwareVersion').textContent = 'Unknown';
-    });
-};</script>
+    function connectWiFi() {
+        const ssid = document.getElementById('wifiNetwork').value;
+        const password = document.getElementById('wifiPassword').value;
+        if (!ssid) {
+            alert('Please select a network');
+            return;
+        }
+        if (confirm(`Connect to ${ssid}? The device will restart if the connection is successful.`)) {
+            document.getElementById('scanStatus').textContent = 'Connecting...';
+            fetch(`/connect?ssid=${encodeURIComponent(ssid)}&password=${encodeURIComponent(password)}`).then(response => response.text()).then(data => {
+                alert(data);
+                document.getElementById('scanStatus').textContent = 'Connection attempt sent. Please wait for device to restart...';
+            }).catch(error => {
+                console.error('Error:', error);
+                document.getElementById('scanStatus').textContent = 'Connection failed';
+            });
+        }
+    }
+
+    function formatSize(bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+        return (bytes / 1024 / 1024).toFixed(2) + " MB";
+    }
+
+    window.onload = function () {
+        fetch('/app.json').then(response => response.json()).then(data => {
+            document.getElementById('brightness').value = data.brt;
+            document.getElementById('gmtOffset').value = data.gmtOffset;
+            document.getElementById('currentTheme').textContent = data.theme;
+        }).catch(error => {
+            console.error('Error fetching app data:', error)
+            document.getElementById('currentTheme').textContent = 'Unknown';
+        });
+
+        fetch('/version.json').then(response => response.json()).then(data => {
+            document.getElementById('firmwareVersion').textContent = data.version;
+        }).catch(error => {
+            console.error('Error fetching version:', error);
+            document.getElementById('firmwareVersion').textContent = 'Unknown';
+        });
+
+        fetch('/list').then(response => response.json()).then(data => {
+            const tbody = document.querySelector("#filesTable tbody");
+            let total = 0;
+            data.sort((a, b) => a.path.localeCompare(b.path)).forEach(f => {
+                total += f.size;
+                const row = document.createElement("tr");
+                row.innerHTML = `<td>${f.path}</td><td class="size">${formatSize(f.size)}</td><td><div class="button-group"><button class="button" onclick="deleteImage(\'/${f.path}\')">DEL</button><button class="button" onclick="displayImage(\'/${f.path}\')">SET</button></div></td>`;
+                tbody.appendChild(row);
+            });
+            document.getElementById("imageList").textContent = `${data.length} file(s) - ${formatSize(total)} total`;
+        }).catch(error => {
+            console.error('Error fetching images:', error);
+            document.getElementById('imageList').textContent = 'Unable to fetch image list :(';
+        });
+    };
+</script>
 </body>
 </html>

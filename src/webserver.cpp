@@ -175,6 +175,49 @@ void handleDelete() {
     }
 }
 
+String listDirRecursiveJSON(const char* dirname = "/") {
+    String json = "[";
+    bool first = true;
+
+    File root = LittleFS.open(dirname, "r");
+    if (!root || !root.isDirectory()) {
+        return "[]";
+    }
+
+    File file = root.openNextFile();
+    while (file) {
+        if (file.isDirectory()) {
+            String sub = listDirRecursiveJSON(file.fullName());
+
+            // remove [] and merge
+            if (sub.length() > 2) {
+                if (!first) json += ",";
+                json += sub.substring(1, sub.length() - 1);
+                first = false;
+            }
+        } else {
+            if (!first) json += ",";
+            first = false;
+
+            json += "{\"path\":\"";
+            json += file.fullName();
+            json += "\",\"size\":";
+            json += file.size();
+            json += "}";
+        }
+
+        file = root.openNextFile();
+    }
+
+    json += "]";
+    return json;
+}
+
+void handleList() {
+    String json = listDirRecursiveJSON("/");
+    server.send(200, "application/json", json);
+}
+
 void handleApiUpdate() {
     if (server.hasArg("plain")) {
         String body = server.arg("plain");
@@ -404,6 +447,7 @@ void webserverInit() {
     server.on("/set", HTTP_GET, handleSet);
     server.on("/test", HTTP_GET, handleTest);
     server.on("/delete", HTTP_GET, handleDelete);
+    server.on("/list", HTTP_GET, handleList);
     server.on("/log", HTTP_GET, handleLog);
     server.on("/reconfigurewifi", HTTP_GET, handleReconfigureWiFi);
     server.on("/factoryreset", HTTP_GET, handleFactoryReset);

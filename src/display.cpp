@@ -12,7 +12,7 @@
 #define FONT_INFO 1      // Small font for IP addresses, etc.
 #define FONT_MESSAGE 2   // Font for messages and labels
 #define FONT_DEFAULT 4   // Default font size for various things
-#define FONT_TIME 6      // Large font for the main clock time (7-segment, digits only)
+#define FONT_TIME 7      // Large font for the main clock time (7-segment, digits only)
 
 TFT_eSPI tft = TFT_eSPI();
 DisplayState displayState;
@@ -208,64 +208,42 @@ void displayRenderClock() {
         tft.drawString(ipWrappedLines[i], tft.width() / 2, i * ipLineHeight + currentY, ipFont);
     }
     tft.endWrite();
-    currentY += ipWrappedLines.size() * ipLineHeight + 10; // Add spacing after IP
 
-    // Display Time (displayState.line1) - Centered
+    currentY = 80; // Add spacing after IP
+
+    // Draw time
     tft.setTextDatum(TC_DATUM);
     constexpr int timeFont = FONT_TIME;
     tft.setTextFont(timeFont);
-    const int timeLineHeight = tft.fontHeight();
-    const std::vector<String> timeWrappedLines = wrapText(String(displayState.line1), timeFont, tft.width());
-
-    // Calculate remaining space and center time vertically in it
-    const int remainingHeight = tft.height() - currentY;
-    const int totalTextHeight = timeWrappedLines.size() * timeLineHeight;
-
-    // Add date height to calculation
-    constexpr int dateFont = FONT_DEFAULT;
-    tft.setTextFont(dateFont);
-    int dateLineHeight = tft.fontHeight();
-    char currentDate[16];
-    getFormattedDate(currentDate, sizeof(currentDate));
-    const std::vector<String> dateWrappedLines = wrapText(String(currentDate), dateFont, tft.width());
-    const int totalDateHeight = dateWrappedLines.size() * dateLineHeight;
-
-    // Center the time+date block in remaining space
-    const int timeBlockHeight = timeLineHeight / 2 + totalTextHeight + totalDateHeight;
-    const int timeStartY = currentY + (remainingHeight - timeBlockHeight) / 2;
-    currentY = timeStartY;
-
-    // Draw time
-    tft.setTextFont(timeFont);
     tft.setTextColor(TFT_WHITE, TFT_BLACK); // Text color, background color
+    const int timeLineHeight = tft.fontHeight();
 
-    // Calculate exact text width to minimize clearing area
-    int maxTextWidth = 0;
-    for (const auto &timeWrappedLine: timeWrappedLines) {
-        if (const int textWidth = tft.textWidth(timeWrappedLine); textWidth > maxTextWidth)
-            maxTextWidth = textWidth;
-    }
+    const std::vector<String> timeWrappedLines = wrapText(String(displayState.line1), timeFont, tft.width());
 
     tft.startWrite();
     for (size_t i = 0; i < timeWrappedLines.size(); i++) {
         tft.drawString(timeWrappedLines[i], tft.width() / 2, i * timeLineHeight + currentY, timeFont);
     }
     tft.endWrite();
-    currentY += totalTextHeight; // Move Y past the time block
 
     // Add some padding between time and date
-    currentY += timeLineHeight / 2; // Roughly half a line height padding
+    currentY += timeLineHeight + 30;
 
-    // Display Date (getFormattedDate()) - Centered, below time
+    // Draw date
+    constexpr int dateFont = FONT_DEFAULT;
     tft.setTextFont(dateFont);
     tft.setTextColor(TFT_WHITE, TFT_BLACK); // Text with background color
+    const int dateLineHeight = tft.fontHeight();
+
+    char currentDate[16];
+    getFormattedDate(currentDate, sizeof(currentDate));
+    const std::vector<String> dateWrappedLines = wrapText(String(currentDate), dateFont, tft.width());
 
     tft.startWrite();
     for (size_t i = 0; i < dateWrappedLines.size(); i++) {
         tft.drawString(dateWrappedLines[i], tft.width() / 2, i * dateLineHeight + currentY, dateFont);
     }
     tft.endWrite();
-    // currentY += totalDateHeight; // Move Y past the date block
 }
 
 void displayRenderMessage() {
