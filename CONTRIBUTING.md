@@ -87,7 +87,7 @@ pio run -t upload
 pio device monitor
 
 # Test API
-./test-api.sh smartclock.local
+./test-api.sh 192.168.0.193
 ```
 
 ### Testing Checklist

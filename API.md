@@ -1,6 +1,6 @@
 # SmartClock HTTP API Reference
 
-Base URL: `http://smartclock.local` of `http://<device-ip>`
+Base URL: `http://<device-ip>`
 
 ## Endpoints
 
@@ -14,7 +14,7 @@ HTML web page for device control and settings.
 **Example:**
 ```bash
 # Open in browser
-firefox http://smartclock.local/
+firefox http://192.168.0.193/
 ```
 
 ---
@@ -42,7 +42,7 @@ Device status information.
 
 **Example:**
 ```bash
-curl http://smartclock.local/app.json
+curl http://192.168.0.193/app.json
 ```
 
 ---
@@ -66,7 +66,7 @@ Filesystem storage information.
 
 **Example:**
 ```bash
-curl http://smartclock.local/space.json
+curl http://192.168.0.193/space.json
 ```
 
 ---
@@ -88,7 +88,7 @@ Current brightness level.
 
 **Example:**
 ```bash
-curl http://smartclock.local/brt.json
+curl http://192.168.0.193/brt.json
 ```
 
 ---
@@ -118,16 +118,16 @@ No action
 **Examples:**
 ```bash
 # Set brightness to 50%
-curl "http://smartclock.local/set?brt=50"
+curl "http://192.168.0.193/set?brt=50"
 
 # Set GMT offset to +1 hour (3600 seconds)
-curl "http://smartclock.local/set?gmt=3600"
+curl "http://192.168.0.193/set?gmt=3600"
 
 # Display specific image (temporary, cleared on reboot)
-curl "http://smartclock.local/set?img=/image/photo.jpg"
+curl "http://192.168.0.193/set?img=/image/photo.jpg"
 
 # Combine parameters
-curl "http://smartclock.local/set?brt=80&gmt=7200&img=/image/photo.jpg"
+curl "http://192.168.0.193/set?brt=80&gmt=7200&img=/image/photo.jpg"
 ```
 
 ---
@@ -157,7 +157,7 @@ OK
 **Examples:**
 ```bash
 # Upload JPEG
-curl -F "file=@photo.jpg" "http://smartclock.local/doUpload?dir=/image/"
+curl -F "file=@photo.jpg" "http://192.168.0.193/doUpload?dir=/image/"
 ```
 
 ---
@@ -185,7 +185,7 @@ Missing file parameter
 
 **Example:**
 ```bash
-curl "http://smartclock.local/delete?file=/image/old.jpg"
+curl "http://192.168.0.193/delete?file=/image/old.jpg"
 ```
 
 ---
@@ -234,7 +234,7 @@ OK
 
 **Example:**
 ```bash
-curl -X POST http://smartclock.local/api/update \
+curl -X POST http://192.168.0.193/api/update \
   -H "Content-Type: application/json" \
   -d 
   {
@@ -256,7 +256,7 @@ WiFi Reconfiguration triggered. Device restarting to AP mode.
 
 **Example:**
 ```bash
-curl http://smartclock.local/reconfigurewifi
+curl http://192.168.0.193/reconfigurewifi
 ```
 
 ---
@@ -273,7 +273,7 @@ Factory Reset triggered. Clearing data and restarting...
 
 **Example:**
 ```bash
-curl http://smartclock.local/factoryreset
+curl http://192.168.0.193/factoryreset
 ```
 
 ---
@@ -289,7 +289,7 @@ HTML form for firmware upload.
 **Example:**
 ```bash
 # Open in browser
-firefox http://smartclock.local/update
+firefox http://192.168.0.193/update
 ```
 
 ---
@@ -316,7 +316,7 @@ FAIL
 **Example:**
 ```bash
 curl -F "update=@.pio/build/nodemcuv2/firmware.bin" \
-  http://smartclock.local/update
+  http://192.168.0.193/update
 ```
 
 ---
@@ -371,8 +371,8 @@ No rate limiting implemented. Best practices:
 ### Clock Mode (Default)
 
 - Triggered by: Device boot, or when no image is explicitly set for display.
-- Shows: Current time (HH:MM) and date (DD-YYYY), updated via NTP.
-- Updates: Every `DISPLAY_UPDATE_INTERVAL` (5 seconds by default).
+- Shows: Current time and date, updated via NTP.
+- Updates: Every `DISPLAY_UPDATE_INTERVAL` (60 seconds by default).
 
 ### Image Mode (Temporary)
 
@@ -388,7 +388,7 @@ No rate limiting implemented. Best practices:
 # Any /api/update call will also reset to clock mode.
 
 # To image mode
-curl "http://smartclock.local/set?img=/image/photo.jpg"
+curl "http://192.168.0.193/set?img=/image/photo.jpg"
 ```
 
 ---
@@ -411,7 +411,7 @@ automation:
 
 rest_command:
   smartclock_update_line1:
-    url: http://smartclock.local/api/update
+    url: http://s192.168.0.193/api/update
     method: POST
     headers:
       Content-Type: application/json
@@ -428,7 +428,7 @@ import requests
 import json
 
 def update_clock_message(message):
-    url = "http://smartclock.local/api/update"
+    url = "http://192.168.0.193/api/update"
     data = {
         "line1": message
     }
@@ -439,7 +439,7 @@ def update_clock_message(message):
 update_clock_message("Hello from Python!")
 
 def set_brightness(level):
-    url = f"http://smartclock.local/set?brt={level}"
+    url = f"http://192.168.0.193/set?brt={level}"
     response = requests.get(url)
     return response.text
 
@@ -455,7 +455,7 @@ set_brightness(75)
 
 MESSAGE="Hello from Shell!"
 
-curl -X POST http://smartclock.local/api/update \
+curl -X POST http://192.168.0.193/api/update \
   -H "Content-Type: application/json" \
   -d "{
     \"line1\": \"$MESSAGE\"
@@ -496,26 +496,3 @@ curl -X POST http://smartclock.local/api/update \
 2. Change OTA password in config.h
 3. Consider firewall rules
 4. For production: add HTTP Basic Auth
-
----
-
-
-## mDNS Discovery
-
-Device advertises:
-- Hostname: `smartclock.local`
-- Service: `_http._tcp`
-- Port: 80
-- TXT records:
-  - `model=SmartClock`
-  - `vendor=Custom`
-  - `api=geekmagic`
-
-**Discovery:**
-```bash
-# Linux/Mac
-avahi-browse -rt _http._tcp
-
-# Windows
-dns-sd -B _http._tcp
-```

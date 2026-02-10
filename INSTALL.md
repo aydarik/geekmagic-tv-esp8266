@@ -103,38 +103,21 @@ After upload:
 
 ## Step 7: Find the Device IP
 
-### Option A: Serial Monitor
-```bash
-pio device monitor
-# Look for: "WiFi Connected! IP: 192.168.x.x"
-```
-
-### Option B: mDNS (if your network supports it)
-```bash
-ping smartclock.local
-# Or in browser: http://smartclock.local
-```
-
-### Option C: Router admin panel
-Look for a device with hostname "smartclock"
-
 ## Step 8: Testing
 
 ```bash
 # Use test script
-./test-api.sh smartclock.local
-# Or with IP:
-./test-api.sh 192.168.1.100
+./test-api.sh 192.168.0.193
 
 # Or manually:
-curl http://smartclock.local/app.json
+curl http://192.168.0.193/app.json
 ```
 
 ## Step 9: Home Assistant Integration (Optional)
 
 1. Install the GeekMagic HACS integration in Home Assistant
 2. Configuration → Integrations → Add Integration → GeekMagic
-3. Host: `smartclock.local` or IP address
+3. IP address
 4. Configure display via HACS panel
 
 ## OTA Updates (after first installation)
@@ -144,7 +127,7 @@ curl http://smartclock.local/app.json
 2. Upload new firmware
 
 ### Via Web Interface
-1. Browse to http://smartclock.local/update
+1. Browse to http://192.168.0.193/update
 2. Select firmware.bin
 3. Upload
 4. Wait for reboot
@@ -153,7 +136,7 @@ curl http://smartclock.local/app.json
 ```bash
 # Set in platformio.ini:
 upload_protocol = espota
-upload_port = smartclock.local
+upload_port = 192.168.0.193
 
 # Upload:
 pio run -t upload
@@ -187,7 +170,7 @@ pio run
 ### OTA doesn't work
 - Verify network connection
 - Check firewall (port 3232 for ArduinoOTA)
-- Ping test: `ping smartclock.local`
+- Ping test: `ping 192.168.0.193`
 
 ### Out of memory during compilation
 ```bash
@@ -209,7 +192,6 @@ build_flags =
 ### Custom hostname
 Edit `src/config.h`:
 ```cpp
-#define MDNS_HOSTNAME "myclock"
 #define OTA_HOSTNAME "myclock"
 ```
 

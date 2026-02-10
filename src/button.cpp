@@ -18,7 +18,7 @@ void buttonInit() {
 
 ButtonPress buttonUpdate() {
     // Read current button state (LOW when pressed with pullup)
-    bool reading = digitalRead(PIN_BUTTON);
+    const bool reading = digitalRead(PIN_BUTTON);
 
     // Check if button state changed (for debouncing)
     if (reading != lastButtonState) {
@@ -26,7 +26,7 @@ ButtonPress buttonUpdate() {
     }
 
     // Debounce: only accept state change after debounce time
-    if ((millis() - lastDebounceTime) > BUTTON_DEBOUNCE_MS) {
+    if (millis() - lastDebounceTime > BUTTON_DEBOUNCE_MS) {
         // If the button state has changed after debounce
         if (reading != currentButtonState) {
             currentButtonState = reading;
@@ -39,7 +39,7 @@ ButtonPress buttonUpdate() {
             }
             // Button was just released (LOW -> HIGH with pullup)
             else if (currentButtonState == HIGH && buttonPressed) {
-                unsigned long pressDuration = millis() - buttonPressStartTime;
+                const unsigned long pressDuration = millis() - buttonPressStartTime;
                 buttonPressed = false;
 
                 logPrintf("Button released after %lu ms", pressDuration);
@@ -48,7 +48,8 @@ ButtonPress buttonUpdate() {
                 if (pressDuration >= BUTTON_LONG_PRESS_MIN_MS) {
                     logPrint("Long press detected");
                     return BUTTON_LONG;
-                } else if (pressDuration <= BUTTON_SHORT_PRESS_MAX_MS) {
+                }
+                if (pressDuration <= BUTTON_SHORT_PRESS_MAX_MS) {
                     logPrint("Short press detected");
                     return BUTTON_SHORT;
                 }

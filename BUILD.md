@@ -106,14 +106,14 @@ pio run -t upload --upload-port /dev/ttyUSB0
 **Option A: Web interface**
 ```bash
 # Via browser
-firefox http://smartclock.local/update
+firefox http://192.168.0.193/update
 # Upload .pio/build/nodemcuv2/firmware.bin
 ```
 
 **Option B: curl**
 ```bash
 curl -F "update=@.pio/build/nodemcuv2/firmware.bin" \
-  http://smartclock.local/update
+  http://192.168.0.193/update
 ```
 
 **Option C: PlatformIO OTA**
@@ -121,7 +121,7 @@ curl -F "update=@.pio/build/nodemcuv2/firmware.bin" \
 Add to `platformio.ini`:
 ```ini
 upload_protocol = espota
-upload_port = smartclock.local
+upload_port = 192.168.0.193
 ```
 
 Then:
@@ -183,16 +183,16 @@ pio run -t upload --upload-port COM3          # Windows
 
 **Test connection:**
 ```bash
-ping smartclock.local
+ping 192.168.0.193
 ```
 
 **Check port 3232:**
 ```bash
 # Linux/Mac
-nc -zv smartclock.local 3232
+nc -zv 192.168.0.193 3232
 
 # Windows
-Test-NetConnection smartclock.local -Port 3232
+Test-NetConnection s192.168.0.193 -Port 3232
 ```
 
 ---
@@ -223,7 +223,7 @@ monitor_speed = 115200
 
 # OTA (optional)
 upload_protocol = espota
-upload_port = smartclock.local
+upload_port = 192.168.0.193
 ```
 
 ### Adjusting build flags
@@ -339,7 +339,7 @@ pio device monitor      # Monitor serial
 # OTA workflow
 pio run                                    # Build
 curl -F "update=@.pio/build/nodemcuv2/firmware.bin" \
-  http://smartclock.local/update          # Upload OTA
+  http://192.168.0.193/update          # Upload OTA
 
 # Check build
 ls -lh .pio/build/nodemcuv2/firmware.bin  # Verify binary exists

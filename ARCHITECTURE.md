@@ -27,14 +27,12 @@ Generated:
 **Responsible for:**
 - System initialization
 - WiFi setup (WiFiManager)
-- mDNS advertising
 - ArduinoOTA setup
 - LittleFS filesystem mount
-- Main loop (OTA, mDNS, display updates)
+- Main loop (OTA, display updates)
 
 **Dependencies:**
 - WiFiManager (captive portal)
-- ESP8266mDNS
 - ArduinoOTA
 - LittleFS
 - display module
@@ -94,11 +92,6 @@ struct DisplayState {
 | /update | GET | OTA upload form |
 | /update | POST | OTA firmware upload |
 
-**Global state:**
-- `currentBrightness` - Last set brightness
-- `currentTheme` - Last set theme
-- `currentImage` - Last displayed image path
-
 ### settings.cpp/h
 **Responsible for:**
 - EEPROM initialization
@@ -125,7 +118,6 @@ struct Settings {
 - Pin assignments
 - Display dimensions
 - WiFi defaults
-- mDNS hostname
 - OTA credentials
 - Update intervals
 - Filesystem paths
@@ -197,8 +189,6 @@ Check magic (0xCAFE)
     ↓
 Valid? Load from EEPROM : Use defaults
     ↓
-Apply to currentBrightness, currentTheme
-    ↓
 On change → settingsSave()
     ↓
 EEPROM.put() → EEPROM.commit()
@@ -232,7 +222,6 @@ ESP8266 is single-threaded cooperative multitasking:
 ```cpp
 loop() {
     ArduinoOTA.handle();     // Check OTA requests
-    MDNS.update();           // mDNS responder
     displayUpdateScroll();   // Scroll animation
 
     if (time for update) {
@@ -258,7 +247,6 @@ loop() {
 ### Compile-time (config.h)
 - Pin assignments
 - WiFi AP credentials
-- mDNS hostname
 - Update intervals
 
 ### Runtime (EEPROM)
@@ -276,7 +264,6 @@ loop() {
 ### Core Libraries
 - Arduino Core for ESP8266
 - ESP8266WiFi
-- ESP8266mDNS
 - LittleFS
 
 ### External Libraries (PlatformIO)
@@ -313,7 +300,7 @@ pio run -t uploadfs      # Upload filesystem (optional)
 ```bash
 # Via network
 upload_protocol = espota
-upload_port = smartclock.local
+upload_port = 192.168.0.193
 pio run -t upload
 ```
 

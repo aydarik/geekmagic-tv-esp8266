@@ -10,31 +10,8 @@
 #define POWER_CYCLE_COUNTER_ADDR (BOOT_COUNTER_ADDR + sizeof(BootCounter))
 #define POWER_CYCLE_THRESHOLD 5  // Factory reset after 5 quick power cycles
 
-// CRC32 lookup table for fast calculation
-static const uint32_t crc32_table[16] = {
-    0x00000000, 0x1db71064, 0x3b6e20c8, 0x26d930ac,
-    0x76dc4190, 0x6b6b51f4, 0x4db26158, 0x5005713c,
-    0xedb88320, 0xf00f9344, 0xd6d6a3e8, 0xcb61b38c,
-    0x9b64c2b0, 0x86d3d2d4, 0xa00ae278, 0xbdbdf21c
-};
-
 void settingsInit() {
     EEPROM.begin(EEPROM_SIZE);
-}
-
-// Calculate CRC32 checksum for settings (excluding the CRC field itself)
-uint32_t settingsCalculateCRC(const Settings &settings) {
-    uint32_t crc = 0xFFFFFFFF;
-    const uint8_t *data = (const uint8_t*)&settings;
-    size_t len = sizeof(Settings) - sizeof(uint32_t); // Exclude CRC field
-
-    for (size_t i = 0; i < len; i++) {
-        crc ^= data[i];
-        crc = crc32_table[crc & 0x0F] ^ (crc >> 4);
-        crc = crc32_table[crc & 0x0F] ^ (crc >> 4);
-    }
-
-    return ~crc;
 }
 
 // Validate settings structure
@@ -43,14 +20,6 @@ bool settingsValidate(const Settings &settings) {
     if (settings.version != FIRMWARE_VERSION) {
         Serial.printf("Settings version mismatch: expected %d, got %d\n",
                       FIRMWARE_VERSION, settings.version);
-        return false;
-    }
-
-    // Validate CRC
-    uint32_t calculatedCRC = settingsCalculateCRC(settings);
-    if (calculatedCRC != settings.crc) {
-        Serial.printf("Settings CRC mismatch: expected 0x%08X, got 0x%08X\n",
-                      calculatedCRC, settings.crc);
         return false;
     }
 
@@ -74,11 +43,9 @@ void settingsReset(Settings &settings) {
 
     settings.version = FIRMWARE_VERSION;
     settings.brightness = 70;
-    settings.theme = 0;
+    settings.theme = 1; // 1 - clock, 2 - message, 3 - image
     settings.lastImage[0] = '\0';
-    settings.gmtOffset = 3600;      // Default to +1 hour (CET)
-    settings.valid = true;
-    settings.crc = settingsCalculateCRC(settings);
+    settings.gmtOffset = 3600; // Default to +1 hour (CET)
 }
 
 void settingsLoad(Settings &settings) {
@@ -92,28 +59,24 @@ void settingsLoad(Settings &settings) {
         if (!settingsValidate(settings)) {
             Serial.println(F("Settings validation failed - resetting to defaults"));
             settingsReset(settings);
-            settingsSave(settings);  // Save valid defaults
+            settingsSave(settings); // Save valid defaults
         } else {
             Serial.println(F("Settings loaded and validated successfully"));
         }
     } else {
         Serial.println(F("No valid settings found - initializing defaults"));
         settingsReset(settings);
-        settingsSave(settings);  // Save defaults on first boot
+        settingsSave(settings); // Save defaults on first boot
     }
 }
 
 void settingsSave(const Settings &settings) {
-    Settings tempSettings = settings;
-    tempSettings.version = FIRMWARE_VERSION;
-    tempSettings.crc = settingsCalculateCRC(tempSettings);
-
-    uint16_t magic = SETTINGS_MAGIC;
+    constexpr uint16_t magic = SETTINGS_MAGIC;
     EEPROM.put(SETTINGS_ADDR, magic);
-    EEPROM.put(SETTINGS_ADDR + 2, tempSettings);
+    EEPROM.put(SETTINGS_ADDR + 2, settings);
     EEPROM.commit();
 
-    Serial.println(F("Settings saved with CRC validation"));
+    Serial.println(F("Settings saved"));
 }
 
 // Boot counter functions for failure detection
@@ -168,7 +131,7 @@ void bootCounterReset() {
     EEPROM.put(BOOT_COUNTER_ADDR, counter);
     EEPROM.commit();
 
-    Serial.println(F("Boot counter reset - successful boot"));
+    Serial.println(F("Boot counter reset"));
 }
 
 bool bootCounterCheckFailsafe() {
@@ -183,11 +146,6 @@ bool bootCounterCheckFailsafe() {
 }
 
 // Power cycle counter functions for user-initiated factory reset
-void powerCycleCounterInit() {
-    // Increment the power cycle counter
-    powerCycleCounterIncrement();
-}
-
 uint8_t powerCycleCounterGet() {
     PowerCycleCounter counter;
     uint16_t magic;
@@ -235,9 +193,7 @@ void powerCycleCounterReset() {
 }
 
 bool powerCycleCounterCheckReset() {
-    uint8_t cycleCount = powerCycleCounterGet();
-
-    if (cycleCount >= POWER_CYCLE_THRESHOLD) {
+    if (const uint8_t cycleCount = powerCycleCounterGet(); cycleCount >= POWER_CYCLE_THRESHOLD) {
         Serial.printf("USER RESET: Power cycle threshold reached (%d cycles)\n", cycleCount);
         return true;
     }

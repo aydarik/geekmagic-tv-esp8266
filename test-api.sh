@@ -3,7 +3,7 @@
 # SmartClock API Test Script
 # Usage: ./test-api.sh [hostname or IP]
 
-HOST=${1:-smartclock.local}
+HOST=$1
 BASE_URL="http://$HOST"
 
 echo "Testing SmartClock API at $BASE_URL"

@@ -7,8 +7,11 @@
 #define LOG_LINE_LENGTH 128
 
 void loggerInit();
+
 void logPrint(const String &msg);
-void logPrintf(const char* format, ...);
+
+void logPrintf(const char *format, ...);
+
 String logGetAll();
 
 #endif

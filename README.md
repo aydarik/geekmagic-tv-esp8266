@@ -20,7 +20,6 @@ Updating images frequently will wear out flash fast. Think about your update set
 - ✅ Web-based User Interface (UI) for settings and control
 - ✅ ST7789V 240x240 display
 - ✅ WiFi configuration via captive portal
-- ✅ mDNS discovery (smartclock.local)
 - ✅ ArduinoOTA updates
 - ✅ Web-based OTA updates (/update)
 - ✅ LittleFS filesystem
@@ -34,11 +33,10 @@ Updating images frequently will wear out flash fast. Think about your update set
 
 ### EEPROM Validation System
 
-The firmware implements a three-layer validation system to prevent corruption from affecting operations:
+The firmware implements a validation system to prevent corruption from affecting operations:
 
 1. **Magic Number Check** (`0xCAFE`): Quick validation that settings exist
 2. **Firmware Version Check**: Ensures settings structure matches current firmware version
-3. **CRC32 Checksum**: Validates data integrity of all settings
 
 When any validation fails, the system automatically:
 - Logs the specific failure reason
@@ -116,11 +114,10 @@ If all connection attempts fail:
 When in failsafe mode:
 - Device runs as Access Point (SSID: `SmartClock-Setup`)
 - **AP credentials displayed on device screen** (SSID, password, and IP address)
-- Random password generated for security (8-digit numeric)
 - Web interface remains accessible via AP IP (typically 192.168.4.1)
 - Retries WiFi connection every 5 minutes automatically
 - If connection succeeds: restarts to restore full functionality
-- mDNS and OTA temporarily disabled to conserve resources
+- OTA temporarily disabled to conserve resources
 
 #### Runtime WiFi Monitoring
 During normal operation:
@@ -184,8 +181,7 @@ pio device monitor
 ## First boot
 
 1. Device starts in AP mode "SmartClock-Setup"
-2. **Look at the device display** to see the randomly generated AP password
-   - Alternatively, connect via serial console (115200 baud) to see the password
+2. **Look at the device display** to see the AP password
 3. Connect to the "SmartClock-Setup" WiFi network using the displayed password
 4. Captive portal opens automatically
 5. Configure WiFi credentials
@@ -196,7 +192,7 @@ pio device monitor
 
 ### Web Control Panel
 
-Access the comprehensive web-based control panel by navigating to `http://smartclock.local/` (or your device's IP address) in a web browser.
+Access the comprehensive web-based control panel by navigating to `http://192.168.0.193/` (or your device's IP address) in a web browser.
 
 **Main Sections:**
 
@@ -215,43 +211,32 @@ Access the comprehensive web-based control panel by navigating to `http://smartc
 
 ```bash
 # Upload image (temporary, cleared on reboot)
-curl -F "file=@image.jpg" http://smartclock.local/doUpload?dir=/image/
+curl -F "file=@image.jpg" http://192.168.0.193/doUpload?dir=/image/
 
 # Show image (e.g., after upload, will be cleared on reboot)
-curl http://smartclock.local/set?img=/image/image.jpg
+curl http://192.168.0.193/set?img=/image/image.jpg
 
 # Set brightness (0-100)
-curl http://smartclock.local/set?brt=50
+curl http://192.168.0.193/set?brt=50
 
 # Set GMT Offset (e.g., for +1 hour)
-curl http://smartclock.local/set?gmt=3600
+curl http://s192.168.0.193/set?gmt=3600
 
 # Live update (JSON - e.g., for custom text lines)
-curl -X POST http://smartclock.local/api/update \
+curl -X POST http://192.168.0.193/api/update \
   -H "Content-Type: application/json" \
   -d '{"line1":"Custom","line2":"Text","bar":0.7}'
 
 # Device status
-curl http://smartclock.local/app.json
+curl http://192.168.0.193/app.json
 ```
 
 ## OTA Updates
 
-### Via Arduino IDE
-1. Tools → Port → smartclock (network)
-2. Upload firmware
-
 ### Via Web
-1. Open `http://smartclock.local/update` (or your device's IP)
+1. Open `http://192.168.0.193/update` (or your device's IP)
 2. Select `firmware.bin`
 3. Upload
-
-## mDNS
-
-Device advertises as:
-- Hostname: `smartclock.local`
-- HTTP service on port 80
-- Metadata: model=SmartClock, api=geekmagic
 
 ## Settings
 
@@ -272,7 +257,7 @@ Stored in EEPROM:
 When the device is in AP/failsafe mode, the display automatically shows:
 - **"AP Mode Active"** message
 - **SSID**: The access point name (SmartClock-Setup)
-- **Password**: The randomly generated 8-digit password
+- **Password**: The access point password
 - **IP Address**: The AP IP address (typically 192.168.4.1) shown at top
 
 This ensures you can always see the connection credentials on the device screen without needing serial access.
@@ -281,23 +266,6 @@ This ensures you can always see the connection credentials on the device screen 
 - JPEG rendering (240x240)
 - Images are uploaded via `/doUpload` and are temporary (cleared on reboot)
 
-## Security Features
-
-### Random AP Password Generation
-For enhanced security, the device generates a **unique random 8-digit numeric password** on each boot when AP mode is activated. This prevents unauthorized access to your device's configuration portal.
-
-**Password Characteristics:**
-- Length: 8 digits
-- Character set: 0-9 (numbers only)
-- Generated using hardware random number generator (ESP.getCycleCount() ^ micros() ^ ESP.getChipId())
-- Displayed on device screen in AP mode
-- Logged to serial console at boot
-
-**How to find your AP password:**
-1. **On the device display**: When in AP mode, the password is shown on screen
-2. **Via serial console**: Connect to serial port (115200 baud) and look for "Generated AP Password: ..."
-3. **After first boot**: The password persists for the session but changes after reboot
-
 ## Troubleshooting
 
 ### Display remains black
@@ -305,18 +273,17 @@ For enhanced security, the device generates a **unique random 8-digit numeric pa
 - Verify TFT_eSPI build flags in platformio.ini
 
 ### WiFi doesn't connect
-- Check the device display for the current AP password (randomly generated)
+- Check the device display for the current AP password
 - Use the "Reconfigure WiFi" option in the Web Control Panel
 - Check WiFi credentials
 - If in AP mode, the SSID, password, and IP address are shown on the display
 
 ### Can't find device IP address
 - **Look at the device display**: The IP address is shown at the top of the clock screen in small text
-- Alternatively, use mDNS: `smartclock.local`
 - Check your router's DHCP client list
 
 ### OTA doesn't work
-- Verify device on network: `ping smartclock.local`
+- Verify device on network: `ping 192.168.0.193`
 - Check firewall settings.
 
 ### Upload fails or image doesn't display correctly
@@ -375,11 +342,8 @@ pio run -t uploadfs
 ## Credentials
 
 - **WiFi AP SSID**: SmartClock-Setup
-- **WiFi AP Password**: Random 8-digit numeric (see device display or serial console)
+- **WiFi AP Password**: smartclock123
 - **OTA Password**: admin
-- **mDNS Hostname**: smartclock.local
-
-**Note**: The AP password is randomly generated on each boot for security. Always check the device display when connecting in AP mode.
 
 ## License
 

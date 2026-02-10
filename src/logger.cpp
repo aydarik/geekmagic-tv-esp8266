@@ -24,7 +24,7 @@ void logPrint(const String &msg) {
     }
 }
 
-void logPrintf(const char* format, ...) {
+void logPrintf(const char *format, ...) {
     char buffer[LOG_LINE_LENGTH];
     va_list args;
     va_start(args, format);
@@ -38,11 +38,11 @@ String logGetAll() {
     String result = "";
     result.reserve(LOG_BUFFER_SIZE * LOG_LINE_LENGTH);
 
-    int start = (logCount < LOG_BUFFER_SIZE) ? 0 : logIndex;
-    int entries = (logCount < LOG_BUFFER_SIZE) ? logCount : LOG_BUFFER_SIZE;
+    const int start = logCount < LOG_BUFFER_SIZE ? 0 : logIndex;
+    const int entries = logCount < LOG_BUFFER_SIZE ? logCount : LOG_BUFFER_SIZE;
 
     for (int i = 0; i < entries; i++) {
-        int idx = (start + i) % LOG_BUFFER_SIZE;
+        const int idx = (start + i) % LOG_BUFFER_SIZE;
         result += logBuffer[idx];
         result += "\n";
     }
