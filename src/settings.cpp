@@ -3,11 +3,8 @@
 #define EEPROM_SIZE 512
 #define SETTINGS_MAGIC 0xCAFE
 #define SETTINGS_ADDR 0
-#define BOOT_COUNTER_MAGIC 0xB007
-#define BOOT_COUNTER_ADDR (SETTINGS_ADDR + sizeof(uint16_t) + sizeof(Settings))
-#define BOOT_FAILURE_THRESHOLD 5  // Reset EEPROM after 5 consecutive boot failures
 #define POWER_CYCLE_COUNTER_MAGIC 0x5C01  // 5C = "Power Cycle"
-#define POWER_CYCLE_COUNTER_ADDR (BOOT_COUNTER_ADDR + sizeof(BootCounter))
+#define POWER_CYCLE_COUNTER_ADDR (SETTINGS_ADDR + sizeof(Settings))
 #define POWER_CYCLE_THRESHOLD 5  // Factory reset after 5 quick power cycles
 
 void settingsInit() {
@@ -29,11 +26,6 @@ bool settingsValidate(const Settings &settings) {
         return false;
     }
 
-    if (settings.theme < 0 || settings.theme > 10) {
-        Serial.println(F("Settings theme out of range"));
-        return false;
-    }
-
     return true;
 }
 
@@ -43,9 +35,14 @@ void settingsReset(Settings &settings) {
 
     settings.version = FIRMWARE_VERSION;
     settings.brightness = 70;
-    settings.theme = 1; // 1 - clock, 2 - message, 3 - image
-    settings.lastImage[0] = '\0';
-    settings.gmtOffset = 3600; // Default to +1 hour (CET)
+
+    // TZ default to Europe
+    strncpy(settings.tz, "CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00", sizeof(settings.tz));
+    settings.tz[sizeof(settings.tz) - 1] = '\0'; // Ensure null-termination
+
+    settings.showIP = true;
+
+    settingsSave(settings);
 }
 
 void settingsLoad(Settings &settings) {
@@ -59,14 +56,12 @@ void settingsLoad(Settings &settings) {
         if (!settingsValidate(settings)) {
             Serial.println(F("Settings validation failed - resetting to defaults"));
             settingsReset(settings);
-            settingsSave(settings); // Save valid defaults
         } else {
             Serial.println(F("Settings loaded and validated successfully"));
         }
     } else {
         Serial.println(F("No valid settings found - initializing defaults"));
         settingsReset(settings);
-        settingsSave(settings); // Save defaults on first boot
     }
 }
 
@@ -75,74 +70,7 @@ void settingsSave(const Settings &settings) {
     EEPROM.put(SETTINGS_ADDR, magic);
     EEPROM.put(SETTINGS_ADDR + 2, settings);
     EEPROM.commit();
-
     Serial.println(F("Settings saved"));
-}
-
-// Boot counter functions for failure detection
-void bootCounterInit() {
-    // Boot counter is already initialized by EEPROM.begin()
-    // Just increment the failure counter
-    bootCounterIncrement();
-}
-
-uint8_t bootCounterGet() {
-    BootCounter counter;
-    uint16_t magic;
-
-    EEPROM.get(BOOT_COUNTER_ADDR, magic);
-
-    if (magic == BOOT_COUNTER_MAGIC) {
-        EEPROM.get(BOOT_COUNTER_ADDR, counter);
-        return counter.failCount;
-    }
-
-    return 0;
-}
-
-void bootCounterIncrement() {
-    BootCounter counter;
-    uint16_t magic;
-
-    EEPROM.get(BOOT_COUNTER_ADDR, magic);
-
-    if (magic == BOOT_COUNTER_MAGIC) {
-        EEPROM.get(BOOT_COUNTER_ADDR, counter);
-        counter.failCount++;
-    } else {
-        // Initialize boot counter
-        counter.magic = BOOT_COUNTER_MAGIC;
-        counter.failCount = 1;
-        counter.lastBootTime = 0;
-    }
-
-    EEPROM.put(BOOT_COUNTER_ADDR, counter);
-    EEPROM.commit();
-
-    Serial.printf("Boot failure count: %d\n", counter.failCount);
-}
-
-void bootCounterReset() {
-    BootCounter counter;
-    counter.magic = BOOT_COUNTER_MAGIC;
-    counter.failCount = 0;
-    counter.lastBootTime = millis();
-
-    EEPROM.put(BOOT_COUNTER_ADDR, counter);
-    EEPROM.commit();
-
-    Serial.println(F("Boot counter reset"));
-}
-
-bool bootCounterCheckFailsafe() {
-    uint8_t failCount = bootCounterGet();
-
-    if (failCount >= BOOT_FAILURE_THRESHOLD) {
-        Serial.printf("FAILSAFE: Boot failure threshold reached (%d failures)\n", failCount);
-        return true;
-    }
-
-    return false;
 }
 
 // Power cycle counter functions for user-initiated factory reset

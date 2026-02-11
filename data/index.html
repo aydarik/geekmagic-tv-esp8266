@@ -38,12 +38,22 @@
 
         h1 {
             background-color: #111318;
-            color: white;
+            color: var(--text-color);
             padding: 15px 20px;
             margin: 0;
             font-size: 1.8em;
             text-align: center;
             border-bottom: 1px solid var(--border-color);
+        }
+
+        a {
+            color: var(--text-color);
+            text-decoration: none;
+        }
+
+        a:hover {
+            color: var(--light-text-color);
+
         }
 
         .card {
@@ -79,7 +89,7 @@
             color: var(--text-color)
         }
 
-        .input-group input[type="number"], .input-group input[type="text"], .input-group input[type="password"], .input-group select {
+        .input-group input[type="number"], .input-group input[type="text"], .input-group input[type="password"], .input-group input[type="range"], .input-group select, .input-group textarea {
             width: calc(100% - 22px);
             padding: 10px;
             border: 1px solid var(--border-color);
@@ -177,10 +187,6 @@
             text-align: left;
         }
 
-        tr:hover {
-            background: #0f5d6a;
-        }
-
         .size {
             text-align: right;
             font-family: monospace;
@@ -221,8 +227,6 @@
                 </div>
                 <button class="button" onclick="connectWiFi()">Connect</button>
             </div>
-            <div class="spacer"></div>
-            <button class="button" onclick="reconfigureWiFi()">Reconfigure WiFi (Portal)</button>
         </div>
     </div>
     <div class="card">
@@ -239,14 +243,31 @@
     <div class="card">
         <div class="card-header">Settings</div>
         <div class="card-body">
-            <div class="input-group"><label for="brightness">Brightness (0-100):</label>
-                <input type="number" id="brightness" min="0" max="100">
-                <button class="button" onclick="setBrightness()">Set Brightness</button>
+            <div class="input-group">
+                <label for="showIP">IP address on Clock screen:</label>
+                <input type="checkbox" id="showIP" onchange="setShowIP()">
+                Show IP address
             </div>
-            <div class="input-group"><label for="gmtOffset">GMT Offset (seconds):</label>
-                <input type="number" id="gmtOffset">
+            <div class="input-group">
+                <label for="brightness">Brightness: <span id="brightnessValue">0</span>%</label>
+                <input type="range" id="brightness" min="0" max="100" value="0" onchange="setBrightness()"
+                       oninput="document.getElementById('brightnessValue').innerText = this.value">
+            </div>
+            <div class="input-group">
+                <label for="tz">Timezone:</label>
+                <input type="text" id="tz">
                 <button class="button" onclick="setTimezone()">Set Timezone</button>
             </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">Custom Message</div>
+        <div class="card-body">
+            <div class="input-group">
+                <label for="customMessage">Message:</label>
+                <textarea id="customMessage" rows="5" cols="33"></textarea>
+            </div>
+            <button class="button" onclick="sendCustomMessage()">Send</button>
         </div>
     </div>
     <div class="card">
@@ -260,18 +281,9 @@
                 </div>
             </form>
             <div class="info">
-                <div id="imageList">Loading image list...</div>
+                <div id="imageList">Loading...</div>
                 <div class="spacer"></div>
-                <table id="filesTable">
-                    <thead>
-                    <tr>
-                        <th>Path</th>
-                        <th>Size</th>
-                        <th>Actions</th>
-                    </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+                <span id="filesTable"></span>
             </div>
             <div class="input-group">
                 <button class="button" onclick="displayTestImage()">Display Test Image</button>
@@ -289,39 +301,43 @@
 <script>
     function setBrightness() {
         var brightness = document.getElementById("brightness").value;
-        fetch('/set?brt=' + brightness).then(response => response.text()).then(data => alert('Brightness set: ' + data)).catch(error => console.error('Error:', error));
+        fetch('/set?brt=' + brightness).catch(error => console.error('Error:', error));
     }
 
-    function reconfigureWiFi() {
-        if (confirm("Are you sure you want to reconfigure WiFi? This will restart the device into AP mode.")) {
-            fetch('/reconfigurewifi').then(response => response.text()).then(data => alert('WiFi Reconfiguration triggered: ' + data)).catch(error => console.error('Error:', error));
-        }
+    function setShowIP() {
+        var val = document.getElementById("showIP").checked;
+        fetch('/set?ip=' + val).catch(error => console.error('Error:', error));
     }
 
     function setTimezone() {
-        var gmtOffset = document.getElementById("gmtOffset").value;
-        fetch('/set?gmt=' + gmtOffset).then(response => response.text()).then(data => alert('Timezone set: ' + data)).catch(error => console.error('Error:', error));
+        var tz = document.getElementById("tz").value;
+        fetch('/set?tz=' + tz).then(response => response.text()).then(data => alert('Timezone set: ' + data)).catch(error => console.error('Error:', error));
     }
 
     function displayImage(imagePath) {
-        fetch('/set?img=' + imagePath).then(response => response.text()).then(data => alert('Image display triggered: ' + data)).catch(error => console.error('Error:', error));
+        fetch('/set?img=' + imagePath).catch(error => console.error('Error:', error));
     }
 
     function deleteImage(imagePath) {
-        fetch('/delete?file=' + imagePath).then(response => response.text()).then(data => alert('Image deleted: ' + data)).catch(error => console.error('Error:', error));
+        fetch('/delete?file=' + imagePath).then(_ => loadData()).catch(error => console.error('Error:', error));
     }
 
     function setTheme(id) {
-        fetch('/set?theme=' + id).then(response => response.text()).then(_ => document.getElementById('currentTheme').textContent = id).catch(error => console.error('Error:', error));
+        fetch('/set?theme=' + id).then(_ => document.getElementById('currentTheme').textContent = id).catch(error => console.error('Error:', error));
+    }
+
+    function sendCustomMessage() {
+        const customMessage = document.getElementById('customMessage').value.replaceAll("\n", "%0A");
+        fetch('/set?msg=' + customMessage).catch(error => console.error('Error:', error));
     }
 
     function displayTestImage() {
-        fetch('/test').then(response => response.text()).then(data => alert('Test Image display triggered: ' + data)).catch(error => console.error('Error:', error));
+        fetch('/test').catch(error => console.error('Error:', error));
     }
 
     function factoryReset() {
         if (confirm("WARNING: Are you sure you want to perform a factory reset? This will erase all settings and files and restart the device.")) {
-            fetch('/factoryreset').then(response => response.text()).then(data => alert('Factory Reset triggered: ' + data)).catch(error => console.error('Error:', error));
+            fetch('/factoryreset').then(response => response.text()).then(data => alert(data)).catch(error => console.error('Error:', error));
         }
     }
 
@@ -329,21 +345,17 @@
         document.getElementById('scanStatus').textContent = 'Scanning for networks...';
         document.getElementById('wifiSection').style.display = 'none';
         fetch('/scan').then(response => response.json()).then(data => {
-            const select = document.getElementById('wifiNetwork');
-            select.innerHTML = '<option value="">--Select a network--</option>';
             if (data.length === 0) {
                 document.getElementById('scanStatus').textContent = 'No networks found';
                 return;
             }
-            data.sort((a, b) => b.rssi - a.rssi);
+            const select = document.getElementById('wifiNetwork');
+            select.innerHTML = '<option value="">--Select a network--</option>';
             data.forEach(network => {
                 if (network.ssid && network.ssid.trim() !== '') {
                     const option = document.createElement('option');
                     option.value = network.ssid;
-                    let signalBars = '';
-                    if (network.rssi > -60) signalBars = '++++'; else if (network.rssi > -70) signalBars = '+++'; else if (network.rssi > -80) signalBars = '++'; else signalBars = '+';
-                    const encryption = network.encryption === 7 ? '[Open]' : '[Secure]';
-                    option.textContent = `${network.ssid} ${signalBars} ${encryption}`;
+                    option.textContent = network.ssid;
                     select.appendChild(option);
                 }
             });
@@ -362,7 +374,7 @@
             alert('Please select a network');
             return;
         }
-        if (confirm(`Connect to ${ssid}? The device will restart if the connection is successful.`)) {
+        if (confirm(`Connect to ${ssid}?`)) {
             document.getElementById('scanStatus').textContent = 'Connecting...';
             fetch(`/connect?ssid=${encodeURIComponent(ssid)}&password=${encodeURIComponent(password)}`).then(response => response.text()).then(data => {
                 alert(data);
@@ -376,18 +388,24 @@
 
     function formatSize(bytes) {
         if (bytes < 1024) return bytes + " B";
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-        return (bytes / 1024 / 1024).toFixed(2) + " MB";
+        return (bytes / 1024).toFixed(1) + " KB";
     }
 
-    window.onload = function () {
+    function loadData() {
         fetch('/app.json').then(response => response.json()).then(data => {
-            document.getElementById('brightness').value = data.brt;
-            document.getElementById('gmtOffset').value = data.gmtOffset;
             document.getElementById('currentTheme').textContent = data.theme;
+            document.getElementById('tz').value = data.tz;
+            document.getElementById('showIP').checked = data.showIP !== false;
         }).catch(error => {
             console.error('Error fetching app data:', error)
             document.getElementById('currentTheme').textContent = 'Unknown';
+        });
+
+        fetch('/brt.json').then(response => response.json()).then(data => {
+            document.getElementById('brightnessValue').innerText = data.brt;
+            document.getElementById('brightness').value = data.brt;
+        }).catch(error => {
+            console.error('Error fetching brightness:', error);
         });
 
         fetch('/version.json').then(response => response.json()).then(data => {
@@ -397,20 +415,30 @@
             document.getElementById('firmwareVersion').textContent = 'Unknown';
         });
 
-        fetch('/list').then(response => response.json()).then(data => {
-            const tbody = document.querySelector("#filesTable tbody");
-            let total = 0;
-            data.sort((a, b) => a.path.localeCompare(b.path)).forEach(f => {
-                total += f.size;
-                const row = document.createElement("tr");
-                row.innerHTML = `<td>${f.path}</td><td class="size">${formatSize(f.size)}</td><td><div class="button-group"><button class="button" onclick="deleteImage(\'/${f.path}\')">DEL</button><button class="button" onclick="displayImage(\'/${f.path}\')">SET</button></div></td>`;
-                tbody.appendChild(row);
-            });
-            document.getElementById("imageList").textContent = `${data.length} file(s) - ${formatSize(total)} total`;
+        fetch('/space.json').then(response => response.json()).then(data => {
+            document.getElementById("imageList").textContent = `Free space: ${formatSize(data.free)}`;
         }).catch(error => {
-            console.error('Error fetching images:', error);
-            document.getElementById('imageList').textContent = 'Unable to fetch image list :(';
+            console.error('Error fetching space:', error);
+            document.getElementById('imageList').textContent = 'Unknown';
         });
+
+        fetch('/message.json').then(response => response.json()).then(data => {
+            document.getElementById("customMessage").value = data.msg;
+        }).catch(error => {
+            console.error('Error fetching custom message:', error);
+            document.getElementById("customMessage").value = '';
+        });
+
+        fetch('/filelist').then(response => response.text()).then(data => {
+            document.getElementById('filesTable').innerHTML = data;
+        }).catch(error => {
+            console.error('Error fetching files:', error);
+            document.getElementById('filesTable').textContent = 'Unable to fetch image list :(';
+        });
+    }
+
+    window.onload = function () {
+        loadData()
     };
 </script>
 </body>

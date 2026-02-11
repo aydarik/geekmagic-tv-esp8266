@@ -5,7 +5,7 @@
 #include <EEPROM.h>
 
 // Firmware version - increment when Settings structure changes
-#define FIRMWARE_VERSION 2
+#define FIRMWARE_VERSION 1
 
 // Semantic version string (replaced by GitHub Action during release builds)
 #ifndef FIRMWARE_VERSION_STRING
@@ -15,16 +15,8 @@
 struct Settings {
     uint16_t version; // Firmware version for compatibility check
     int brightness;
-    int theme;
-    char lastImage[64];
-    long gmtOffset; // GMT offset in seconds
-};
-
-// Boot failure tracking structure (separate from settings)
-struct BootCounter {
-    uint16_t magic; // Magic number to validate boot counter
-    uint8_t failCount; // Number of consecutive boot failures
-    uint32_t lastBootTime; // Timestamp of last successful boot
+    char tz[64];
+    bool showIP;
 };
 
 // Power cycle reset structure (user-initiated factory reset)
@@ -42,15 +34,6 @@ void settingsSave(const Settings &settings);
 void settingsReset(Settings &settings);
 
 bool settingsValidate(const Settings &settings);
-
-// Boot counter functions
-uint8_t bootCounterGet();
-
-void bootCounterIncrement();
-
-void bootCounterReset();
-
-bool bootCounterCheckFailsafe();
 
 // Power cycle counter functions (user-initiated factory reset)
 uint8_t powerCycleCounterGet();

@@ -1,5 +1,6 @@
 .pio
 .vscode
+src/generated
 *.bin
 *.elf
 *.map

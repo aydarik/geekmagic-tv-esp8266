@@ -7,13 +7,10 @@
 #include <ArduinoJson.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266WiFi.h>   // For WiFi.softAPIP()
-#include <WiFiManager.h> // Include WiFiManager here
 
 #include "generated/index_html.h"
 
 ESP8266WebServer server(WEB_SERVER_PORT);
-
-char currentImage[DISPLAY_PATH_BUFFER_SIZE];
 
 extern Settings appSettings;
 
@@ -21,12 +18,13 @@ extern Settings appSettings;
 File uploadFile;
 
 void handleAppJson() {
-    String json = "{";
-    json += "\"theme\":" + String(appSettings.theme) + ",";
-    json += "\"brt\":" + String(appSettings.brightness) + ",";
-    json += "\"img\":\"" + String(appSettings.lastImage) + "\",";
-    json += "\"gmtOffset\":" + String(appSettings.gmtOffset);
-    json += "}";
+    StaticJsonDocument<128> doc;
+    doc["theme"] = displayState.theme;
+    doc["img"] = displayState.image;
+    doc["tz"] = appSettings.tz;
+    doc["showIP"] = appSettings.showIP;
+    String json;
+    serializeJson(doc, json);
     server.send(200, "application/json", json);
 }
 
@@ -34,20 +32,35 @@ void handleSpaceJson() {
     FSInfo fs_info;
     LittleFS.info(fs_info);
 
-    String json = "{";
-    json += "\"total\":" + String(fs_info.totalBytes) + ",";
-    json += "\"free\":" + String(fs_info.totalBytes - fs_info.usedBytes);
-    json += "}";
+    StaticJsonDocument<64> doc;
+    doc["total"] = fs_info.totalBytes;
+    doc["free"] = fs_info.totalBytes - fs_info.usedBytes;
+    String json;
+    serializeJson(doc, json);
     server.send(200, "application/json", json);
 }
 
 void handleBrtJson() {
-    String json = "{\"brt\":\"" + String(appSettings.brightness) + "\"}";
+    StaticJsonDocument<32> doc;
+    doc["brt"] = appSettings.brightness;
+    String json;
+    serializeJson(doc, json);
     server.send(200, "application/json", json);
 }
 
 void handleVersionJson() {
-    String json = "{\"version\":\"" + String(FIRMWARE_VERSION_STRING) + "\"}";
+    StaticJsonDocument<64> doc;
+    doc["version"] = FIRMWARE_VERSION_STRING;
+    String json;
+    serializeJson(doc, json);
+    server.send(200, "application/json", json);
+}
+
+void handleMessageJson() {
+    StaticJsonDocument<512> doc;
+    doc["msg"] = displayState.message;
+    String json;
+    serializeJson(doc, json);
     server.send(200, "application/json", json);
 }
 
@@ -62,26 +75,46 @@ void handleSet() {
     }
 
     if (server.hasArg("theme")) {
-        appSettings.theme = server.arg("theme").toInt();
+        displayState.theme = server.arg("theme").toInt();
         displayUpdate();
-        settingsSave(appSettings);
         updated = true;
     }
 
     if (server.hasArg("img")) {
-        strncpy(currentImage, server.arg("img").c_str(), sizeof(currentImage));
-        currentImage[sizeof(currentImage) - 1] = '\0'; // Ensure null-termination
-        strncpy(appSettings.lastImage, currentImage, sizeof(appSettings.lastImage));
-        appSettings.theme = 3;
+        strncpy(displayState.image, server.arg("img").c_str(), sizeof(displayState.image));
+        displayState.image[sizeof(displayState.image) - 1] = '\0'; // Ensure null-termination
+        displayState.theme = 3;
         displayUpdate();
-        // Use sizeof for appSettings.lastImage
+        updated = true;
+    }
+
+    if (server.hasArg("msg")) {
+        strncpy(displayState.message, server.arg("msg").c_str(), sizeof(displayState.message));
+        displayState.message[sizeof(displayState.message) - 1] = '\0'; // Ensure null-termination
+        displayState.theme = 2;
+        displayUpdate();
+        updated = true;
+    }
+
+    if (server.hasArg("tz")) {
+        strncpy(appSettings.tz, server.arg("tz").c_str(), sizeof(appSettings.tz));
+        appSettings.tz[sizeof(appSettings.tz) - 1] = '\0'; // Ensure null-termination
+
+        setenv("TZ", appSettings.tz, 1);
+        tzset();
+
+        if (displayState.theme == 1) {
+            displayUpdate();
+        }
         settingsSave(appSettings);
         updated = true;
     }
 
-    if (server.hasArg("gmt")) {
-        appSettings.gmtOffset = server.arg("gmt").toInt();
-        timeClient.setTimeOffset(appSettings.gmtOffset);
+    if (server.hasArg("ip")) {
+        appSettings.showIP = server.arg("ip") != "false";
+        if (displayState.theme == 1) {
+            displayUpdate();
+        }
         settingsSave(appSettings);
         updated = true;
     }
@@ -175,90 +208,34 @@ void handleDelete() {
     }
 }
 
-String listDirRecursiveJSON(const char* dirname = "/") {
-    String json = "[";
-    bool first = true;
-
+String listDirRecursiveHtml(const char *dirname = "/") {
+    String htmlRow = "";
     File root = LittleFS.open(dirname, "r");
-    if (!root || !root.isDirectory()) {
-        return "[]";
-    }
-
     File file = root.openNextFile();
     while (file) {
         if (file.isDirectory()) {
-            String sub = listDirRecursiveJSON(file.fullName());
-
-            // remove [] and merge
+            String sub = listDirRecursiveHtml(file.fullName());
             if (sub.length() > 2) {
-                if (!first) json += ",";
-                json += sub.substring(1, sub.length() - 1);
-                first = false;
+                htmlRow += sub;
             }
         } else {
-            if (!first) json += ",";
-            first = false;
-
-            json += "{\"path\":\"";
-            json += file.fullName();
-            json += "\",\"size\":";
-            json += file.size();
-            json += "}";
+            char row[512];
+            snprintf(row, sizeof(row),
+                     "<tr><td><a href=\"%s\">/%s</a></td><td class=\"size\">%d</td><td><div class=\"button-group\"><button class=\"button\" onclick=\"deleteImage('/%s')\">DEL</button><button class=\"button\" onclick=\"displayImage('/%s')\">SET</button></div></td></tr>",
+                     file.fullName(), file.fullName(), file.size(), file.fullName(), file.fullName());
+            htmlRow += row;
         }
-
         file = root.openNextFile();
     }
 
-    json += "]";
-    return json;
+    return htmlRow;
 }
 
-void handleList() {
-    String json = listDirRecursiveJSON("/");
-    server.send(200, "application/json", json);
-}
-
-void handleApiUpdate() {
-    if (server.hasArg("plain")) {
-        String body = server.arg("plain");
-        JsonDocument doc;
-        deserializeJson(doc, body);
-
-        // line1 from API now goes to displayState.line2 for custom messages
-        if (!doc["line1"].isNull()) {
-            strncpy(displayState.line2, doc["line1"].as<const char *>(), sizeof(displayState.line2));
-            displayState.line2[sizeof(displayState.line2) - 1] = '\0'; // Ensure null-termination
-        } else {
-            // If line1 is not provided, clear the custom message
-            displayState.line2[0] = '\0';
-        }
-        appSettings.theme = 2;
-        displayUpdate();
-
-        server.send(200, "text/plain", "OK");
-    } else {
-        server.send(400, "text/plain", "No JSON body");
-    }
-}
-
-void handleReconfigureWiFi() {
-    server.send(200, "text/plain", "WiFi Reconfiguration triggered. Device restarting to AP mode.");
-    delay(100); // Give time for response to send
-
-    // Set failsafe mode and display AP credentials on screen
-    wifiFailsafeMode = true;
-    displayShowAPScreen(WIFI_AP_NAME, WIFI_AP_PASSWORD, WiFi.softAPIP().toString().c_str());
-    delay(1000); // Give time for display update
-
-    wifiManager.startConfigPortal(WIFI_AP_NAME, WIFI_AP_PASSWORD); // Restart into AP mode with random password
-
-    // After config portal exits, check if connected
-    if (WiFi.status() == WL_CONNECTED) {
-        wifiFailsafeMode = false;
-        displayShowMessage("WiFi OK\n" + WiFi.localIP().toString());
-        delay(2000);
-    }
-    // ESP.restart(); // WiFiManager.startConfigPortal() usually reboots itself
+void handleFileList() {
+    String htmlTable = "<table><thead><tr><th>Path</th><th>Size</th><th>Actions</th></tr></thead><tbody>"
+                       + listDirRecursiveHtml("/")
+                       + "</tbody></table>";
+    server.send(200, "application/json", htmlTable);
 }
 
 // Function to handle factory reset
@@ -266,43 +243,27 @@ void handleFactoryReset() {
     server.send(200, "text/plain", "Factory Reset triggered. Clearing data and restarting...");
     delay(100); // Give time for response to send
 
-    logPrint(F("Performing factory reset..."));
+    displayShowMessage(F("Performing\nfactory reset..."));
 
-    // Clear WiFi credentials FIRST (most important)
-    logPrint(F("Clearing WiFi credentials..."));
-    WiFi.disconnect(true); // Disconnect and erase WiFi credentials
-    delay(100);
-
-    // Use WiFiManager to reset settings (clears WiFi config sector)
+    // Factory reset sequence
+    WiFi.disconnect(true);
+    delay(500);
     wifiManager.resetSettings();
-    logPrint(F("WiFiManager settings cleared."));
-    delay(100);
+    delay(500);
 
-    // Also erase ESP8266 WiFi config sector for complete wipe
     ESP.eraseConfig();
-    logPrint(F("ESP WiFi config erased."));
-    delay(100);
+    delay(500);
 
-    // Clear EEPROM settings (our custom settings)
-    settingsInit(); // Ensure EEPROM is ready
-    Settings defaultSettings;
-    settingsReset(defaultSettings); // Use the proper reset function
-    settingsSave(defaultSettings);
-    logPrint(F("EEPROM settings cleared/reset."));
+    settingsReset(appSettings);
+    delay(500);
 
-    // Clear boot counter
-    bootCounterReset();
-    logPrint(F("Boot counter reset."));
-
-    // Format LittleFS (delete all files)
-    logPrint(F("Formatting LittleFS..."));
     LittleFS.format();
-    logPrint(F("LittleFS formatted."));
+    delay(500);
 
-    logPrint(F("Factory reset complete. Restarting..."));
-    delay(1000);
-
-    ESP.restart(); // Restart the device
+    Serial.println(F("Factory reset complete. Rebooting..."));
+    displayShowMessage(F("Success!\nRebooting..."));
+    delay(2000);
+    ESP.restart();
 }
 
 void handleOTAForm() {
@@ -329,9 +290,6 @@ void handleOTAUpload() {
     } else if (upload.status == UPLOAD_FILE_WRITE) {
         if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
             Update.printError(Serial);
-        } else {
-            const int percent = Update.progress() * 100 / Update.size();
-            Serial.printf("Progress: %d%%\n", percent);
         }
     } else if (upload.status == UPLOAD_FILE_END) {
         if (Update.end(true)) {
@@ -349,7 +307,7 @@ void handleOTADone() {
     server.send(200, "text/plain", shouldReboot ? "OK - Rebooting..." : "FAIL");
 
     if (shouldReboot) {
-        delay(1000);
+        delay(2000);
         ESP.restart();
     }
 }
@@ -362,8 +320,7 @@ void handleLog() {
 void handleWiFiScan() {
     logPrint(F("Starting WiFi scan..."));
 
-    // Scan for networks (async scan to avoid blocking AP mode)
-    int numNetworks = WiFi.scanNetworks(false, true); // async=false, show_hidden=true
+    int numNetworks = WiFi.scanNetworks(false, true);
 
     String json = "[";
     for (int i = 0; i < numNetworks; i++) {
@@ -392,7 +349,7 @@ void handleWiFiConnect() {
     const String password = server.hasArg("password") ? server.arg("password") : "";
 
     logPrintf("Attempting to connect to WiFi: %s", ssid.c_str());
-    server.send(200, "text/plain", "Connecting to " + ssid + "... Device will restart if successful.");
+    server.send(200, "text/plain", "Connecting to " + ssid + "...");
     delay(100);
 
     // Enable persistent WiFi credentials storage
@@ -420,17 +377,45 @@ void handleWiFiConnect() {
     if (WiFi.status() == WL_CONNECTED) {
         logPrintf("Successfully connected to %s", ssid.c_str());
         logPrintf("IP address: %s", WiFi.localIP().toString().c_str());
-
-        // Credentials are now saved, restart to apply changes
-        delay(1000);
-        ESP.restart();
+        displayShowMessage(F("Success!\nRebooting..."));
     } else {
         logPrintf("Failed to connect to %s", ssid.c_str());
-        // Restart AP mode
-        WiFi.mode(WIFI_AP);
-        WiFi.softAP(WIFI_AP_NAME, WIFI_AP_PASSWORD);
-        logPrint(F("Connection failed, AP mode restarted"));
+        displayShowMessage(F("Failed :(\nRebooting..."));
     }
+    delay(2000);
+    ESP.restart();
+}
+
+void handleStatic() {
+    String path = server.uri();
+
+    // Check if file exists in LittleFS
+    if (!LittleFS.exists(path)) {
+        server.send(404, "text/plain", "File not found");
+        return;
+    }
+
+    File file = LittleFS.open(path, "r");
+    if (!file) {
+        server.send(500, "text/plain", "Failed to open file");
+        return;
+    }
+
+    // Determine content type based on file extension
+    String contentType = "application/octet-stream";
+    if (path.endsWith(".jpg") || path.endsWith(".jpeg")) {
+        contentType = "image/jpeg";
+    } else if (path.endsWith(".png")) {
+        contentType = "image/png";
+    } else if (path.endsWith(".bmp")) {
+        contentType = "image/bmp";
+    } else if (path.endsWith(".gif")) {
+        contentType = "image/gif";
+    }
+
+    // Stream the file to the client
+    server.streamFile(file, contentType);
+    file.close();
 }
 
 void handleRoot() {
@@ -444,18 +429,17 @@ void webserverInit() {
     server.on("/space.json", HTTP_GET, handleSpaceJson);
     server.on("/brt.json", HTTP_GET, handleBrtJson);
     server.on("/version.json", HTTP_GET, handleVersionJson);
-    server.on("/set", HTTP_GET, handleSet);
-    server.on("/test", HTTP_GET, handleTest);
+    server.on("/message.json", HTTP_GET, handleMessageJson);
+
+    server.on("/filelist", HTTP_GET, handleFileList);
     server.on("/delete", HTTP_GET, handleDelete);
-    server.on("/list", HTTP_GET, handleList);
+    server.on("/set", HTTP_GET, handleSet);
+
+    server.on("/test", HTTP_GET, handleTest);
     server.on("/log", HTTP_GET, handleLog);
-    server.on("/reconfigurewifi", HTTP_GET, handleReconfigureWiFi);
     server.on("/factoryreset", HTTP_GET, handleFactoryReset);
     server.on("/scan", HTTP_GET, handleWiFiScan);
     server.on("/connect", HTTP_GET, handleWiFiConnect);
-
-    // POST endpoints
-    server.on("/api/update", HTTP_POST, handleApiUpdate);
 
     // File upload
     server.on("/doUpload", HTTP_POST, handleUploadDone, handleFileUpload);
@@ -464,7 +448,8 @@ void webserverInit() {
     server.on("/update", HTTP_GET, handleOTAForm);
     server.on("/update", HTTP_POST, handleOTADone, handleOTAUpload);
 
-    currentImage[0] = '\0'; // Initialize currentImage as empty
+    // Serve images from LittleFS (catches all unhandled routes)
+    server.onNotFound(handleStatic);
 
     server.begin();
     Serial.println(F("Web server started"));
