@@ -27,7 +27,7 @@ Works with:
 ## First Installation (UART Required)
 
 The first flash cannot be done via OTA.
-You must **flash over UART** ⚠
+You must **flash over UART** ⚠️
 
 Recommended tool: https://web.esphome.io/
 

@@ -408,8 +408,8 @@
             console.error('Error fetching brightness:', error);
         });
 
-        fetch('/version.json').then(response => response.json()).then(data => {
-            document.getElementById('firmwareVersion').textContent = data.version;
+        fetch('/v.json').then(response => response.json()).then(data => {
+            document.getElementById('firmwareVersion').textContent = data.v;
         }).catch(error => {
             console.error('Error fetching version:', error);
             document.getElementById('firmwareVersion').textContent = 'Unknown';

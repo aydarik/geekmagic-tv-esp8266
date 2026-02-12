@@ -50,7 +50,8 @@ void handleBrtJson() {
 
 void handleVersionJson() {
     StaticJsonDocument<64> doc;
-    doc["version"] = FIRMWARE_VERSION_STRING;
+    doc["m"] = "aydarik";
+    doc["v"] = FIRMWARE_VERSION_STRING;
     String json;
     serializeJson(doc, json);
     server.send(200, "application/json", json);
@@ -221,7 +222,7 @@ String listDirRecursiveHtml(const char *dirname = "/") {
         } else {
             char row[512];
             snprintf(row, sizeof(row),
-                     "<tr><td><a href=\"%s\">/%s</a></td><td class=\"size\">%d</td><td><div class=\"button-group\"><button class=\"button\" onclick=\"deleteImage('/%s')\">DEL</button><button class=\"button\" onclick=\"displayImage('/%s')\">SET</button></div></td></tr>",
+                     "<tr><td><a href='/%s'>/%s</a></td><td class='size'>%d</td><td><div class='button-group'><button class='button' onclick=\"deleteImage('/%s')\">DEL</button><button class='button' onclick=\"displayImage('/%s')\">SET</button></div></td></tr>\n",
                      file.fullName(), file.fullName(), file.size(), file.fullName(), file.fullName());
             htmlRow += row;
         }
@@ -232,10 +233,10 @@ String listDirRecursiveHtml(const char *dirname = "/") {
 }
 
 void handleFileList() {
-    String htmlTable = "<table><thead><tr><th>Path</th><th>Size</th><th>Actions</th></tr></thead><tbody>"
+    String htmlTable = "<table><thead><tr><th>Path</th><th>Size</th><th>Actions</th></tr></thead><tbody>\n"
                        + listDirRecursiveHtml("/")
                        + "</tbody></table>";
-    server.send(200, "application/json", htmlTable);
+    server.send(200, "text/html", htmlTable);
 }
 
 // Function to handle factory reset
@@ -428,7 +429,7 @@ void webserverInit() {
     server.on("/app.json", HTTP_GET, handleAppJson);
     server.on("/space.json", HTTP_GET, handleSpaceJson);
     server.on("/brt.json", HTTP_GET, handleBrtJson);
-    server.on("/version.json", HTTP_GET, handleVersionJson);
+    server.on("/v.json", HTTP_GET, handleVersionJson);
     server.on("/message.json", HTTP_GET, handleMessageJson);
 
     server.on("/filelist", HTTP_GET, handleFileList);
