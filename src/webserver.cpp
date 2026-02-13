@@ -2,6 +2,7 @@
 #include "config.h"
 #include "display.h"
 #include "settings.h"
+#include "themes/notification.h"
 #include "main.h"
 #include "logger.h"
 #include <LittleFS.h>
@@ -14,12 +15,13 @@
 ESP8266WebServer server(WEB_SERVER_PORT);
 
 extern Settings appSettings;
+extern NotificationState notificationState;
 
 // File upload buffer
 File uploadFile;
 
 void handleAppJson() {
-    StaticJsonDocument<128> doc;
+    JsonDocument doc;
     doc["theme"] = displayState.theme;
     doc["img"] = displayState.image;
     doc["tz"] = appSettings.tz;
@@ -34,7 +36,7 @@ void handleSpaceJson() {
     FSInfo fs_info;
     LittleFS.info(fs_info);
 
-    StaticJsonDocument<64> doc;
+    JsonDocument doc;
     doc["total"] = fs_info.totalBytes;
     doc["free"] = fs_info.totalBytes - fs_info.usedBytes;
     String json;
@@ -43,7 +45,7 @@ void handleSpaceJson() {
 }
 
 void handleBrtJson() {
-    StaticJsonDocument<32> doc;
+    JsonDocument doc;
     doc["brt"] = appSettings.brightness;
     String json;
     serializeJson(doc, json);
@@ -51,7 +53,7 @@ void handleBrtJson() {
 }
 
 void handleVersionJson() {
-    StaticJsonDocument<64> doc;
+    JsonDocument doc;
     doc["m"] = "aydarik";
     doc["v"] = FIRMWARE_VERSION_STRING;
     String json;
@@ -60,88 +62,69 @@ void handleVersionJson() {
 }
 
 void handleMessageJson() {
-    StaticJsonDocument<512> doc;
-    doc["msg"] = displayState.message;
+    JsonDocument doc;
+    doc["msg"] = notificationState.message;
+    doc["sbj"] = notificationState.subject;
+    doc["style"] = notificationState.style;
     String json;
     serializeJson(doc, json);
     server.send(200, "application/json", json);
 }
 
 void handleSet() {
-    bool updated = false;
-
-    if (server.hasArg("brt")) {
+    if (server.hasArg("msg")) {
+        if (server.hasArg("sbj")) {
+            strncpy(notificationState.subject, server.arg("sbj").c_str(), sizeof(notificationState.subject));
+            notificationState.subject[sizeof(notificationState.subject) - 1] = '\0'; // Ensure null-termination
+        } else {
+            notificationState.subject[0] = '\0';
+        }
+        if (server.hasArg("style")) {
+            strncpy(notificationState.style, server.arg("style").c_str(), sizeof(notificationState.style));
+            notificationState.style[sizeof(notificationState.style) - 1] = '\0'; // Ensure null-termination
+        } else {
+            notificationState.style[0] = '\0';
+        }
+        strncpy(notificationState.message, server.arg("msg").c_str(), sizeof(notificationState.message));
+        notificationState.message[sizeof(notificationState.message) - 1] = '\0'; // Ensure null-termination
+        displayUpdate(2);
+    } else if (server.hasArg("brt")) {
         appSettings.brightness = server.arg("brt").toInt();
         displaySetBrightness(appSettings.brightness);
         settingsSave(appSettings);
-        updated = true;
-    }
-
-    if (server.hasArg("theme")) {
-        displayState.theme = server.arg("theme").toInt();
-        displayUpdate();
-        updated = true;
-    }
-
-    if (server.hasArg("img")) {
+    } else if (server.hasArg("theme")) {
+        displayUpdate(server.arg("theme").toInt());
+    } else if (server.hasArg("img")) {
         strncpy(displayState.image, server.arg("img").c_str(), sizeof(displayState.image));
         displayState.image[sizeof(displayState.image) - 1] = '\0'; // Ensure null-termination
-        displayState.theme = 3;
-        displayUpdate();
-        updated = true;
-    }
-
-    if (server.hasArg("msg")) {
-        strncpy(displayState.message, server.arg("msg").c_str(), sizeof(displayState.message));
-        displayState.message[sizeof(displayState.message) - 1] = '\0'; // Ensure null-termination
-        displayState.theme = 2;
-        displayUpdate();
-        updated = true;
-    }
-
-    if (server.hasArg("tz")) {
-        strncpy(appSettings.tz, server.arg("tz").c_str(), sizeof(appSettings.tz));
-        appSettings.tz[sizeof(appSettings.tz) - 1] = '\0'; // Ensure null-termination
-
-        setenv("TZ", appSettings.tz, 1);
-        tzset();
-
-        if (displayState.theme == 1) {
-            displayUpdate();
-        }
-        settingsSave(appSettings);
-        updated = true;
-    }
-
-    if (server.hasArg("ip")) {
+        displayUpdate(3);
+    } else if (server.hasArg("ip")) {
         appSettings.showIP = server.arg("ip") != "false";
         if (displayState.theme == 1) {
             displayUpdate();
         }
         settingsSave(appSettings);
-        updated = true;
-    }
-
-    if (server.hasArg("sec")) {
+    } else if (server.hasArg("sec")) {
         appSettings.showSec = server.arg("sec") != "false";
         if (displayState.theme == 1) {
             displayUpdate();
         }
         settingsSave(appSettings);
-        updated = true;
-    }
-
-    if (server.hasArg("clear")) {
-        if (server.arg("clear") == "image") {
-            Dir dir = LittleFS.openDir(IMAGE_DIR);
-            while (dir.next()) {
-                LittleFS.remove(dir.fileName());
-            }
-            updated = true;
+    } else if (server.hasArg("tz")) {
+        strncpy(appSettings.tz, server.arg("tz").c_str(), sizeof(appSettings.tz));
+        appSettings.tz[sizeof(appSettings.tz) - 1] = '\0'; // Ensure null-termination
+        setenv("TZ", appSettings.tz, 1);
+        tzset();
+        if (displayState.theme == 1) {
+            displayUpdate();
         }
+        settingsSave(appSettings);
+    } else {
+        server.send(400, "text/plain", "No action");
+        return;
     }
 
-    server.send(200, "text/plain", updated ? "OK" : "No action");
+    server.send(200, "text/plain", "OK");
 }
 
 void handleTest() {
@@ -309,24 +292,20 @@ void handleLog() {
 }
 
 void handleWiFiScan() {
-    logPrint(F("Starting WiFi scan..."));
+    const int numNetworks = WiFi.scanNetworks(false, true);
 
-    int numNetworks = WiFi.scanNetworks(false, true);
-
-    String json = "[";
+    JsonDocument docRoot;
     for (int i = 0; i < numNetworks; i++) {
-        if (i > 0) json += ",";
-        json += "{";
-        json += "\"ssid\":\"" + WiFi.SSID(i) + "\",";
-        json += "\"rssi\":" + String(WiFi.RSSI(i)) + ",";
-        json += "\"encryption\":" + String(WiFi.encryptionType(i));
-        json += "}";
+        JsonDocument doc;
+        doc["ssid"] = WiFi.SSID(i);
+        doc["rssi"] = WiFi.RSSI(i);
+        docRoot.add(doc);
     }
-    json += "]";
 
     WiFi.scanDelete(); // Clear scan results
-    logPrintf("WiFi scan complete. Found %d networks", numNetworks);
 
+    String json;
+    serializeJson(docRoot, json);
     server.send(200, "application/json", json);
 }
 

@@ -218,12 +218,12 @@
             <div id="scanStatus"></div>
             <div id="wifiSection" style="display: none; margin-top: 15px;">
                 <div class="input-group">
-                    <label for="wifiNetwork">Select Network:</label>
+                    <label for="wifiNetwork">Network:</label>
                     <select id="wifiNetwork"></select>
                 </div>
                 <div class="input-group">
                     <label for="wifiPassword">Password:</label>
-                    <input type="password" id="wifiPassword" placeholder="Enter WiFi password"/>
+                    <input type="password" id="wifiPassword"/>
                 </div>
                 <button class="button" onclick="connectWiFi()">Connect</button>
             </div>
@@ -244,29 +244,39 @@
         <div class="card-header">Settings</div>
         <div class="card-body">
             <div class="input-group">
-                <div><input type="checkbox" id="showIP" onchange="setShowIP()"> Show IP address</div>
-                <div><input type="checkbox" id="showSec" onchange="setShowSeconds()"> Show seconds</div>
+                <div><input type="checkbox" id="showIP" onchange="setShowIP()"/> Show IP address</div>
+                <div><input type="checkbox" id="showSec" onchange="setShowSeconds()"/> Show seconds</div>
             </div>
             <div class="input-group">
                 <label for="brightness">Brightness: <span id="brightnessValue">0</span>%</label>
                 <input type="range" id="brightness" min="0" max="100" value="0" onchange="setBrightness()"
-                       oninput="document.getElementById('brightnessValue').innerText = this.value">
+                       oninput="document.getElementById('brightnessValue').innerText = this.value"/>
             </div>
             <div class="input-group">
                 <label for="tz">Timezone:</label>
-                <input type="text" id="tz">
+                <input type="text" id="tz"/>
                 <button class="button" onclick="setTimezone()">Set Timezone</button>
             </div>
         </div>
     </div>
     <div class="card">
-        <div class="card-header">Custom Message</div>
+        <div class="card-header">Notification</div>
         <div class="card-body">
             <div class="input-group">
+                <label for="customStyle">Style:</label>
+                <select id="customStyle">
+                    <option selected>Default</option>
+                    <option value="center">Center</option>
+                    <option value="big_num">Big number</option>
+                </select>
+                <div class="spacer"></div>
+                <label for="customSubject">Subject:</label>
+                <input type="text" id="customSubject"/>
+                <div class="spacer"></div>
                 <label for="customMessage">Message:</label>
                 <textarea id="customMessage" rows="5" cols="33"></textarea>
             </div>
-            <button class="button" onclick="sendCustomMessage()">Send</button>
+            <button class="button" onclick="sendCustomNotification()">Send</button>
         </div>
     </div>
     <div class="card">
@@ -315,24 +325,29 @@
 
     function setTimezone() {
         var tz = document.getElementById("tz").value;
-        fetch('/set?tz=' + tz).then(response => response.text()).then(data => alert('Timezone set: ' + data)).catch(error => console.error('Error:', error));
+        fetch('/set?tz=' + encodeURIComponent(tz)).then(response => response.text()).then(data => alert('Timezone set: ' + data)).catch(error => console.error('Error:', error));
     }
 
     function displayImage(imagePath) {
-        fetch('/set?img=' + imagePath).catch(error => console.error('Error:', error));
+        fetch('/set?img=' + encodeURIComponent(imagePath)).catch(error => console.error('Error:', error));
     }
 
     function deleteImage(imagePath) {
-        fetch('/delete?file=' + imagePath).then(_ => loadData()).catch(error => console.error('Error:', error));
+        fetch('/delete?file=' + encodeURIComponent(imagePath)).then(_ => loadData()).catch(error => console.error('Error:', error));
     }
 
     function setTheme(id) {
         fetch('/set?theme=' + id).then(_ => document.getElementById('currentTheme').textContent = id).catch(error => console.error('Error:', error));
     }
 
-    function sendCustomMessage() {
-        const customMessage = document.getElementById('customMessage').value.replaceAll("\n", "%0A");
-        fetch('/set?msg=' + customMessage).catch(error => console.error('Error:', error));
+    function sendCustomNotification() {
+        const customStyle = document.getElementById('customStyle').value;
+        const customSubject = document.getElementById('customSubject').value;
+        const customMessage = document.getElementById('customMessage').value;
+        fetch('/set?msg=' + encodeURIComponent(customMessage)
+            + '&sbj=' + encodeURIComponent(customSubject)
+            + '&style=' + encodeURIComponent(customStyle)
+        ).catch(error => console.error('Error:', error));
     }
 
     function displayTestImage() {
@@ -346,28 +361,32 @@
     }
 
     function scanWiFi() {
-        document.getElementById('scanStatus').textContent = 'Scanning for networks...';
+        const statusElement = document.getElementById('scanStatus')
+        statusElement.textContent = 'Scanning for networks...';
+        const selectElement = document.getElementById('wifiNetwork');
+        while (selectElement.firstChild) {
+            selectElement.removeChild(selectElement.lastChild);
+        }
         document.getElementById('wifiSection').style.display = 'none';
         fetch('/scan').then(response => response.json()).then(data => {
             if (data.length === 0) {
                 document.getElementById('scanStatus').textContent = 'No networks found';
                 return;
             }
-            const select = document.getElementById('wifiNetwork');
-            select.innerHTML = '<option value="">--Select a network--</option>';
+            data.sort((a, b) => b.rssi - a.rssi);
             data.forEach(network => {
                 if (network.ssid && network.ssid.trim() !== '') {
-                    const option = document.createElement('option');
-                    option.value = network.ssid;
-                    option.textContent = network.ssid;
-                    select.appendChild(option);
+                    const optionElement = document.createElement('option');
+                    optionElement.value = network.ssid;
+                    optionElement.textContent = network.ssid;
+                    selectElement.appendChild(optionElement);
                 }
             });
-            document.getElementById('scanStatus').textContent = `Found ${data.length} network(s)`;
+            statusElement.textContent = `Found ${data.length} network(s)`;
             document.getElementById('wifiSection').style.display = 'block';
         }).catch(error => {
             console.error('Error:', error);
-            document.getElementById('scanStatus').textContent = 'Scan failed';
+            statusElement.textContent = 'Scan failed';
         });
     }
 
@@ -428,9 +447,13 @@
         });
 
         fetch('/message.json').then(response => response.json()).then(data => {
+            document.getElementById("customStyle").value = data.style;
+            document.getElementById("customSubject").value = data.sbj;
             document.getElementById("customMessage").value = data.msg;
         }).catch(error => {
             console.error('Error fetching custom message:', error);
+            document.getElementById("customStyle").value = '';
+            document.getElementById("customSubject").value = '';
             document.getElementById("customMessage").value = '';
         });
 

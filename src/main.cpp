@@ -213,14 +213,16 @@ void setup() {
     strncpy(displayState.ipInfo, WiFi.localIP().toString().c_str(), sizeof(displayState.ipInfo));
     displayState.ipInfo[sizeof(displayState.ipInfo) - 1] = '\0';
 
-    if (displayState.theme == 0) {
+    // Stop setup if in service mode
+    if (displayState.theme < 0) {
         return;
     }
 
     // NTP initialization
     configTzTime(appSettings.tz, NTP_SERVER); // Set timezone and NTP server for system time
+    yield();
 
-    displayUpdate();
+    displayUpdate(1);
     lastDisplayUpdate = millis();
 
     logPrint("Setup complete");
@@ -236,8 +238,8 @@ void loop() {
         Serial.println(F("Power cycle counter cleared after successful boot"));
     }
 
-    // Don't cycle pages if in AP mode
-    if (displayState.theme != 0) {
+    // Cycle pages only if not in service mode
+    if (displayState.theme >= 0) {
         // Handle button presses
         const ButtonPress buttonPress = buttonUpdate();
         if (buttonPress == BUTTON_SHORT) {
@@ -255,7 +257,7 @@ void loop() {
 
     // Automatic screen updates for clock rendering
     if (displayState.theme == 1 && millis() - lastDisplayUpdate > DISPLAY_UPDATE_INTERVAL) {
-        displayUpdate(false);
+        displayUpdate(0, false);
         lastDisplayUpdate = millis();
     }
 

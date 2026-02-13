@@ -8,7 +8,7 @@ void themeRenderAPMode(const char *ssid, const char *pass) {
     tft.fillScreen(TFT_BLACK);
     tft.setTextDatum(TC_DATUM);
 
-    int currentX = tft.width() / 2;
+    const int currentX = tft.width() / 2;
     int currentY = 10; // Start from top with small margin
 
     // Display IP Info at the top (small font)

@@ -4,6 +4,7 @@
 #include "settings.h"
 #include "themes/clock.h"
 #include "themes/ap.h"
+#include "themes/notification.h"
 #include <LittleFS.h>
 #include <TJpg_Decoder.h>
 #include <ESP8266WiFi.h>
@@ -30,11 +31,6 @@ void displayInit() {
     TJpgDec.setSwapBytes(true);
     TJpgDec.setCallback(tft_output);
 
-    displayState.theme = 1;
-    displayState.ipInfo[0] = '\0';
-    displayState.image[0] = '\0';
-    displayState.message[0] = '\0';
-
     // Backlight on (inverted PWM: low value = bright)
     pinMode(PIN_BACKLIGHT, OUTPUT);
     analogWriteFreq(1000); // Zet PWM frequency
@@ -60,7 +56,6 @@ void displaySetBrightness(int brightness) {
     }
 
     analogWrite(PIN_BACKLIGHT, pwmValue);
-    logPrintf("Brightness: %d%%", brightness);
 }
 
 void displayTest() {
@@ -83,11 +78,6 @@ void displayTest() {
 
     displayUpdate();
 }
-
-void displayRenderMessage() {
-    displayShowMessage(String(displayState.message));
-}
-
 
 void displayRenderImage() {
     const char *path = displayState.image;
@@ -121,13 +111,17 @@ void displayRenderImage() {
     jpgFile.close(); // Close the file after decoding attempt
 }
 
-void displayUpdate(bool forceClear) {
-    if (displayState.theme == 1) {
-        themeRenderClock(forceClear);
-    } else if (displayState.theme == 2) {
-        displayRenderMessage();
+void displayUpdate(const int theme, const bool forceClear) {
+    if (theme > 0) {
+        displayState.theme = theme;
+    }
+
+    if (displayState.theme == 2) {
+        themeRenderNotification();
     } else if (displayState.theme == 3) {
         displayRenderImage();
+    } else {
+        themeRenderClock(forceClear);
     }
 }
 
@@ -136,17 +130,18 @@ void displayShowMessage(const String &msg) {
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
     tft.setTextDatum(MC_DATUM);
 
-    int startY = tft.height() / 2; // Starting Y position, will be adjusted
+    int currentY = tft.height() / 2; // Starting Y position, will be adjusted
     constexpr int font = FONT_DEFAULT;
+    constexpr int linesOffset = 8;
 
     // Calculate line height based on the font
     tft.setTextFont(font); // Set font for height calculation
-    const int lineHeight = tft.fontHeight();
+    const unsigned int lineHeight = tft.fontHeight();
 
-    // Split message by newline characters first
+    // Split message by newline characters
     std::vector<String> linesToProcess;
-    int prev = 0;
-    for (size_t i = 0; i < msg.length(); i++) {
+    unsigned int prev = 0;
+    for (unsigned int i = 0; i < msg.length(); i++) {
         if (msg.charAt(i) == '\n') {
             linesToProcess.push_back(msg.substring(prev, i));
             prev = i + 1;
@@ -154,23 +149,21 @@ void displayShowMessage(const String &msg) {
     }
     linesToProcess.push_back(msg.substring(prev)); // Add the last part
 
-    constexpr int linesOffset = 8;
-
     // Adjust startY to vertically center the block of text
-    const size_t linesCnt = linesToProcess.size();
-    startY -= linesCnt * (lineHeight + linesOffset) / 2;
+    const unsigned int linesCnt = linesToProcess.size();
+    currentY -= linesCnt * (lineHeight + linesOffset) / 2;
 
     // Draw each wrapped line
     tft.startWrite();
-    for (size_t i = 0; i < linesCnt; i++) {
-        tft.drawString(linesToProcess[i], tft.width() / 2, startY + i * (lineHeight + linesOffset), font);
+    for (unsigned int i = 0; i < linesCnt; i++) {
+        tft.drawString(linesToProcess[i], tft.width() / 2, currentY + i * (lineHeight + linesOffset), font);
     }
     tft.endWrite();
 }
 
 void displayShowAPScreen(const char *ssid, const char *password, const char *ip) {
     logPrint(F("Switching to AP screen"));
-    displayState.theme = 0;
+    displayState.theme = -1;
 
     strncpy(displayState.ipInfo, ip, sizeof(displayState.ipInfo));
     displayState.ipInfo[sizeof(displayState.ipInfo) - 1] = '\0'; // Ensure null-termination
@@ -184,18 +177,15 @@ void displayCycleNextPage() {
         // Currently showing clock, try to switch to image if available
         if (displayState.image[0] != '\0' && LittleFS.exists(displayState.image)) {
             logPrint(F("Cycling to image page"));
-            displayState.theme = 3;
+            displayUpdate(3);
         } else {
             logPrint(F("No image available, staying on clock page"));
         }
     } else {
         // Currently showing image, switch back to clock
         logPrint(F("Cycling to clock page"));
-        displayState.theme = 1;
+        displayUpdate(1);
     }
-
-    // Immediately update the display
-    displayUpdate();
 }
 
 // Track backlight state for toggle functionality

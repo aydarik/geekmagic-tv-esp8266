@@ -60,7 +60,7 @@ void themeRenderClock(const bool forceClear) {
     if (appSettings.showSec) {
         char currentSeconds[4];
         getSeconds(currentSeconds, sizeof(currentSeconds), timeinfo);
-        tft.drawString(String(currentSeconds), currentX + 70, currentY + 27, FONT_DEFAULT);
+        tft.drawString(String(currentSeconds), currentX + 71, currentY + 27, FONT_DEFAULT);
     }
 
     // Draw date
