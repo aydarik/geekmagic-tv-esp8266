@@ -2,6 +2,7 @@
 #include "config.h"
 #include "display.h"
 #include "settings.h"
+#include "main.h"
 #include "logger.h"
 #include <LittleFS.h>
 #include <ArduinoJson.h>
@@ -23,6 +24,7 @@ void handleAppJson() {
     doc["img"] = displayState.image;
     doc["tz"] = appSettings.tz;
     doc["showIP"] = appSettings.showIP;
+    doc["showSec"] = appSettings.showSec;
     String json;
     serializeJson(doc, json);
     server.send(200, "application/json", json);
@@ -113,6 +115,15 @@ void handleSet() {
 
     if (server.hasArg("ip")) {
         appSettings.showIP = server.arg("ip") != "false";
+        if (displayState.theme == 1) {
+            displayUpdate();
+        }
+        settingsSave(appSettings);
+        updated = true;
+    }
+
+    if (server.hasArg("sec")) {
+        appSettings.showSec = server.arg("sec") != "false";
         if (displayState.theme == 1) {
             displayUpdate();
         }
@@ -243,28 +254,7 @@ void handleFileList() {
 void handleFactoryReset() {
     server.send(200, "text/plain", "Factory Reset triggered. Clearing data and restarting...");
     delay(100); // Give time for response to send
-
-    displayShowMessage(F("Performing\nfactory reset..."));
-
-    // Factory reset sequence
-    WiFi.disconnect(true);
-    delay(500);
-    wifiManager.resetSettings();
-    delay(500);
-
-    ESP.eraseConfig();
-    delay(500);
-
-    settingsReset(appSettings);
-    delay(500);
-
-    LittleFS.format();
-    delay(500);
-
-    Serial.println(F("Factory reset complete. Rebooting..."));
-    displayShowMessage(F("Success!\nRebooting..."));
-    delay(2000);
-    ESP.restart();
+    factoryReset();
 }
 
 void handleOTAForm() {

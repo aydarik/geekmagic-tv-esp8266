@@ -8,8 +8,6 @@ void webserverInit();
 
 void webserverHandle();
 
-void handleRoot();
-
 extern ESP8266WebServer server;
 extern WiFiManager wifiManager; // Declare WiFiManager object as extern
 

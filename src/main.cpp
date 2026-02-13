@@ -3,6 +3,7 @@
 #include <WiFiManager.h>
 #include <ArduinoOTA.h>
 #include <LittleFS.h>
+#include "main.h"
 #include "config.h"
 #include "display.h"
 #include "webserver.h"
@@ -25,7 +26,6 @@ bool tryConnectWiFi(int maxAttempts) {
 
     for (int attempt = 1; attempt <= maxAttempts; attempt++) {
         Serial.printf("WiFi attempt %d/%d\n", attempt, maxAttempts);
-
         WiFi.mode(WIFI_STA);
         WiFi.begin();
 
@@ -63,83 +63,38 @@ bool tryConnectWiFi(int maxAttempts) {
     return false;
 }
 
-void setupWiFi() {
-    Serial.println(F("=== WiFi Setup Start ==="));
+void startAPMode() {
+    Serial.println(F("Entering failsafe AP mode"));
+    WiFi.disconnect(true);
+    yield();
+    WiFi.mode(WIFI_AP);
+    yield();
+    WiFi.softAP(WIFI_AP_NAME, WIFI_AP_PASSWORD);
 
+    Serial.printf("Failsafe AP started\n");
+    Serial.printf("  SSID: %s\n", WIFI_AP_NAME);
+    Serial.printf("  Password: %s\n", WIFI_AP_PASSWORD);
+    Serial.printf("  IP: %s\n", WiFi.softAPIP().toString().c_str());
+    displayShowAPScreen(WIFI_AP_NAME, WIFI_AP_PASSWORD, WiFi.softAPIP().toString().c_str());
+}
+
+void setupWiFi() {
+    Serial.println(F("Starting WiFi Setup..."));
     // Check if WiFi credentials are saved BEFORE attempting connection
-    const String ssid = WiFi.SSID();
-    // Flag to indicate if we need to proceed to the Failsafe AP section
-    bool needsFailsafeAP = false;
-    if (ssid.isEmpty() || ssid.length() == 0) {
+    if (const String ssid = WiFi.SSID(); ssid.isEmpty() || ssid.length() == 0) {
         Serial.println(F("No saved WiFi credentials - going directly to failsafe AP"));
-        needsFailsafeAP = true;
+        startAPMode();
     } else {
         // Try to connect to saved WiFi credentials with retry
         Serial.println(F("Attempting to connect with saved credentials..."));
         if (tryConnectWiFi(WIFI_RETRY_ATTEMPTS)) {
             Serial.println(F("Connected successfully!"));
-            return; // Exit setupWiFi as connection is established
-        }
-
-        // Connection failed, try WiFiManager config portal
-        Serial.println(F("WiFi connection failed - attempting WiFiManager config portal"));
-        displayShowMessage(F("WiFi Failed!\nStarting AP..."));
-        delay(2000);
-        // Set timeout - don't reset settings, let WiFiManager try saved credentials first
-        wifiManager.setConfigPortalTimeout(WIFI_TIMEOUT);
-        Serial.printf("Starting WiFiManager autoConnect (timeout: %d seconds)...\n", WIFI_TIMEOUT);
-        displayShowMessage(F("Config Portal\nStarting..."));
-        yield();
-
-        // Try autoConnect with error handling
-        Serial.println(F("Calling wifiManager.autoConnect()..."));
-        const bool connectedViaManager = wifiManager.autoConnect(WIFI_AP_NAME, WIFI_AP_PASSWORD);
-        yield();
-
-        Serial.printf("autoConnect returned: %s\n", connectedViaManager ? "true" : "false");
-        if (!connectedViaManager) {
-            needsFailsafeAP = true;
         } else {
-            Serial.println(F("WiFiManager connected successfully!"));
-            displayShowMessage(WiFi.localIP().toString());
-            delay(2000);
-            return; // Exit setupWiFi as connection is established via manager
+            Serial.println(F("No saved WiFi credentials - going directly to failsafe AP"));
+            startAPMode();
         }
     }
-
-    // This block is executed only if needsFailsafeAP is true
-    if (needsFailsafeAP) {
-        Serial.println(F("Entering failsafe AP mode"));
-
-        // Ensure WiFi is in AP mode
-        WiFi.disconnect(true);
-        yield();
-        WiFi.mode(WIFI_AP);
-        yield();
-
-        Serial.printf("Attempting to start AP: SSID='%s', Password='%s'\n", WIFI_AP_NAME, WIFI_AP_PASSWORD);
-        bool apStarted = WiFi.softAP(WIFI_AP_NAME, WIFI_AP_PASSWORD);
-        Serial.printf("AP Start result: %s\n", apStarted ? "SUCCESS" : "FAILED");
-        if (!apStarted) {
-            // If AP failed to start, try one more time after delay
-            Serial.println(F("AP start failed, retrying after delay..."));
-            delay(2000);
-            WiFi.mode(WIFI_OFF);
-            delay(500);
-            WiFi.mode(WIFI_AP);
-            delay(500);
-            apStarted = WiFi.softAP(WIFI_AP_NAME, WIFI_AP_PASSWORD);
-            Serial.printf("Retry AP Start result: %s\n", apStarted ? "SUCCESS" : "FAILED");
-        }
-
-        Serial.printf("Failsafe AP started\n");
-        Serial.printf("  SSID: %s\n", WIFI_AP_NAME);
-        Serial.printf("  Password: %s\n", WIFI_AP_PASSWORD);
-        Serial.printf("  IP: %s\n", WiFi.softAPIP().toString().c_str());
-        displayShowAPScreen(WIFI_AP_NAME, WIFI_AP_PASSWORD, WiFi.softAPIP().toString().c_str());
-    }
-
-    Serial.println(F("=== WiFi Setup Complete ==="));
+    Serial.println(F("WiFi setup completed"));
 }
 
 void setupOTA() {
@@ -186,7 +141,7 @@ void setupFilesystem() {
         displayShowMessage(F("Formatting FS..."));
         LittleFS.format(); // Format LittleFS if mounting fails
         Serial.println(F("LittleFS formatted. Restarting..."));
-        delay(3000);
+        delay(2000);
         ESP.restart(); // Restart after formatting
     }
 
@@ -195,6 +150,29 @@ void setupFilesystem() {
     }
 
     Serial.println(F("LittleFS ready"));
+}
+
+void factoryReset() {
+    displayShowMessage(F("Performing\nfactory reset..."));
+
+    WiFi.disconnect(true);
+    yield();
+    wifiManager.resetSettings();
+    yield();
+
+    ESP.eraseConfig();
+    yield();
+
+    settingsReset(appSettings);
+    powerCycleCounterReset();
+
+    LittleFS.format();
+    yield();
+
+    Serial.println(F("Factory reset complete. Rebooting..."));
+    displayShowMessage(F("Success!\nRebooting..."));
+    delay(2000);
+    ESP.restart();
 }
 
 void setup() {
@@ -219,30 +197,7 @@ void setup() {
     // Check for user-initiated factory reset (5 quick power cycles)
     if (powerCycleCounterCheckReset()) {
         Serial.println(F("USER RESET: 5 quick power cycles detected!"));
-        displayShowMessage(F("Performing\nfactory reset..."));
-
-        // Factory reset sequence
-        WiFi.disconnect(true);
-        delay(500);
-        wifiManager.resetSettings();
-        delay(500);
-
-        ESP.eraseConfig();
-        delay(500);
-
-        settingsReset(appSettings);
-        delay(500);
-
-        LittleFS.format();
-        delay(500);
-
-        powerCycleCounterReset();
-        delay(500);
-
-        Serial.println(F("Factory reset complete. Rebooting..."));
-        displayShowMessage(F("Success!\nRebooting..."));
-        delay(2000);
-        ESP.restart();
+        factoryReset();
         return;
     }
 
@@ -284,7 +239,7 @@ void loop() {
     // Don't cycle pages if in AP mode
     if (displayState.theme != 0) {
         // Handle button presses
-        ButtonPress buttonPress = buttonUpdate();
+        const ButtonPress buttonPress = buttonUpdate();
         if (buttonPress == BUTTON_SHORT) {
             displayCycleNextPage();
             return;
@@ -304,6 +259,5 @@ void loop() {
         lastDisplayUpdate = millis();
     }
 
-    // Delay to save some CPU
-    delay(100);
+    yield();
 }

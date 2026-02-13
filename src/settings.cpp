@@ -41,6 +41,7 @@ void settingsReset(Settings &settings) {
     settings.tz[sizeof(settings.tz) - 1] = '\0'; // Ensure null-termination
 
     settings.showIP = true;
+    settings.showSec = true;
 
     settingsSave(settings);
 }

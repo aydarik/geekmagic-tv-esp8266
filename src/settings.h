@@ -17,6 +17,7 @@ struct Settings {
     int brightness;
     char tz[64];
     bool showIP;
+    bool showSec;
 };
 
 // Power cycle reset structure (user-initiated factory reset)

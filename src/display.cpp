@@ -2,17 +2,12 @@
 #include "config.h"
 #include "logger.h"
 #include "settings.h"
+#include "themes/clock.h"
+#include "themes/ap.h"
 #include <LittleFS.h>
 #include <TJpg_Decoder.h>
 #include <ESP8266WiFi.h>
 #include <vector>
-#include <ctime> // For time and date functions
-
-// Font size definitions for clarity
-#define FONT_INFO 1      // Small font for IP addresses, etc.
-#define FONT_MESSAGE 2   // Font for messages and labels
-#define FONT_DEFAULT 4   // Default font size for various things
-#define FONT_TIME 7      // Large font for the main clock time (7-segment, digits only)
 
 TFT_eSPI tft = TFT_eSPI();
 
@@ -24,28 +19,6 @@ bool tft_output(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t *bitmap) 
     if (y >= tft.height()) return false;
     tft.pushImage(x, y, w, h, bitmap);
     return true;
-}
-
-void getFormattedTime(char *buffer, size_t bufferSize) {
-    time_t now;
-    tm timeinfo;
-    time(&now);
-    localtime_r(&now, &timeinfo);
-
-    // H:M\0
-    strftime(buffer, bufferSize, "%H:%M", &timeinfo);
-    buffer[bufferSize - 1] = '\0'; // Ensure null-termination
-}
-
-void getFormattedDate(char *buffer, size_t bufferSize) {
-    time_t now;
-    tm timeinfo;
-    time(&now);
-    localtime_r(&now, &timeinfo);
-
-    // d-m-Y\0
-    strftime(buffer, bufferSize, "%d-%m-%Y", &timeinfo);
-    buffer[bufferSize - 1] = '\0'; // Ensure null-termination
 }
 
 void displayInit() {
@@ -90,13 +63,6 @@ void displaySetBrightness(int brightness) {
     logPrintf("Brightness: %d%%", brightness);
 }
 
-int getWiFiSignalPercent() {
-    const long rssi = WiFi.RSSI();
-    if (rssi <= -100) return 0;
-    if (rssi >= -50) return 100;
-    return 2 * (rssi + 100);
-}
-
 void displayTest() {
     logPrint(F("Testing colors..."));
     tft.fillScreen(TFT_RED);
@@ -118,96 +84,10 @@ void displayTest() {
     displayUpdate();
 }
 
-void displayRenderClock() {
-    int currentX = tft.width() / 2;
-    int currentY = 10; // Start from top with small margin
-
-    // Display IP Info at the top (small font)
-    if (appSettings.showIP) {
-        tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
-        tft.setTextDatum(TC_DATUM);
-        constexpr int ipFont = FONT_INFO; // Small font
-        tft.setTextFont(ipFont);
-        const int ipLineHeight = tft.fontHeight();
-        tft.drawString(String(displayState.ipInfo), currentX, currentY, ipFont);
-        currentY += ipLineHeight; // Add spacing
-    }
-
-    // Draw time
-    currentY += 50;
-    tft.setTextDatum(TC_DATUM);
-    constexpr int timeFont = FONT_TIME;
-    tft.setTextFont(timeFont);
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    char currentTime[8];
-    getFormattedTime(currentTime, sizeof(currentTime));
-    tft.drawString(String(currentTime), currentX, currentY, timeFont);
-
-    // Draw date
-    currentY += 80;
-    constexpr int dateFont = FONT_DEFAULT;
-    tft.setTextFont(dateFont);
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    char currentDate[16];
-    getFormattedDate(currentDate, sizeof(currentDate));
-    tft.drawString(String(currentDate), currentX, currentY, dateFont);
-}
-
 void displayRenderMessage() {
     displayShowMessage(String(displayState.message));
 }
 
-void displayRenderAPMode(const char *ssid, const char *pass) {
-    tft.fillScreen(TFT_BLACK);
-    tft.setTextDatum(TC_DATUM);
-
-    int currentX = tft.width() / 2;
-    int currentY = 10; // Start from top with small margin
-
-    // Display IP Info at the top (small font)
-    if (displayState.ipInfo[0] != '\0') {
-        tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
-        constexpr int ipFont = FONT_INFO; // Small font
-        tft.setTextFont(ipFont);
-        const int ipLineHeight = tft.fontHeight();
-        tft.drawString(String(displayState.ipInfo), currentX, currentY, ipFont);
-        currentY += ipLineHeight;
-    }
-
-    constexpr int headerFont = FONT_DEFAULT;
-    constexpr int labelFont = FONT_MESSAGE;
-    constexpr int valueFont = FONT_DEFAULT;
-
-    // Draw "AP Mode" header
-    currentY += 40;
-    tft.setTextFont(headerFont);
-    tft.setTextColor(TFT_CYAN, TFT_BLACK);
-    tft.drawString("AP Mode", currentX, currentY, headerFont);
-
-    // Draw SSID label
-    currentY += 40;
-    tft.setTextFont(labelFont);
-    tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
-    tft.drawString("SSID:", currentX, currentY, labelFont);
-
-    // Draw SSID value
-    currentY += 25;
-    tft.setTextFont(valueFont);
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.drawString(ssid, currentX, currentY, valueFont);
-
-    // Draw Password label
-    currentY += 40;
-    tft.setTextFont(labelFont);
-    tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
-    tft.drawString("Password:", currentX, currentY, labelFont);
-
-    // Draw Password value
-    currentY += 25;
-    tft.setTextFont(valueFont);
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.drawString(pass, currentX, currentY, valueFont);
-}
 
 void displayRenderImage() {
     const char *path = displayState.image;
@@ -243,10 +123,7 @@ void displayRenderImage() {
 
 void displayUpdate(bool forceClear) {
     if (displayState.theme == 1) {
-        if (forceClear) {
-            tft.fillScreen(TFT_BLACK);
-        }
-        displayRenderClock();
+        themeRenderClock(forceClear);
     } else if (displayState.theme == 2) {
         displayRenderMessage();
     } else if (displayState.theme == 3) {
@@ -298,7 +175,7 @@ void displayShowAPScreen(const char *ssid, const char *password, const char *ip)
     strncpy(displayState.ipInfo, ip, sizeof(displayState.ipInfo));
     displayState.ipInfo[sizeof(displayState.ipInfo) - 1] = '\0'; // Ensure null-termination
 
-    displayRenderAPMode(ssid, password);
+    themeRenderAPMode(ssid, password);
 }
 
 void displayCycleNextPage() {

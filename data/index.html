@@ -244,9 +244,8 @@
         <div class="card-header">Settings</div>
         <div class="card-body">
             <div class="input-group">
-                <label for="showIP">IP address on Clock screen:</label>
-                <input type="checkbox" id="showIP" onchange="setShowIP()">
-                Show IP address
+                <div><input type="checkbox" id="showIP" onchange="setShowIP()"> Show IP address</div>
+                <div><input type="checkbox" id="showSec" onchange="setShowSeconds()"> Show seconds</div>
             </div>
             <div class="input-group">
                 <label for="brightness">Brightness: <span id="brightnessValue">0</span>%</label>
@@ -307,6 +306,11 @@
     function setShowIP() {
         var val = document.getElementById("showIP").checked;
         fetch('/set?ip=' + val).catch(error => console.error('Error:', error));
+    }
+
+    function setShowSeconds() {
+        var val = document.getElementById("showSec").checked;
+        fetch('/set?sec=' + val).catch(error => console.error('Error:', error));
     }
 
     function setTimezone() {
@@ -396,6 +400,7 @@
             document.getElementById('currentTheme').textContent = data.theme;
             document.getElementById('tz').value = data.tz;
             document.getElementById('showIP').checked = data.showIP !== false;
+            document.getElementById('showSec').checked = data.showSec !== false;
         }).catch(error => {
             console.error('Error fetching app data:', error)
             document.getElementById('currentTheme').textContent = 'Unknown';
