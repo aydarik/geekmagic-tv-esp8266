@@ -255,6 +255,7 @@ void handleOTAUpload() {
 
     if (upload.status == UPLOAD_FILE_START) {
         Serial.printf("OTA Update Start: %s\n", upload.filename.c_str());
+        displayState.theme = -1;
         displayShowMessage("OTA Update...");
 
         const uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
@@ -389,7 +390,9 @@ void handleStatic() {
 }
 
 void handleRoot() {
-    server.send_P(200, "text/html", reinterpret_cast<const char *>(data_index_html), data_index_html_len);
+    server.sendHeader("Content-Encoding", "gzip");
+    server.sendHeader("Cache-Control", "max-age=600");
+    server.send_P(200, "text/html", reinterpret_cast<const char *>(src_generated_index_html_gz), src_generated_index_html_gz_len);
 }
 
 void webserverInit() {

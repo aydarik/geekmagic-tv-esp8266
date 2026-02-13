@@ -104,6 +104,7 @@ void setupOTA() {
     ArduinoOTA.onStart([] {
         const String type = ArduinoOTA.getCommand() == U_FLASH ? "firmware" : "filesystem";
         Serial.println("OTA Start: " + type);
+        displayState.theme = -1;
         displayShowMessage(F("OTA Update..."));
     });
 
