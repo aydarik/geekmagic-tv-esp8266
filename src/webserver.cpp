@@ -3,12 +3,13 @@
 #include "display.h"
 #include "settings.h"
 #include "themes/notification.h"
+#include "themes/countdown.h"
 #include "main.h"
 #include "logger.h"
 #include <LittleFS.h>
 #include <ArduinoJson.h>
 #include <ESP8266WebServer.h>
-#include <ESP8266WiFi.h>   // For WiFi.softAPIP()
+#include <ESP8266WiFi.h>
 
 #include "generated/index_html.h"
 
@@ -16,6 +17,7 @@ ESP8266WebServer server(WEB_SERVER_PORT);
 
 extern Settings appSettings;
 extern NotificationState notificationState;
+extern CountdownState countdownState;
 
 // File upload buffer
 File uploadFile;
@@ -71,23 +73,30 @@ void handleMessageJson() {
     server.send(200, "application/json", json);
 }
 
+void handleCountdownJson() {
+    JsonDocument doc;
+    doc["cnt"] = countdownState.datetime;
+    doc["sbj"] = countdownState.subject;
+    String json;
+    serializeJson(doc, json);
+    server.send(200, "application/json", json);
+}
+
 void handleSet() {
     if (server.hasArg("msg")) {
-        if (server.hasArg("sbj")) {
-            strncpy(notificationState.subject, server.arg("sbj").c_str(), sizeof(notificationState.subject));
-            notificationState.subject[sizeof(notificationState.subject) - 1] = '\0'; // Ensure null-termination
-        } else {
-            notificationState.subject[0] = '\0';
-        }
-        if (server.hasArg("style")) {
-            strncpy(notificationState.style, server.arg("style").c_str(), sizeof(notificationState.style));
-            notificationState.style[sizeof(notificationState.style) - 1] = '\0'; // Ensure null-termination
-        } else {
-            notificationState.style[0] = '\0';
-        }
+        strncpy(notificationState.subject, server.arg("sbj").c_str(), sizeof(notificationState.subject));
+        notificationState.subject[sizeof(notificationState.subject) - 1] = '\0'; // Ensure null-termination
+        strncpy(notificationState.style, server.arg("style").c_str(), sizeof(notificationState.style));
+        notificationState.style[sizeof(notificationState.style) - 1] = '\0'; // Ensure null-termination
         strncpy(notificationState.message, server.arg("msg").c_str(), sizeof(notificationState.message));
         notificationState.message[sizeof(notificationState.message) - 1] = '\0'; // Ensure null-termination
         displayUpdate(2);
+    } else if (server.hasArg("cnt")) {
+        strncpy(countdownState.subject, server.arg("sbj").c_str(), sizeof(countdownState.subject));
+        countdownState.subject[sizeof(countdownState.subject) - 1] = '\0'; // Ensure null-termination
+        strncpy(countdownState.datetime, server.arg("cnt").c_str(), sizeof(countdownState.datetime));
+        countdownState.datetime[sizeof(countdownState.datetime) - 1] = '\0'; // Ensure null-termination
+        displayUpdate(4);
     } else if (server.hasArg("brt")) {
         appSettings.brightness = server.arg("brt").toInt();
         displaySetBrightness(appSettings.brightness);
@@ -158,8 +167,6 @@ void handleFileUpload() {
             if (const size_t bytesWritten = uploadFile.write(upload.buf, upload.currentSize);
                 bytesWritten != upload.currentSize) {
                 logPrintf("WARNING: Only %u of %u bytes written to file!", bytesWritten, upload.currentSize);
-            } else {
-                logPrintf("INFO: Wrote %u bytes to file.", bytesWritten);
             }
         }
     } else if (upload.status == UPLOAD_FILE_END) {
@@ -392,7 +399,8 @@ void handleStatic() {
 void handleRoot() {
     server.sendHeader("Content-Encoding", "gzip");
     server.sendHeader("Cache-Control", "max-age=600");
-    server.send_P(200, "text/html", reinterpret_cast<const char *>(src_generated_index_html_gz), src_generated_index_html_gz_len);
+    server.send_P(200, "text/html", reinterpret_cast<const char *>(src_generated_index_html_gz),
+                  src_generated_index_html_gz_len);
 }
 
 void webserverInit() {
@@ -403,6 +411,7 @@ void webserverInit() {
     server.on("/brt.json", HTTP_GET, handleBrtJson);
     server.on("/v.json", HTTP_GET, handleVersionJson);
     server.on("/message.json", HTTP_GET, handleMessageJson);
+    server.on("/countdown.json", HTTP_GET, handleCountdownJson);
 
     server.on("/filelist", HTTP_GET, handleFileList);
     server.on("/delete", HTTP_GET, handleDelete);

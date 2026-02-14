@@ -5,6 +5,7 @@
 #include "themes/clock.h"
 #include "themes/ap.h"
 #include "themes/notification.h"
+#include "themes/countdown.h"
 #include <LittleFS.h>
 #include <TJpg_Decoder.h>
 #include <ESP8266WiFi.h>
@@ -59,7 +60,6 @@ void displaySetBrightness(int brightness) {
 }
 
 void displayTest() {
-    logPrint(F("Testing colors..."));
     tft.fillScreen(TFT_RED);
     delay(500);
     tft.fillScreen(TFT_GREEN);
@@ -70,7 +70,6 @@ void displayTest() {
     delay(500);
     tft.fillScreen(TFT_BLACK);
 
-    logPrint(F("Testing text..."));
     tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
     tft.setTextDatum(MC_DATUM);
     tft.drawString("HELLO WORLD!", 120, 120, FONT_DEFAULT);
@@ -89,12 +88,9 @@ void displayRenderImage() {
 
     File jpgFile = LittleFS.open(path, "r");
     if (!jpgFile) {
-        const String errorMsg = String(F("Failed to open image file: ")) + path;
-        displayShowMessage(errorMsg);
-        logPrint(errorMsg);
+        displayShowMessage(F("Failed to open\nimage file"));
         return;
     }
-    logPrint(String(F("INFO: Image file opened: ")) + path);
 
     // Direct image swap without clearing screen for smooth transitions
     // The new JPEG will overwrite the previous image directly
@@ -103,9 +99,7 @@ void displayRenderImage() {
     const JRESULT res = TJpgDec.drawFsJpg(0, 0, jpgFile);
     tft.endWrite();
     if (res != JDR_OK) {
-        const String errorMsg = String(F("JPEG Decode Failed\nCode: ")) + String(res);
-        displayShowMessage(errorMsg);
-        logPrint(errorMsg);
+        displayShowMessage(F("Failed to\ndecode JPEG"));
     }
 
     jpgFile.close(); // Close the file after decoding attempt
@@ -116,12 +110,19 @@ void displayUpdate(const int theme, const bool forceClear) {
         displayState.theme = theme;
     }
 
-    if (displayState.theme == 2) {
-        themeRenderNotification();
-    } else if (displayState.theme == 3) {
-        displayRenderImage();
-    } else {
-        themeRenderClock(forceClear);
+    switch (displayState.theme) {
+        case 2:
+            themeRenderNotification();
+            break;
+        case 3:
+            displayRenderImage();
+            break;
+        case 4:
+            themeRenderCountdown(forceClear);
+            break;
+        default:
+            themeRenderClock(forceClear);
+            break;
     }
 }
 
@@ -162,7 +163,6 @@ void displayShowMessage(const String &msg) {
 }
 
 void displayShowAPScreen(const char *ssid, const char *password, const char *ip) {
-    logPrint(F("Switching to AP screen"));
     displayState.theme = -1;
 
     strncpy(displayState.ipInfo, ip, sizeof(displayState.ipInfo));
@@ -176,14 +176,10 @@ void displayCycleNextPage() {
     if (displayState.theme == 1) {
         // Currently showing clock, try to switch to image if available
         if (displayState.image[0] != '\0' && LittleFS.exists(displayState.image)) {
-            logPrint(F("Cycling to image page"));
             displayUpdate(3);
-        } else {
-            logPrint(F("No image available, staying on clock page"));
         }
     } else {
         // Currently showing image, switch back to clock
-        logPrint(F("Cycling to clock page"));
         displayUpdate(1);
     }
 }
@@ -194,12 +190,10 @@ static bool backlightOn = true;
 void displayToggleBacklight() {
     if (backlightOn) {
         // Turn off backlight
-        logPrint(F("Backlight OFF"));
         displaySetBrightness(0);
         backlightOn = false;
     } else {
         // Turn on backlight
-        logPrint(F("Backlight ON"));
         displaySetBrightness(appSettings.brightness);
         backlightOn = true;
     }

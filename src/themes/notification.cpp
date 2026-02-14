@@ -20,7 +20,7 @@ void themeRenderNotification() {
     if (notificationState.subject[0] != '\0') {
         tft.setTextDatum(TC_DATUM);
         tft.setTextColor(TFT_ORANGE, TFT_BLACK);
-        tft.drawString(String(notificationState.subject), centerX, currentY, FONT_DEFAULT);
+        tft.drawString(notificationState.subject, centerX, currentY, FONT_DEFAULT);
         currentY = 40;
     }
 

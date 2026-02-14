@@ -226,7 +226,7 @@ void setup() {
     displayUpdate(1);
     lastDisplayUpdate = millis();
 
-    logPrint("Setup complete");
+    logPrint(F("Setup complete"));
     logPrintf("IP: %s", WiFi.localIP().toString().c_str());
 }
 
@@ -257,7 +257,7 @@ void loop() {
     webserverHandle();
 
     // Automatic screen updates for clock rendering
-    if (displayState.theme == 1 && millis() - lastDisplayUpdate > DISPLAY_UPDATE_INTERVAL) {
+    if ((displayState.theme == 1 || displayState.theme == 4) && millis() - lastDisplayUpdate > DISPLAY_UPDATE_INTERVAL) {
         displayUpdate(0, false);
         lastDisplayUpdate = millis();
     }

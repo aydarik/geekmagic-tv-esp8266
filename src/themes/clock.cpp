@@ -33,14 +33,14 @@ void themeRenderClock(const bool forceClear) {
         tft.fillScreen(TFT_BLACK);
     }
 
-    int currentX = tft.width() / 2;
+    const int centerX = tft.width() / 2;
     int currentY = 10; // Start from top with small margin
     tft.setTextDatum(TC_DATUM);
 
     // Display IP Info at the top (small font)
     if (appSettings.showIP) {
         tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
-        tft.drawString(String(displayState.ipInfo), currentX, currentY, FONT_MICRO);
+        tft.drawString(String(displayState.ipInfo), centerX, currentY, FONT_MICRO);
         currentY += 5; // Add spacing
     }
 
@@ -50,7 +50,7 @@ void themeRenderClock(const bool forceClear) {
     currentY += 52;
     char currentTime[8];
     getFormattedTime(currentTime, sizeof(currentTime), timeinfo);
-    int timeX = currentX;
+    int timeX = centerX;
     if (appSettings.showSec) {
         timeX -= 20;
     }
@@ -60,12 +60,12 @@ void themeRenderClock(const bool forceClear) {
     if (appSettings.showSec) {
         char currentSeconds[4];
         getSeconds(currentSeconds, sizeof(currentSeconds), timeinfo);
-        tft.drawString(String(currentSeconds), currentX + 71, currentY + 27, FONT_DEFAULT);
+        tft.drawString(String(currentSeconds), centerX + 71, currentY + 27, FONT_DEFAULT);
     }
 
     // Draw date
     currentY += 77;
     char currentDate[16];
     getFormattedDate(currentDate, sizeof(currentDate), timeinfo);
-    tft.drawString(String(currentDate), currentX, currentY, FONT_DEFAULT);
+    tft.drawString(String(currentDate), centerX, currentY, FONT_DEFAULT);
 }

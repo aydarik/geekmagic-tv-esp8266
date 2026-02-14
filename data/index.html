@@ -239,6 +239,7 @@
                 <button class="button" onclick="setTheme(1)">1. Clock</button>
                 <button class="button" onclick="setTheme(2)">2. Message</button>
                 <button class="button" onclick="setTheme(3)">3. Image</button>
+                <button class="button" onclick="setTheme(4)">4. Countdown</button>
             </div>
         </div>
     </div>
@@ -279,6 +280,19 @@
                 <textarea id="customMessage" rows="5" cols="33"></textarea>
             </div>
             <button class="button" onclick="sendCustomNotification()">Send</button>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">Countdown</div>
+        <div class="card-body">
+            <div class="input-group">
+                <label for="countdownSubject">Subject:</label>
+                <input type="text" id="countdownSubject"/>
+                <div class="spacer"></div>
+                <label for="countdownDateTime">Date Time:</label>
+                <input type="datetime-local" id="countdownDateTime">
+            </div>
+            <button class="button" onclick="sendCountdown()">Send</button>
         </div>
     </div>
     <div class="card">
@@ -349,6 +363,14 @@
         fetch('/set?msg=' + encodeURIComponent(customMessage)
             + '&sbj=' + encodeURIComponent(customSubject)
             + '&style=' + encodeURIComponent(customStyle)
+        ).catch(error => console.error('Error:', error));
+    }
+
+    function sendCountdown() {
+        const countdownSubject = document.getElementById('countdownSubject').value;
+        const countdownDateTime = document.getElementById('countdownDateTime').value;
+        fetch('/set?cnt=' + encodeURIComponent(countdownDateTime)
+            + '&sbj=' + encodeURIComponent(countdownSubject)
         ).catch(error => console.error('Error:', error));
     }
 
@@ -454,9 +476,15 @@
             document.getElementById("customMessage").value = data.msg;
         }).catch(error => {
             console.error('Error fetching custom message:', error);
-            document.getElementById("customStyle").value = '';
-            document.getElementById("customSubject").value = '';
-            document.getElementById("customMessage").value = '';
+        });
+
+        fetch('/countdown.json').then(response => response.json()).then(data => {
+            document.getElementById("countdownSubject").value = data.sbj;
+            if (data.cnt) {
+                document.getElementById("countdownDateTime").value = data.cnt;
+            }
+        }).catch(error => {
+            console.error('Error fetching custom message:', error);
         });
 
         fetch('/filelist').then(response => response.text()).then(data => {
@@ -467,7 +495,26 @@
         });
     }
 
+    function formatDateTimeLocal(date) {
+        const pad = n => n.toString().padStart(2, '0');
+        return date.getFullYear() + '-' +
+            pad(date.getMonth() + 1) + '-' +
+            pad(date.getDate()) + 'T' +
+            pad(date.getHours()) + ':' +
+            pad(date.getMinutes());
+    }
+
     window.onload = function () {
+        const countdownElement = document.getElementById('countdownDateTime');
+        const now = new Date();
+        now.setMinutes(now.getMinutes() + 1);
+        now.setSeconds(0, 0);
+        countdownElement.value = formatDateTimeLocal(now);
+        countdownElement.min   = countdownElement.value;
+        countdownElement.placeholder = countdownElement.value;
+        now.setMonth(now.getMonth() + 2);
+        countdownElement.max   = formatDateTimeLocal(now);
+
         loadData()
     };
 </script>
