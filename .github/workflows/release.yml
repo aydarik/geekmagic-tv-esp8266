@@ -52,9 +52,7 @@ jobs:
           files: .pio/build/nodemcuv2/firmware.bin
           tag_name: ${{ steps.get_version.outputs.TAG }}
           name: v${{ steps.get_version.outputs.TAG }}
-          body: |
-            **Full Changelog**: https://github.com/${{ github.repository }}/commits/${{ steps.get_version.outputs.TAG }}
-          draft: false
+          draft: true
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

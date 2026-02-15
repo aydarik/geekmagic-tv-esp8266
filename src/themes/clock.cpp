@@ -34,38 +34,46 @@ void themeRenderClock(const bool forceClear) {
     }
 
     const int centerX = tft.width() / 2;
-    int currentY = 10; // Start from top with small margin
+    int currentY = 5; // Start from top with small margin
     tft.setTextDatum(TC_DATUM);
+
+    // Draw seconds
+    char currentSeconds[4];
+    getSeconds(currentSeconds, sizeof(currentSeconds), timeinfo);
+    if (appSettings.showSec) {
+        int secondsY = currentY + 84;
+        tft.drawString(currentSeconds, centerX + 71, secondsY, FONT_DEFAULT);
+    }
+
+    if (!forceClear && strcmp(currentSeconds, "00") != 0) {
+        return;
+    }
 
     // Display IP Info at the top (small font)
     if (appSettings.showIP) {
         tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
-        tft.drawString(String(displayState.ipInfo), centerX, currentY, FONT_MICRO);
-        currentY += 5; // Add spacing
+        tft.drawString(displayState.ipInfo, centerX, currentY, FONT_MICRO);
     }
 
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
     // Draw time
-    currentY += 52;
+    currentY += 57;
     char currentTime[8];
     getFormattedTime(currentTime, sizeof(currentTime), timeinfo);
     int timeX = centerX;
     if (appSettings.showSec) {
         timeX -= 20;
     }
-    tft.drawString(String(currentTime), timeX, currentY, FONT_TIME);
+    tft.drawString(currentTime, timeX, currentY, FONT_TIME);
 
-    // Draw seconds
-    if (appSettings.showSec) {
-        char currentSeconds[4];
-        getSeconds(currentSeconds, sizeof(currentSeconds), timeinfo);
-        tft.drawString(String(currentSeconds), centerX + 71, currentY + 27, FONT_DEFAULT);
+    if (!forceClear && strcmp(currentTime, "00:00") != 0) {
+        return;
     }
 
     // Draw date
     currentY += 77;
     char currentDate[16];
     getFormattedDate(currentDate, sizeof(currentDate), timeinfo);
-    tft.drawString(String(currentDate), centerX, currentY, FONT_DEFAULT);
+    tft.drawString(currentDate, centerX, currentY, FONT_DEFAULT);
 }

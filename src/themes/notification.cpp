@@ -71,12 +71,13 @@ void themeRenderNotification() {
     tft.fillScreen(TFT_BLACK);
 
     const int font = FONT_DEFAULT;
+    const bool hasSubject = notificationState.subject[0] != '\0';
     const int centerY = tft.height() / 2;
     const int centerX = tft.width() / 2;
     int currentY = 0;
 
     // Draw subject
-    if (notificationState.subject[0] != '\0') {
+    if (hasSubject) {
         tft.setTextDatum(TC_DATUM);
         tft.setTextColor(TFT_ORANGE, TFT_BLACK);
         tft.drawString(notificationState.subject, centerX, currentY, font);
@@ -114,5 +115,14 @@ void themeRenderNotification() {
         }
         tft.endWrite();
         free(msg);
+    }
+
+    // Draw subject line
+    if (hasSubject) {
+        currentY = 30;
+        for (int dx = 0; dx <= centerX; dx += 8) {
+            tft.drawLine(centerX - dx, currentY, centerX + dx, currentY, TFT_WHITE);
+            delay(30); // control animation speed
+        }
     }
 }
