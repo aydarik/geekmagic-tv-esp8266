@@ -323,6 +323,10 @@
     </div>
 </div>
 
+<div style="text-align: center">
+    <a href="https://github.com/aydarik/geekmagic-tv-esp8266/releases">Check for new version &#x1F449;</a>
+</div>
+
 <script>
     function setBrightness() {
         var brightness = document.getElementById("brightness").value;
@@ -471,7 +475,10 @@
         });
 
         fetch('/message.json').then(response => response.json()).then(data => {
-            document.getElementById("customStyle").value = data.style;
+            const styleElement = document.getElementById("customStyle");
+            if (data.style && Array.from(styleElement.options).some(option => option.value === data.style)) {
+                styleElement.value = data.style;
+            }
             document.getElementById("customSubject").value = data.sbj;
             document.getElementById("customMessage").value = data.msg;
         }).catch(error => {

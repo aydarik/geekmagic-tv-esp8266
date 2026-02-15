@@ -29,7 +29,7 @@ bool tryConnectWiFi(int maxAttempts) {
         WiFi.mode(WIFI_STA);
         WiFi.begin();
 
-        unsigned long startAttempt = millis();
+        const unsigned long startAttempt = millis();
         while (WiFi.status() != WL_CONNECTED && millis() - startAttempt < WIFI_CONNECTION_TIMEOUT) {
             delay(1000);
         }
@@ -37,7 +37,7 @@ bool tryConnectWiFi(int maxAttempts) {
         // Wait for IP address to be assigned after WiFi connection
         if (WiFi.status() == WL_CONNECTED) {
             Serial.println(F("WiFi associated, waiting for IP..."));
-            unsigned long ipWaitStart = millis();
+            const unsigned long ipWaitStart = millis();
             while (WiFi.localIP() == IPAddress(0, 0, 0, 0) &&
                    millis() - ipWaitStart < 10000) {
                 // Wait up to 10 seconds for IP
@@ -257,9 +257,11 @@ void loop() {
     webserverHandle();
 
     // Automatic screen updates for clock rendering
-    if ((displayState.theme == 1 || displayState.theme == 4) && millis() - lastDisplayUpdate > DISPLAY_UPDATE_INTERVAL) {
-        displayUpdate(0, false);
-        lastDisplayUpdate = millis();
+    if (displayState.theme == 1 || displayState.theme == 4) {
+        if (const unsigned long now = millis(); now - lastDisplayUpdate > DISPLAY_UPDATE_INTERVAL) {
+            displayUpdate(0, false);
+            lastDisplayUpdate = now;
+        }
     }
 
     yield();
