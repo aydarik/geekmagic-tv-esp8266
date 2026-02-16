@@ -25,8 +25,6 @@ bool tft_output(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t *bitmap) 
 
 void displayInit() {
     tft.init();
-    tft.setRotation(0);
-    tft.invertDisplay(true); // Match ESPHome invert_colors: true
 
     TJpgDec.setJpgScale(1);
     TJpgDec.setSwapBytes(true);
@@ -127,6 +125,8 @@ void displayUpdate(const int theme, const bool forceClear) {
 }
 
 void displayShowMessage(const String &msg) {
+    displayState.theme = 0;
+
     tft.fillScreen(TFT_BLACK);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
     tft.setTextDatum(MC_DATUM);

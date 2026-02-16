@@ -116,8 +116,6 @@ void setupOTA() {
 
     ArduinoOTA.onProgress([](const unsigned int progress, const unsigned int total) {
         const int percent = progress * 100 / total;
-        Serial.printf("Progress: %u%%\n", percent);
-
         static int lastPercent = -1;
         if (percent != lastPercent) {
             tft.fillRect(20, 130, 200, 20, TFT_BLACK);
@@ -144,13 +142,6 @@ void setupFilesystem() {
         Serial.println(F("LittleFS formatted. Restarting..."));
         delay(2000);
         ESP.restart(); // Restart after formatting
-    }
-
-    if (!LittleFS.exists(IMAGE_DIR)) {
-        LittleFS.mkdir(IMAGE_DIR);
-    }
-    if (!LittleFS.exists(FONTS_DIR)) {
-        LittleFS.mkdir(FONTS_DIR);
     }
 
     Serial.println(F("LittleFS ready"));

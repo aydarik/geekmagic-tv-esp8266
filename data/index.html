@@ -310,14 +310,13 @@
                 <div class="spacer"></div>
                 <span id="filesTable"></span>
             </div>
-            <div class="input-group">
-                <button class="button" onclick="displayTestImage()">Display Test Image</button>
-            </div>
         </div>
     </div>
     <div class="card">
         <div class="card-header">Advanced Actions</div>
-        <div class="card-body button-group"><a href="/update" class="button">Firmware Update (OTA)</a>
+        <div class="card-body button-group">
+            <a href="/update" class="button">Firmware Update (OTA)</a>
+            <button class="button" onclick="displayTestImage()">Display Test</button>
             <button class="button red" onclick="factoryReset()">Factory Reset</button>
         </div>
     </div>
@@ -517,10 +516,10 @@
         now.setMinutes(now.getMinutes() + 1);
         now.setSeconds(0, 0);
         countdownElement.value = formatDateTimeLocal(now);
-        countdownElement.min   = countdownElement.value;
+        countdownElement.min = countdownElement.value;
         countdownElement.placeholder = countdownElement.value;
         now.setMonth(now.getMonth() + 2);
-        countdownElement.max   = formatDateTimeLocal(now);
+        countdownElement.max = formatDateTimeLocal(now);
 
         loadData()
     };

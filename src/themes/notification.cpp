@@ -1,5 +1,4 @@
 #include "notification.h"
-
 #include "config.h"
 #include "display.h"
 
@@ -81,16 +80,19 @@ void themeRenderNotification() {
         tft.setTextDatum(TC_DATUM);
         tft.setTextColor(TFT_ORANGE, TFT_BLACK);
         tft.drawString(notificationState.subject, centerX, currentY, font);
-        currentY = 40;
+        currentY = 45;
     }
 
     // Draw message
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
     if (strcmp(notificationState.style, "big_num") == 0) {
         tft.setTextDatum(MC_DATUM);
-        tft.drawString(notificationState.message, centerX, centerY + currentY / 2, FONT_HUGE_NUM);
+        if (strlen(notificationState.message) < 5) {
+            tft.setTextSize(2);
+        }
+        tft.drawString(notificationState.message, centerX, centerY + currentY / 2, FONT_DIGIT);
+        tft.setTextSize(1);
     } else {
-        char *msg = strdup(notificationState.message);
         int currentX = 0;
 
         // Calculate line height based on the font
@@ -98,6 +100,7 @@ void themeRenderNotification() {
         const int linesOffset = tft.fontHeight() + 8;
 
         char *wrapped[MAX_LINES];
+        char *msg = strdup(notificationState.message);
         const size_t count = wrapText(msg, wrapped, MAX_LINES);
 
         // Draw each wrapped line
@@ -111,7 +114,7 @@ void themeRenderNotification() {
 
         tft.startWrite();
         for (unsigned int i = 0; i < count; i++) {
-            tft.drawString(wrapped[i], currentX, currentY + i * linesOffset, font);
+            tft.drawString(wrapped[i], currentX, currentY + i * linesOffset);
         }
         tft.endWrite();
         free(msg);
@@ -119,10 +122,10 @@ void themeRenderNotification() {
 
     // Draw subject line
     if (hasSubject) {
-        currentY = 30;
+        currentY = 32;
         for (int dx = 0; dx <= centerX; dx += 8) {
-            tft.drawLine(centerX - dx, currentY, centerX + dx, currentY, TFT_WHITE);
-            delay(30); // control animation speed
+            tft.drawFastHLine(centerX - dx, currentY, dx * 2, TFT_SILVER);
+            delay(20); // control animation speed
         }
     }
 }

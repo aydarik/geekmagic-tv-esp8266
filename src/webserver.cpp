@@ -163,16 +163,21 @@ void handleTest() {
 }
 
 void handleFileUpload() {
+    if (!server.hasArg("dir")) {
+        displayShowMessage(F("Missing dir"));
+        return;
+    }
+
+    const String dir = server.arg("dir");
+    if (!LittleFS.exists(dir)) {
+        LittleFS.mkdir(dir);
+    }
+
     const HTTPUpload &upload = server.upload();
 
     if (upload.status == UPLOAD_FILE_START) {
         const String filename = upload.filename;
         Serial.printf("Upload start: %s\n", filename.c_str());
-
-        String dir = IMAGE_DIR;
-        if (server.hasArg("dir")) {
-            dir = server.arg("dir");
-        }
 
         const String filepath = dir + filename;
         uploadFile = LittleFS.open(filepath, "w");
@@ -204,13 +209,7 @@ void handleUploadDone() {
     server.send(200, "text/plain", "OK");
 
     // After upload, verify file size on LittleFS
-    String filename = server.upload().filename;
-    String dir = IMAGE_DIR;
-    if (server.hasArg("dir")) {
-        dir = server.arg("dir");
-    }
-
-    const String filepath = dir + filename;
+    const String filepath = server.arg("dir") + server.upload().filename;
     if (File uploadedFile = LittleFS.open(filepath, "r")) {
         logPrintf("INFO: Actual file size on LittleFS for %s: %u bytes", filepath.c_str(), uploadedFile.size());
         uploadedFile.close();
@@ -242,10 +241,26 @@ String listDirRecursiveHtml(const char *dirname = "/") {
                 htmlRow += sub;
             }
         } else {
+            const char* fileName = file.fullName();
+
+            char delBtn[128];
+            snprintf(delBtn, sizeof(delBtn),
+                     "<button class='button' onclick=\"deleteImage('/%s')\">DEL</button>",
+                     fileName);
+
+            char setBtn[128] = "";
+            auto fnameLower = String(fileName);
+            fnameLower.toLowerCase();  // convert to lowercase
+            if (fnameLower.endsWith(".jpg")) {
+                snprintf(setBtn, sizeof(setBtn),
+                         "<button class='button' onclick=\"displayImage('/%s')\">SET</button>",
+                         fileName);
+            }
+
             char row[512];
             snprintf(row, sizeof(row),
-                     "<tr><td><a href='/%s'>/%s</a></td><td class='size'>%d</td><td><div class='button-group'><button class='button' onclick=\"deleteImage('/%s')\">DEL</button><button class='button' onclick=\"displayImage('/%s')\">SET</button></div></td></tr>\n",
-                     file.fullName(), file.fullName(), file.size(), file.fullName(), file.fullName());
+                     "<tr><td><a href='/%s'>/%s</a></td><td class='size'>%d</td><td><div class='button-group'>%s%s</div></td></tr>\n",
+                     fileName, fileName, file.size(), delBtn, setBtn);
             htmlRow += row;
         }
         file = root.openNextFile();
@@ -256,7 +271,7 @@ String listDirRecursiveHtml(const char *dirname = "/") {
 
 void handleFileList() {
     String htmlTable = "<table><thead><tr><th>Path</th><th>Size</th><th>Actions</th></tr></thead><tbody>\n"
-                       + listDirRecursiveHtml("/")
+                       + listDirRecursiveHtml(server.hasArg("dir") ? server.arg("dir").c_str() : "/")
                        + "</tbody></table>";
     server.send(200, "text/html", htmlTable);
 }

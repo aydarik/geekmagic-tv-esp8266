@@ -116,7 +116,7 @@ void themeRenderCountdown(const bool forceClear) {
             tft.setTextColor(TFT_ORANGE, TFT_BLACK);
             tft.drawString(String(countdownState.subject), centerX, currentY, FONT_DEFAULT);
         }
-        currentY = 40;
+        currentY = 45;
     }
 
     // Draw countdown
@@ -130,20 +130,26 @@ void themeRenderCountdown(const bool forceClear) {
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
     tft.setTextDatum(MC_DATUM);
 
-    const int timerY = centerY + currentY / 2;
-    tft.startWrite();
-    if (!forceClear && ((!passed && seconds == 59) || (passed && seconds == 0))) {
-        tft.fillRect(0, timerY - 30, tft.width(), 60, TFT_BLACK);
+    int fontMultiplier = 1;
+    if (!passed && minutes < 10) {
+        fontMultiplier = 2;
+        tft.setTextSize(fontMultiplier);
     }
-    tft.drawString(buffer, centerX, timerY, FONT_TIME);
-    tft.endWrite();
+
+    const int timerY = centerY + currentY / 2;
+    if (!forceClear && ((!passed && seconds == 59) || (passed && seconds == 0))) {
+        tft.fillRect(0, timerY - 30 * fontMultiplier, tft.width(), 60 * fontMultiplier, TFT_BLACK);
+    }
+    tft.drawString(buffer, centerX, timerY, FONT_DIGIT);
+
+    tft.setTextSize(1);
 
     // Draw subject line
     if (hasSubject && forceClear) {
-        currentY = 30;
+        currentY = 32;
         for (int dx = 0; dx <= centerX; dx += 8) {
-            tft.drawLine(centerX - dx, currentY, centerX + dx, currentY, TFT_WHITE);
-            delay(30); // control animation speed
+            tft.drawFastHLine(centerX - dx, currentY, dx * 2, TFT_SILVER);
+            delay(20); // control animation speed
         }
     }
 }

@@ -65,7 +65,7 @@ void themeRenderClock(const bool forceClear) {
     if (appSettings.showSec) {
         timeX -= 20;
     }
-    tft.drawString(currentTime, timeX, currentY, FONT_TIME);
+    tft.drawString(currentTime, timeX, currentY, FONT_DIGIT);
 
     if (!forceClear && strcmp(currentTime, "00:00") != 0) {
         return;
