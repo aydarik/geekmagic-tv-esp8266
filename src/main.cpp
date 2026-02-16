@@ -149,6 +149,9 @@ void setupFilesystem() {
     if (!LittleFS.exists(IMAGE_DIR)) {
         LittleFS.mkdir(IMAGE_DIR);
     }
+    if (!LittleFS.exists(FONTS_DIR)) {
+        LittleFS.mkdir(FONTS_DIR);
+    }
 
     Serial.println(F("LittleFS ready"));
 }
