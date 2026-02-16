@@ -1,7 +1,7 @@
 #include "countdown.h"
-
 #include "config.h"
 #include "display.h"
+#include "fonts/Roboto_Regular24.h"
 
 CountdownState countdownState;
 
@@ -114,9 +114,11 @@ void themeRenderCountdown(const bool forceClear) {
         if (forceClear) {
             tft.setTextDatum(TC_DATUM);
             tft.setTextColor(TFT_ORANGE, TFT_BLACK);
+            tft.loadFont(Roboto_Regular24);
             tft.drawString(String(countdownState.subject), centerX, currentY, FONT_DEFAULT);
+            tft.unloadFont();
         }
-        currentY = 45;
+        currentY = 44;
     }
 
     // Draw countdown

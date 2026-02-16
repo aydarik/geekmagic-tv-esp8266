@@ -296,12 +296,11 @@
         </div>
     </div>
     <div class="card">
-        <div class="card-header">Image Management</div>
+        <div class="card-header">File Management</div>
         <div class="card-body">
-            <form action="/doUpload?dir=/image/" method="POST" enctype="multipart/form-data">
+            <form action="/doUpload?dir=/image/" method="POST" enctype="multipart/form-data" id="fileForm">
                 <div class="input-group">
-                    <label for="fileUpload">Upload JPEG Image:</label>
-                    <input type="file" name="file" accept="image/jpeg" id="fileUpload"/>
+                    <input type="file" name="file" id="fileUpload"/>
                     <input type="submit" value="Upload" class="button"/>
                 </div>
             </form>

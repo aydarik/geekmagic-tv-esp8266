@@ -42,7 +42,7 @@ jobs:
       - name: Build
         run: |
           mkdir src/generated
-          gzip -9 -c data/index.html > src/generated/index.html.gz
+          gzip -9 -c res/index.html > src/generated/index.html.gz
           xxd -i src/generated/index.html.gz > src/generated/index_html.h
           pio run -e nodemcuv2
 

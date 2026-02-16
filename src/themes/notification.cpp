@@ -1,20 +1,30 @@
 #include "notification.h"
 #include "config.h"
 #include "display.h"
+#include "fonts/Roboto_Regular24.h"
 
 NotificationState notificationState;
 
+int utf8Length(const char *text) {
+    int count = 0;
+    while (*text) {
+        // Count only bytes that are NOT continuation bytes (10xxxxxx)
+        if ((*text & 0xC0) != 0x80) {
+            count++;
+        }
+        text++;
+    }
+    return count;
+}
+
 // Helper function to wrap text
-size_t wrapText(char *text, char *lines[], const size_t maxLines) {
+size_t wrapText(char *text, char *lines[], const size_t maxLines, const size_t maxSize) {
     if (!text || *text == '\0')
         return 0;
 
-    const int maxWidth = tft.width();
-    const int spaceWidth = tft.textWidth(" ");
-
     size_t count = 0;
     char *lineStart = text;
-    int currentWidth = 0;
+    size_t currentWidth = 0;
     char *p = text;
 
     while (*p && count < maxLines) {
@@ -31,15 +41,14 @@ size_t wrapText(char *text, char *lines[], const size_t maxLines) {
         // Find next word
         char *wordStart = p;
         while (*p && *p != ' ' && *p != '\n') p++;
-        char saved = *p;
+        const char saved = *p;
         *p = '\0';
 
-        int wordWidth = tft.textWidth(wordStart);
-
+        const size_t wordWidth = utf8Length(wordStart);
         if (currentWidth == 0) {
             currentWidth = wordWidth;
-        } else if (currentWidth + spaceWidth + wordWidth <= maxWidth) {
-            currentWidth += spaceWidth + wordWidth;
+        } else if (currentWidth + wordWidth + 1 <= maxSize) {
+            currentWidth += wordWidth + 1;
         } else {
             // Wrap line BEFORE current word
             *(wordStart - 1) = '\0'; // Terminate previous line
@@ -69,7 +78,6 @@ void themeRenderNotification() {
 
     tft.fillScreen(TFT_BLACK);
 
-    const int font = FONT_DEFAULT;
     const bool hasSubject = notificationState.subject[0] != '\0';
     const int centerY = tft.height() / 2;
     const int centerX = tft.width() / 2;
@@ -79,8 +87,10 @@ void themeRenderNotification() {
     if (hasSubject) {
         tft.setTextDatum(TC_DATUM);
         tft.setTextColor(TFT_ORANGE, TFT_BLACK);
-        tft.drawString(notificationState.subject, centerX, currentY, font);
-        currentY = 45;
+        tft.loadFont(Roboto_Regular24);
+        tft.drawString(notificationState.subject, centerX, currentY);
+        tft.unloadFont();
+        currentY = 44;
     }
 
     // Draw message
@@ -93,30 +103,35 @@ void themeRenderNotification() {
         tft.drawString(notificationState.message, centerX, centerY + currentY / 2, FONT_DIGIT);
         tft.setTextSize(1);
     } else {
-        int currentX = 0;
-
-        // Calculate line height based on the font
-        tft.setTextFont(font); // Set font for height calculation
-        const int linesOffset = tft.fontHeight() + 8;
-
-        char *wrapped[MAX_LINES];
+        const size_t maxLines = MAX_LINES - (hasSubject ? 1 : 0);
+        char *wrapped[maxLines];
         char *msg = strdup(notificationState.message);
-        const size_t count = wrapText(msg, wrapped, MAX_LINES);
+        const size_t count = wrapText(msg, wrapped, maxLines, MAX_LINE_CHARS);
 
-        // Draw each wrapped line
+        int currentX = 5;
         if (strcmp(notificationState.style, "center") == 0) {
             tft.setTextDatum(TC_DATUM);
             currentX = centerX;
-            currentY = centerY + currentY / 2 - linesOffset * count / 2;
+            currentY = centerY + currentY / 2 - LINES_OFFSET * count / 2;
         } else {
+            if (!hasSubject) {
+                currentY = 5;
+            }
             tft.setTextDatum(TL_DATUM);
         }
 
+        tft.loadFont(Roboto_Regular24);
         tft.startWrite();
         for (unsigned int i = 0; i < count; i++) {
-            tft.drawString(wrapped[i], currentX, currentY + i * linesOffset);
+            if (strcmp(wrapped[i], "---") == 0) {
+                const int lineY = currentY + i * LINES_OFFSET + LINES_OFFSET / 3;
+                tft.drawFastHLine(0, lineY, tft.width(), TFT_DARKGREY);
+            } else {
+                tft.drawString(wrapped[i], currentX, currentY + i * LINES_OFFSET);
+            }
         }
         tft.endWrite();
+        tft.unloadFont();
         free(msg);
     }
 
