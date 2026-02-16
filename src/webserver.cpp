@@ -82,17 +82,38 @@ void handleCountdownJson() {
     server.send(200, "application/json", json);
 }
 
+String urlDecode(const String& input) {
+    String decoded = "";
+    char temp[] = "0x00";
+
+    for (unsigned int i = 0; i < input.length(); i++) {
+        if (input[i] == '+') {
+            decoded += ' ';
+        }
+        else if (input[i] == '%' && i + 2 < input.length()) {
+            temp[2] = input[i + 1];
+            temp[3] = input[i + 2];
+            decoded += static_cast<char>(strtol(temp, nullptr, 16));
+            i += 2;
+        }
+        else {
+            decoded += input[i];
+        }
+    }
+    return decoded;
+}
+
 void handleSet() {
     if (server.hasArg("msg")) {
-        strncpy(notificationState.subject, server.arg("sbj").c_str(), sizeof(notificationState.subject));
+        strncpy(notificationState.subject, urlDecode(server.arg("sbj")).c_str(), sizeof(notificationState.subject));
         notificationState.subject[sizeof(notificationState.subject) - 1] = '\0'; // Ensure null-termination
         strncpy(notificationState.style, server.arg("style").c_str(), sizeof(notificationState.style));
         notificationState.style[sizeof(notificationState.style) - 1] = '\0'; // Ensure null-termination
-        strncpy(notificationState.message, server.arg("msg").c_str(), sizeof(notificationState.message));
+        strncpy(notificationState.message, urlDecode(server.arg("msg")).c_str(), sizeof(notificationState.message));
         notificationState.message[sizeof(notificationState.message) - 1] = '\0'; // Ensure null-termination
         displayUpdate(2);
     } else if (server.hasArg("cnt")) {
-        strncpy(countdownState.subject, server.arg("sbj").c_str(), sizeof(countdownState.subject));
+        strncpy(countdownState.subject, urlDecode(server.arg("sbj")).c_str(), sizeof(countdownState.subject));
         countdownState.subject[sizeof(countdownState.subject) - 1] = '\0'; // Ensure null-termination
         strncpy(countdownState.datetime, server.arg("cnt").c_str(), sizeof(countdownState.datetime));
         countdownState.datetime[sizeof(countdownState.datetime) - 1] = '\0'; // Ensure null-termination
