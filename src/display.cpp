@@ -8,7 +8,6 @@
 #include "themes/countdown.h"
 #include <LittleFS.h>
 #include <TJpg_Decoder.h>
-#include <ESP8266WiFi.h>
 #include <vector>
 
 TFT_eSPI tft = TFT_eSPI();
@@ -26,6 +25,8 @@ bool tft_output(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t *bitmap) 
 void displayInit() {
     tft.init();
     tft.setTextWrap(false);
+    tft.setTextFont(FONT_DEFAULT);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
     TJpgDec.setJpgScale(1);
     TJpgDec.setSwapBytes(true);
@@ -68,11 +69,6 @@ void displayTest() {
     tft.fillScreen(TFT_WHITE);
     delay(500);
     tft.fillScreen(TFT_BLACK);
-
-    tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
-    tft.setTextDatum(MC_DATUM);
-    tft.drawString("HELLO WORLD!", 120, 120, FONT_DEFAULT);
-    delay(2000);
 
     displayUpdate();
 }
@@ -123,6 +119,9 @@ void displayUpdate(const int theme, const bool forceClear) {
     }
 
     switch (displayState.theme) {
+        case 1:
+            themeRenderClock(forceClear);
+            break;
         case 2:
             themeRenderNotification(forceClear);
             break;
@@ -133,7 +132,6 @@ void displayUpdate(const int theme, const bool forceClear) {
             themeRenderCountdown(forceClear);
             break;
         default:
-            themeRenderClock(forceClear);
             break;
     }
 
@@ -152,15 +150,14 @@ void displayShowMessage(const String &msg) {
     displayState.theme = 0;
 
     tft.fillScreen(TFT_BLACK);
+    tft.setTextFont(FONT_DEFAULT);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
     tft.setTextDatum(MC_DATUM);
 
-    int currentY = tft.height() / 2; // Starting Y position, will be adjusted
-    constexpr int font = FONT_DEFAULT;
+    int currentY = tft.height() / 2;
     constexpr int linesOffset = 8;
 
     // Calculate line height based on the font
-    tft.setTextFont(font); // Set font for height calculation
     const unsigned int lineHeight = tft.fontHeight();
 
     // Split message by newline characters
@@ -181,7 +178,7 @@ void displayShowMessage(const String &msg) {
     // Draw each wrapped line
     tft.startWrite();
     for (unsigned int i = 0; i < linesCnt; i++) {
-        tft.drawString(linesToProcess[i], tft.width() / 2, currentY + i * (lineHeight + linesOffset), font);
+        tft.drawString(linesToProcess[i], tft.width() / 2, currentY + i * (lineHeight + linesOffset));
     }
     tft.endWrite();
 }

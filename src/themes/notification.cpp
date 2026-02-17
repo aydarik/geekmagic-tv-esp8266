@@ -94,11 +94,11 @@ void themeRenderNotification(const bool forceClear) {
         tft.loadFont(Roboto_Regular24);
         tft.drawString(notificationState.subject, centerX, currentY);
         tft.unloadFont();
+        tft.setTextColor(TFT_WHITE, TFT_BLACK);
         currentY = 44;
     }
 
     // Draw message
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
     if (strcmp(notificationState.style, "big_num") == 0) {
         tft.setTextDatum(MC_DATUM);
         if (strlen(notificationState.message) < 5) {

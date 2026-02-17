@@ -117,6 +117,7 @@ void themeRenderCountdown(const bool forceClear) {
             tft.loadFont(Roboto_Regular24);
             tft.drawString(String(countdownState.subject), centerX, currentY, FONT_DEFAULT);
             tft.unloadFont();
+            tft.setTextColor(TFT_WHITE, TFT_BLACK);
         }
         currentY = 44;
     }
@@ -129,11 +130,11 @@ void themeRenderCountdown(const bool forceClear) {
         sprintf(buffer, "%d:%02d", minutes, seconds);
     }
 
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
     tft.setTextDatum(MC_DATUM);
 
     if (!forceClear && ((!passed && seconds == 59) || (passed && minutes == 0 && seconds == 1))) {
-        tft.fillRect(0, currentY + 10, tft.width(), tft.height() - 10, TFT_BLACK);
+        constexpr int offset = 10;
+        tft.fillRect(0, currentY + offset, tft.width(), tft.height() - currentY - offset, TFT_BLACK);
     }
 
     if (!passed && minutes < 10) {

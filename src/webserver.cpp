@@ -4,6 +4,7 @@
 #include "settings.h"
 #include "themes/notification.h"
 #include "themes/countdown.h"
+#include "themes/clock.h"
 #include "main.h"
 #include "logger.h"
 #include <LittleFS.h>
@@ -18,6 +19,7 @@ ESP8266WebServer server(WEB_SERVER_PORT);
 extern Settings appSettings;
 extern NotificationState notificationState;
 extern CountdownState countdownState;
+extern ClockState clockState;
 
 // File upload buffer
 File uploadFile;
@@ -87,6 +89,14 @@ void handleCountdownJson() {
     server.send(200, "application/json", json);
 }
 
+void handleNoteJson() {
+    JsonDocument doc;
+    doc["note"] = clockState.note;
+    String json;
+    serializeJson(doc, json);
+    server.send(200, "application/json", json);
+}
+
 String urlDecode(const String &input) {
     String decoded = "";
     char temp[] = "0x00";
@@ -108,17 +118,25 @@ String urlDecode(const String &input) {
 
 void handleSet() {
     if (server.hasArg("msg")) {
+        strncpy(notificationState.message, urlDecode(server.arg("msg")).c_str(), sizeof(notificationState.message));
+        notificationState.message[sizeof(notificationState.message) - 1] = '\0'; // Ensure null-termination
         strncpy(notificationState.subject, urlDecode(server.arg("sbj")).c_str(), sizeof(notificationState.subject));
         notificationState.subject[sizeof(notificationState.subject) - 1] = '\0'; // Ensure null-termination
         strncpy(notificationState.style, server.arg("style").c_str(), sizeof(notificationState.style));
         notificationState.style[sizeof(notificationState.style) - 1] = '\0'; // Ensure null-termination
-        strncpy(notificationState.message, urlDecode(server.arg("msg")).c_str(), sizeof(notificationState.message));
-        notificationState.message[sizeof(notificationState.message) - 1] = '\0'; // Ensure null-termination
         displayUpdate(2);
-        if (server.hasArg("timeout")) {
-            if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
-                displayState.timeout = time(nullptr) + timeout;
-            }
+        if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
+            displayState.timeout = time(nullptr) + timeout;
+        }
+    } else if (server.hasArg("note")) {
+        strncpy(clockState.note, urlDecode(server.arg("note")).c_str(), sizeof(clockState.note));
+        clockState.note[sizeof(clockState.note) - 1] = '\0'; // Ensure null-termination
+        clockState.noteTimeout = 0;
+        if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
+            clockState.noteTimeout = time(nullptr) + timeout;
+        }
+        if (displayState.theme == 1) {
+            displayUpdate();
         }
     } else if (server.hasArg("cnt")) {
         strncpy(countdownState.subject, urlDecode(server.arg("sbj")).c_str(), sizeof(countdownState.subject));
@@ -126,11 +144,9 @@ void handleSet() {
         strncpy(countdownState.datetime, server.arg("cnt").c_str(), sizeof(countdownState.datetime));
         countdownState.datetime[sizeof(countdownState.datetime) - 1] = '\0'; // Ensure null-termination
         displayUpdate(4);
-        if (server.hasArg("timeout")) {
-            if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
-                if (const time_t datetime = parseDateTime(countdownState.datetime); datetime > time(nullptr)) {
-                    displayState.timeout = datetime + timeout;
-                }
+        if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
+            if (const time_t datetime = parseDateTime(countdownState.datetime); datetime > time(nullptr)) {
+                displayState.timeout = datetime + timeout;
             }
         }
     } else if (server.hasArg("brt")) {
@@ -143,10 +159,8 @@ void handleSet() {
         strncpy(displayState.image, server.arg("img").c_str(), sizeof(displayState.image));
         displayState.image[sizeof(displayState.image) - 1] = '\0'; // Ensure null-termination
         displayUpdate(3);
-        if (server.hasArg("timeout")) {
-            if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
-                displayState.timeout = time(nullptr) + timeout;
-            }
+        if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
+            displayState.timeout = time(nullptr) + timeout;
         }
     } else if (server.hasArg("ip")) {
         appSettings.showIP = server.arg("ip") != "false";
@@ -467,6 +481,7 @@ void webserverInit() {
     server.on("/v.json", HTTP_GET, handleVersionJson);
     server.on("/message.json", HTTP_GET, handleMessageJson);
     server.on("/countdown.json", HTTP_GET, handleCountdownJson);
+    server.on("/note.json", HTTP_GET, handleNoteJson);
 
     server.on("/filelist", HTTP_GET, handleFileList);
     server.on("/delete", HTTP_GET, handleDelete);

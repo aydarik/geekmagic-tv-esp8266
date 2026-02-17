@@ -1,9 +1,13 @@
+#include <ctime>
+#include "clock.h"
 #include "config.h"
 #include "display.h"
 #include "settings.h"
-#include <ctime> // For time and date functions
+#include "fonts/Roboto_Regular24.h"
 
 extern Settings appSettings;
+
+ClockState clockState;
 
 void getFormattedTime(char *buffer, const size_t bufferSize, const tm &timeinfo) {
     // H:M\0
@@ -37,6 +41,23 @@ void themeRenderClock(const bool forceClear) {
     int currentY = 5; // Start from top with small margin
     tft.setTextDatum(TC_DATUM);
 
+    // Draw note
+    if (bool hasNote = clockState.note[0] != '\0') {
+        if (clockState.noteTimeout != 0) {
+            if (now > clockState.noteTimeout) {
+                clockState.note[0] = '\0';
+                clockState.noteTimeout = 0;
+                tft.fillRect(0, tft.height() - 40, tft.width(), 30, TFT_BLACK);
+                hasNote = false;
+            }
+        }
+        if (hasNote && forceClear) {
+            tft.loadFont(Roboto_Regular24);
+            tft.drawString(clockState.note, centerX, tft.height() - 40);
+            tft.unloadFont();
+        }
+    }
+
     // Draw seconds
     char currentSeconds[4];
     getSeconds(currentSeconds, sizeof(currentSeconds), timeinfo);
@@ -53,9 +74,8 @@ void themeRenderClock(const bool forceClear) {
     if (appSettings.showIP) {
         tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
         tft.drawString(displayState.ipInfo, centerX, currentY, FONT_MICRO);
+        tft.setTextColor(TFT_WHITE, TFT_BLACK);
     }
-
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
     // Draw time
     currentY += 57;
@@ -72,8 +92,10 @@ void themeRenderClock(const bool forceClear) {
     }
 
     // Draw date
-    currentY += 77;
+    currentY += 75;
     char currentDate[16];
     getFormattedDate(currentDate, sizeof(currentDate), timeinfo);
+    tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
     tft.drawString(currentDate, centerX, currentY, FONT_DEFAULT);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
 }

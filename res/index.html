@@ -255,8 +255,21 @@
             <div class="input-group">
                 <label for="tz">Timezone:</label>
                 <input type="text" id="tz"/>
-                <button class="button" onclick="setTimezone()">Set Timezone</button>
             </div>
+            <button class="button" onclick="setTimezone()">Set Timezone</button>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">Clock Note</div>
+        <div class="card-body">
+            <div class="input-group">
+                <label for="clockNote">Note:</label>
+                <input type="text" id="clockNote"/>
+                <div class="spacer"></div>
+                <label for="clockNoteTimeout">Timeout (sec):</label>
+                <input type="number" id="clockNoteTimeout"/>
+            </div>
+            <button class="button" onclick="sendClockNote()">Send</button>
         </div>
     </div>
     <div class="card">
@@ -311,6 +324,11 @@
                 <div class="spacer"></div>
                 <span id="filesTable"></span>
             </div>
+            <div class="spacer"></div>
+            <div class="input-group">
+                <label for="imageTimeout">Timeout after set (sec):</label>
+                <input type="number" id="imageTimeout"/>
+            </div>
         </div>
     </div>
     <div class="card">
@@ -348,7 +366,8 @@
     }
 
     function displayImage(imagePath) {
-        fetch('/set?img=' + encodeURIComponent(imagePath)).catch(error => console.error('Error:', error));
+        const imageTimeout = document.getElementById('imageTimeout').value;
+        fetch('/set?img=' + encodeURIComponent(imagePath) + '&timeout=' + imageTimeout).catch(error => console.error('Error:', error));
     }
 
     function deleteImage(imagePath) {
@@ -378,6 +397,14 @@
         fetch('/set?cnt=' + encodeURIComponent(countdownDateTime)
             + '&sbj=' + encodeURIComponent(countdownSubject)
             + '&timeout=' + countdownTimeout
+        ).catch(error => console.error('Error:', error));
+    }
+
+    function sendClockNote() {
+        const clockNote = document.getElementById('clockNote').value;
+        const clockNoteTimeout = document.getElementById('clockNoteTimeout').value;
+        fetch('/set?note=' + encodeURIComponent(clockNote)
+            + '&timeout=' + clockNoteTimeout
         ).catch(error => console.error('Error:', error));
     }
 
@@ -493,6 +520,12 @@
             if (data.cnt) {
                 document.getElementById("countdownDateTime").value = data.cnt;
             }
+        }).catch(error => {
+            console.error('Error fetching custom message:', error);
+        });
+
+        fetch('/note.json').then(response => response.json()).then(data => {
+            document.getElementById("clockNote").value = data.note;
         }).catch(error => {
             console.error('Error fetching custom message:', error);
         });
