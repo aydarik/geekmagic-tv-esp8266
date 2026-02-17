@@ -55,7 +55,6 @@
 
         a:hover {
             color: var(--light-text-color);
-
         }
 
         .card {
@@ -91,7 +90,7 @@
             color: var(--text-color)
         }
 
-        .input-group input[type="number"], .input-group input[type="text"], .input-group input[type="password"], .input-group input[type="range"], .input-group select, .input-group textarea {
+        .input-group input[type="number"], .input-group input[type="text"], .input-group input[type="password"], .input-group input[type="range"], .input-group input[type="datetime-local"], .input-group select, .input-group textarea {
             width: calc(100% - 22px);
             padding: 10px;
             border: 1px solid var(--border-color);
@@ -110,19 +109,19 @@
         .button {
             display: inline-block;
             background-color: var(--primary-color);
-            color: white;
+            color: var(--text-color);
             padding: 10px 15px;
             border: none;
             border-radius: 5px;
             cursor: pointer;
             text-decoration: none;
             font-size: 1em;
-            margin-top: 10px;
             transition: background-color 0.2s ease
         }
 
         .button:hover {
             background-color: var(--primary-hover-color);
+            color: var(--text-color);
         }
 
         .button.red {
@@ -206,10 +205,8 @@
         <div class="card-body">
             <div class="version-info">Firmware Version: <strong id="firmwareVersion">Loading...</strong></div>
             <div class="button-group">
-                <a href="/app.json" class="button">App JSON</a>
-                <a href="/space.json" class="button">Storage Info</a>
-                <a href="/brt.json" class="button">Brightness JSON</a>
                 <a href="/log" class="button">View Logs</a>
+                <button class="button" onclick="displayTestImage()">Display Test</button>
             </div>
         </div>
     </div>
@@ -278,6 +275,8 @@
                 <div class="spacer"></div>
                 <label for="customMessage">Message:</label>
                 <textarea id="customMessage" rows="5" cols="33"></textarea>
+                <label for="customTimeout">Timeout (sec):</label>
+                <input type="number" id="customTimeout"/>
             </div>
             <button class="button" onclick="sendCustomNotification()">Send</button>
         </div>
@@ -291,8 +290,11 @@
                 <div class="spacer"></div>
                 <label for="countdownDateTime">Date Time:</label>
                 <input type="datetime-local" id="countdownDateTime">
+                <div class="spacer"></div>
+                <label for="countdownTimeout">Timeout after expiration (sec):</label>
+                <input type="number" id="countdownTimeout"/>
             </div>
-            <button class="button" onclick="sendCountdown()">Send</button>
+            <button class="button" onclick="sendCountdown()">Start</button>
         </div>
     </div>
     <div class="card">
@@ -300,7 +302,7 @@
         <div class="card-body">
             <form action="/doUpload?dir=/image/" method="POST" enctype="multipart/form-data" id="fileForm">
                 <div class="input-group">
-                    <input type="file" name="file" id="fileUpload"/>
+                    <input type="file" name="file" accept="image/jpeg" id="fileUpload"/>
                     <input type="submit" value="Upload" class="button"/>
                 </div>
             </form>
@@ -315,7 +317,6 @@
         <div class="card-header">Advanced Actions</div>
         <div class="card-body button-group">
             <a href="/update" class="button">Firmware Update (OTA)</a>
-            <button class="button" onclick="displayTestImage()">Display Test</button>
             <button class="button red" onclick="factoryReset()">Factory Reset</button>
         </div>
     </div>
@@ -362,17 +363,21 @@
         const customStyle = document.getElementById('customStyle').value;
         const customSubject = document.getElementById('customSubject').value;
         const customMessage = document.getElementById('customMessage').value;
+        const customTimeout = document.getElementById('customTimeout').value;
         fetch('/set?msg=' + encodeURIComponent(customMessage)
             + '&sbj=' + encodeURIComponent(customSubject)
-            + '&style=' + encodeURIComponent(customStyle)
+            + '&style=' + customStyle
+            + '&timeout=' + customTimeout
         ).catch(error => console.error('Error:', error));
     }
 
     function sendCountdown() {
         const countdownSubject = document.getElementById('countdownSubject').value;
         const countdownDateTime = document.getElementById('countdownDateTime').value;
+        const countdownTimeout = document.getElementById('countdownTimeout').value;
         fetch('/set?cnt=' + encodeURIComponent(countdownDateTime)
             + '&sbj=' + encodeURIComponent(countdownSubject)
+            + '&timeout=' + countdownTimeout
         ).catch(error => console.error('Error:', error));
     }
 

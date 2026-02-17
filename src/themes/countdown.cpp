@@ -132,18 +132,14 @@ void themeRenderCountdown(const bool forceClear) {
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
     tft.setTextDatum(MC_DATUM);
 
-    int fontMultiplier = 1;
+    if (!forceClear && ((!passed && seconds == 59) || (passed && minutes == 0 && seconds == 1))) {
+        tft.fillRect(0, currentY + 10, tft.width(), tft.height() - 10, TFT_BLACK);
+    }
+
     if (!passed && minutes < 10) {
-        fontMultiplier = 2;
-        tft.setTextSize(fontMultiplier);
+        tft.setTextSize(2);
     }
-
-    const int timerY = centerY + currentY / 2;
-    if (!forceClear && ((!passed && seconds == 59) || (passed && seconds == 0))) {
-        tft.fillRect(0, timerY - 30 * fontMultiplier, tft.width(), 60 * fontMultiplier, TFT_BLACK);
-    }
-    tft.drawString(buffer, centerX, timerY, FONT_DIGIT);
-
+    tft.drawString(buffer, centerX, centerY + currentY / 2, FONT_DIGIT);
     tft.setTextSize(1);
 
     // Draw subject line

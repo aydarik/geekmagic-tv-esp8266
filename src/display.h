@@ -4,13 +4,13 @@
 #include <Arduino.h>
 #include <TFT_eSPI.h>
 
-// Define buffer sizes for DisplayState char arrays
 #define DISPLAY_IP_BUFFER_SIZE 24
 #define DISPLAY_IMG_PATH_BUFFER_SIZE 64
 #define DISPLAY_MSG_BUFFER_SIZE 512
 
 struct DisplayState {
-    int theme; // -1 - AP mode, 1 - clock, 2 - message, 3 - image
+    int theme; // -1 - AP mode, 1 - clock, 2 - message, 3 - image, 4 - countdown
+    time_t timeout;
     char ipInfo[DISPLAY_IP_BUFFER_SIZE]; // IP address or network info to show at top
     char image[DISPLAY_IMG_PATH_BUFFER_SIZE]; // Image path
 };

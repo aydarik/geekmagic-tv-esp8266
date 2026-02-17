@@ -29,6 +29,9 @@ void handleAppJson() {
     doc["tz"] = appSettings.tz;
     doc["showIP"] = appSettings.showIP;
     doc["showSec"] = appSettings.showSec;
+    if (displayState.timeout != 0) {
+        doc["timeout"] = displayState.timeout;
+    }
     String json;
     serializeJson(doc, json);
     server.send(200, "application/json", json);
@@ -41,6 +44,8 @@ void handleSpaceJson() {
     JsonDocument doc;
     doc["total"] = fs_info.totalBytes;
     doc["free"] = fs_info.totalBytes - fs_info.usedBytes;
+    doc["heap"] = ESP.getFreeHeap();
+    doc["fragm"] = ESP.getHeapFragmentation();
     String json;
     serializeJson(doc, json);
     server.send(200, "application/json", json);
@@ -82,21 +87,19 @@ void handleCountdownJson() {
     server.send(200, "application/json", json);
 }
 
-String urlDecode(const String& input) {
+String urlDecode(const String &input) {
     String decoded = "";
     char temp[] = "0x00";
 
     for (unsigned int i = 0; i < input.length(); i++) {
         if (input[i] == '+') {
             decoded += ' ';
-        }
-        else if (input[i] == '%' && i + 2 < input.length()) {
+        } else if (input[i] == '%' && i + 2 < input.length()) {
             temp[2] = input[i + 1];
             temp[3] = input[i + 2];
             decoded += static_cast<char>(strtol(temp, nullptr, 16));
             i += 2;
-        }
-        else {
+        } else {
             decoded += input[i];
         }
     }
@@ -112,12 +115,24 @@ void handleSet() {
         strncpy(notificationState.message, urlDecode(server.arg("msg")).c_str(), sizeof(notificationState.message));
         notificationState.message[sizeof(notificationState.message) - 1] = '\0'; // Ensure null-termination
         displayUpdate(2);
+        if (server.hasArg("timeout")) {
+            if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
+                displayState.timeout = time(nullptr) + timeout;
+            }
+        }
     } else if (server.hasArg("cnt")) {
         strncpy(countdownState.subject, urlDecode(server.arg("sbj")).c_str(), sizeof(countdownState.subject));
         countdownState.subject[sizeof(countdownState.subject) - 1] = '\0'; // Ensure null-termination
         strncpy(countdownState.datetime, server.arg("cnt").c_str(), sizeof(countdownState.datetime));
         countdownState.datetime[sizeof(countdownState.datetime) - 1] = '\0'; // Ensure null-termination
         displayUpdate(4);
+        if (server.hasArg("timeout")) {
+            if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
+                if (const time_t datetime = parseDateTime(countdownState.datetime); datetime > time(nullptr)) {
+                    displayState.timeout = datetime + timeout;
+                }
+            }
+        }
     } else if (server.hasArg("brt")) {
         appSettings.brightness = server.arg("brt").toInt();
         displaySetBrightness(appSettings.brightness);
@@ -128,6 +143,11 @@ void handleSet() {
         strncpy(displayState.image, server.arg("img").c_str(), sizeof(displayState.image));
         displayState.image[sizeof(displayState.image) - 1] = '\0'; // Ensure null-termination
         displayUpdate(3);
+        if (server.hasArg("timeout")) {
+            if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
+                displayState.timeout = time(nullptr) + timeout;
+            }
+        }
     } else if (server.hasArg("ip")) {
         appSettings.showIP = server.arg("ip") != "false";
         if (displayState.theme == 1) {
@@ -241,7 +261,7 @@ String listDirRecursiveHtml(const char *dirname = "/") {
                 htmlRow += sub;
             }
         } else {
-            const char* fileName = file.fullName();
+            const char *fileName = file.fullName();
 
             char delBtn[128];
             snprintf(delBtn, sizeof(delBtn),
@@ -250,7 +270,7 @@ String listDirRecursiveHtml(const char *dirname = "/") {
 
             char setBtn[128] = "";
             auto fnameLower = String(fileName);
-            fnameLower.toLowerCase();  // convert to lowercase
+            fnameLower.toLowerCase(); // convert to lowercase
             if (fnameLower.endsWith(".jpg")) {
                 snprintf(setBtn, sizeof(setBtn),
                          "<button class='button' onclick=\"displayImage('/%s')\">SET</button>",
@@ -298,7 +318,6 @@ void handleOTAUpload() {
 
     if (upload.status == UPLOAD_FILE_START) {
         Serial.printf("OTA Update Start: %s\n", upload.filename.c_str());
-        displayState.theme = -1;
         displayShowMessage("OTA Update...");
 
         const uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;

@@ -70,7 +70,11 @@ size_t wrapText(char *text, char *lines[], const size_t maxLines, const size_t m
     return count;
 }
 
-void themeRenderNotification() {
+void themeRenderNotification(const bool forceClear) {
+    if (!forceClear) {
+        return;
+    }
+
     if (notificationState.message[0] == '\0') {
         displayShowMessage(F("No messages"));
         return;

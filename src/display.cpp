@@ -77,7 +77,11 @@ void displayTest() {
     displayUpdate();
 }
 
-void displayRenderImage() {
+void displayRenderImage(const bool forceClear) {
+    if (!forceClear) {
+        return;
+    }
+
     const char *path = displayState.image;
 
     if (!LittleFS.exists(path)) {
@@ -109,12 +113,21 @@ void displayUpdate(const int theme, const bool forceClear) {
         displayState.theme = theme;
     }
 
+    if (displayState.timeout != 0) {
+        if (forceClear || displayState.theme < 1) {
+            displayState.timeout = 0;
+        } else if (time(nullptr) > displayState.timeout) {
+            displayUpdate(1, true);
+            return;
+        }
+    }
+
     switch (displayState.theme) {
         case 2:
-            themeRenderNotification();
+            themeRenderNotification(forceClear);
             break;
         case 3:
-            displayRenderImage();
+            displayRenderImage(forceClear);
             break;
         case 4:
             themeRenderCountdown(forceClear);
@@ -122,6 +135,16 @@ void displayUpdate(const int theme, const bool forceClear) {
         default:
             themeRenderClock(forceClear);
             break;
+    }
+
+    if (displayState.timeout != 0) {
+        constexpr int minDelay = 60;
+        if (const int diff = displayState.timeout - time(nullptr) + 1; diff <= minDelay) {
+            const int currentX = diff * tft.width() / minDelay;
+            const int currentY = tft.height() - 8;
+            tft.drawFastHLine(0, currentY, currentX, TFT_DARKGREY);
+            tft.drawFastHLine(currentX, currentY, tft.width(), TFT_BLACK);
+        }
     }
 }
 
@@ -164,12 +187,10 @@ void displayShowMessage(const String &msg) {
 }
 
 void displayShowAPScreen(const char *ssid, const char *password, const char *ip) {
-    displayState.theme = -1;
-
     strncpy(displayState.ipInfo, ip, sizeof(displayState.ipInfo));
     displayState.ipInfo[sizeof(displayState.ipInfo) - 1] = '\0'; // Ensure null-termination
-
     themeRenderAPMode(ssid, password);
+    displayState.theme = -1;
 }
 
 void displayCycleNextPage() {

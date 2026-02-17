@@ -15,6 +15,6 @@ struct NotificationState {
     char style[NOTIFICATION_STYLE_BUFFER_SIZE];
 };
 
-void themeRenderNotification();
+void themeRenderNotification(bool forceClear);
 
 #endif
