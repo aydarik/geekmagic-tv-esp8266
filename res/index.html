@@ -515,15 +515,6 @@
             console.error('Error fetching custom message:', error);
         });
 
-        fetch('/countdown.json').then(response => response.json()).then(data => {
-            document.getElementById("countdownSubject").value = data.sbj;
-            if (data.cnt) {
-                document.getElementById("countdownDateTime").value = data.cnt;
-            }
-        }).catch(error => {
-            console.error('Error fetching custom message:', error);
-        });
-
         fetch('/note.json').then(response => response.json()).then(data => {
             document.getElementById("clockNote").value = data.note;
         }).catch(error => {
@@ -554,7 +545,6 @@
         now.setSeconds(0, 0);
         countdownElement.value = formatDateTimeLocal(now);
         countdownElement.min = countdownElement.value;
-        countdownElement.placeholder = countdownElement.value;
         now.setMonth(now.getMonth() + 2);
         countdownElement.max = formatDateTimeLocal(now);
 

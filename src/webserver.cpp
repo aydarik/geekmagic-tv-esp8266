@@ -80,15 +80,6 @@ void handleMessageJson() {
     server.send(200, "application/json", json);
 }
 
-void handleCountdownJson() {
-    JsonDocument doc;
-    doc["cnt"] = countdownState.datetime;
-    doc["sbj"] = countdownState.subject;
-    String json;
-    serializeJson(doc, json);
-    server.send(200, "application/json", json);
-}
-
 void handleNoteJson() {
     JsonDocument doc;
     doc["note"] = clockState.note;
@@ -480,7 +471,6 @@ void webserverInit() {
     server.on("/brt.json", HTTP_GET, handleBrtJson);
     server.on("/v.json", HTTP_GET, handleVersionJson);
     server.on("/message.json", HTTP_GET, handleMessageJson);
-    server.on("/countdown.json", HTTP_GET, handleCountdownJson);
     server.on("/note.json", HTTP_GET, handleNoteJson);
 
     server.on("/filelist", HTTP_GET, handleFileList);
