@@ -81,6 +81,7 @@ void displayRenderImage(const bool forceClear) {
     const char *path = displayState.image;
 
     if (!LittleFS.exists(path)) {
+        logPrintf("Image not found: %s", path);
         displayShowMessage(F("Image not found"));
         return;
     }

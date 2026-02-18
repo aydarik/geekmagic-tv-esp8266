@@ -7,13 +7,6 @@ CountdownState countdownState;
 
 // Parse "YYYY-MM-DD HH:MM:SS"
 time_t parseDateTime(const String &s) {
-    // Expected lengths:
-    // 16 -> YYYY-MM-DD HH:MM
-    // 19 -> YYYY-MM-DD HH:MM:SS
-    if (s.length() != 16 && s.length() != 19) {
-        return 0;
-    }
-
     const char *str = s.c_str();
 
     // Validate fixed characters
@@ -23,11 +16,11 @@ time_t parseDateTime(const String &s) {
         return 0;
     }
 
-    if (s.length() == 19 && str[16] != ':') {
+    if (s.length() > 16 && str[16] != ':') {
         return 0;
     }
 
-    auto toInt2 = [](char a, char b) -> int {
+    auto toInt2 = [](const char a, const char b) -> int {
         if (!isdigit(a) || !isdigit(b)) return -1;
         return (a - '0') * 10 + (b - '0');
     };
@@ -42,14 +35,14 @@ time_t parseDateTime(const String &s) {
                (p[3] - '0');
     };
 
-    int year = toInt4(str);
-    int month = toInt2(str[5], str[6]);
-    int day = toInt2(str[8], str[9]);
-    int hour = toInt2(str[11], str[12]);
-    int min = toInt2(str[14], str[15]);
-    int sec = 0;
+    const int year = toInt4(str);
+    const int month = toInt2(str[5], str[6]);
+    const int day = toInt2(str[8], str[9]);
+    const int hour = toInt2(str[11], str[12]);
+    const int min = toInt2(str[14], str[15]);
 
-    if (s.length() == 19) {
+    int sec = 0;
+    if (s.length() > 16) {
         sec = toInt2(str[17], str[18]);
     }
 

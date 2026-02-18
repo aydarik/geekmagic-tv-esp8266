@@ -106,7 +106,7 @@ void setupOTA() {
     ArduinoOTA.onStart([] {
         const String type = ArduinoOTA.getCommand() == U_FLASH ? F("firmware") : F("filesystem");
         Serial.println("OTA Start: " + type);
-        displayShowMessage(F("OTA Update..."), -25);
+        displayShowMessage(F("OTA Update..."), -15);
         tft.drawRect(20, 120, 200, 20, TFT_WHITE);
         tft.fillRect(22, 122, 196, 16, TFT_BLACK);
     });

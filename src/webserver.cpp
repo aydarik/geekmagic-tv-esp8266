@@ -119,7 +119,7 @@ void handleSet() {
         notificationState.message[sizeof(notificationState.message) - 1] = '\0'; // Ensure null-termination
         strncpy(notificationState.subject, urlDecode(server.arg("sbj")).c_str(), sizeof(notificationState.subject));
         notificationState.subject[sizeof(notificationState.subject) - 1] = '\0'; // Ensure null-termination
-        strncpy(notificationState.style, server.arg("style").c_str(), sizeof(notificationState.style));
+        strncpy(notificationState.style, urlDecode(server.arg("style")).c_str(), sizeof(notificationState.style));
         notificationState.style[sizeof(notificationState.style) - 1] = '\0'; // Ensure null-termination
         displayUpdate(2);
         if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
@@ -138,7 +138,7 @@ void handleSet() {
     } else if (server.hasArg("cnt")) {
         strncpy(countdownState.subject, urlDecode(server.arg("sbj")).c_str(), sizeof(countdownState.subject));
         countdownState.subject[sizeof(countdownState.subject) - 1] = '\0'; // Ensure null-termination
-        strncpy(countdownState.datetime, server.arg("cnt").c_str(), sizeof(countdownState.datetime));
+        strncpy(countdownState.datetime, urlDecode(server.arg("cnt")).c_str(), sizeof(countdownState.datetime));
         countdownState.datetime[sizeof(countdownState.datetime) - 1] = '\0'; // Ensure null-termination
         displayUpdate(4);
         if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
@@ -153,7 +153,7 @@ void handleSet() {
     } else if (server.hasArg("theme")) {
         displayUpdate(server.arg("theme").toInt());
     } else if (server.hasArg("img")) {
-        strncpy(displayState.image, server.arg("img").c_str(), sizeof(displayState.image));
+        strncpy(displayState.image, urlDecode(server.arg("img")).c_str(), sizeof(displayState.image));
         displayState.image[sizeof(displayState.image) - 1] = '\0'; // Ensure null-termination
         displayUpdate(3);
         if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
@@ -215,21 +215,21 @@ void handleFileUpload() {
 
         if (!uploadFile) {
             Serial.println(F("Failed to open file for writing"));
-            logPrintf("ERROR: Failed to open file %s for writing!", filepath.c_str());
+            logPrintf("ERROR! Failed to open file %s for writing!", filepath.c_str());
         } else {
-            logPrintf("INFO: Opened file %s for writing.", filepath.c_str());
+            logPrintf("Opened file %s for writing.", filepath.c_str());
         }
     } else if (upload.status == UPLOAD_FILE_WRITE) {
         if (uploadFile) {
             if (const size_t bytesWritten = uploadFile.write(upload.buf, upload.currentSize);
                 bytesWritten != upload.currentSize) {
-                logPrintf("WARNING: Only %u of %u bytes written to file!", bytesWritten, upload.currentSize);
+                logPrintf("WARNING! Only %u of %u bytes written to file!", bytesWritten, upload.currentSize);
             }
         }
     } else if (upload.status == UPLOAD_FILE_END) {
         if (uploadFile) {
             uploadFile.close();
-            logPrintf("INFO: File %s closed. Total size: %u bytes", upload.filename.c_str(), upload.totalSize);
+            logPrintf("File %s closed. Total size: %u bytes", upload.filename.c_str(), upload.totalSize);
             Serial.printf("Upload complete: %s (%u bytes)\n",
                           upload.filename.c_str(), upload.totalSize);
         }
@@ -242,10 +242,10 @@ void handleUploadDone() {
     // After upload, verify file size on LittleFS
     const String filepath = server.arg("dir") + server.upload().filename;
     if (File uploadedFile = LittleFS.open(filepath, "r")) {
-        logPrintf("INFO: Actual file size on LittleFS for %s: %u bytes", filepath.c_str(), uploadedFile.size());
+        logPrintf("Actual file size on LittleFS for %s: %u bytes", filepath.c_str(), uploadedFile.size());
         uploadedFile.close();
     } else {
-        logPrintf("ERROR: Could not open %s after upload to check size.", filepath.c_str());
+        logPrintf("ERROR! Could not open %s after upload to check size.", filepath.c_str());
     }
 }
 
