@@ -126,13 +126,20 @@ void handleSet() {
             displayState.timeout = time(nullptr) + timeout;
         }
     } else if (server.hasArg("note")) {
-        strncpy(clockState.note, urlDecode(server.arg("note")).c_str(), sizeof(clockState.note));
-        clockState.note[sizeof(clockState.note) - 1] = '\0'; // Ensure null-termination
+        const String decodedNote = urlDecode(server.arg("note"));
+        const char* newNote = decodedNote.c_str();
+        bool changed = true;
+        if (strcmp(clockState.note, newNote) == 0) {
+            changed = false;
+        } else {
+            strncpy(clockState.note, newNote, sizeof(clockState.note));
+            clockState.note[sizeof(clockState.note) - 1] = '\0'; // Ensure null-termination
+        }
         clockState.noteTimeout = 0;
         if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
             clockState.noteTimeout = time(nullptr) + timeout;
         }
-        if (displayState.theme == 1) {
+        if (displayState.theme == 1 && changed) {
             displayUpdate();
         }
     } else if (server.hasArg("cnt")) {
