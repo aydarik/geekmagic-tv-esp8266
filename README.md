@@ -8,40 +8,46 @@ ESP8266 firmware compatible with the GeekMagic API, designed for GeekMagic Small
 > This project is originally a fork of [bvweerd/geekmagic-tv-esp8266](https://github.com/bvweerd/geekmagic-tv-esp8266),
 > huge thanks to [@bvweerd](https://github.com/bvweerd) for this amazing work ❤️
 >
-> It started as a personal learning/experimentation project. Due to significant architectural changes, it is **not intended to stay in sync** with the upstream repository.
+> It started as a personal learning/experimentation project. Due to significant architectural changes, it is **not
+intended to stay in sync** with the upstream repository.
 
-![Clock](/assets/photo_clock.jpg) ![Message](/assets/photo_message.jpg)
+![Clock](/assets/photo_clock.jpg)
 
 > [!WARNING]
 > **SmallTV** and **SmallTV-Ultra** utilize an ESP8266. The **SmallTV-Pro** uses an ESP32.
 > This firmware is strictly for **ESP8266-based devices**. Testing was done on the SmallTV Ultra.
-> 
+>
 > **Flashing custom firmware is at your own risk.**
 
 ## Home Assistant
 
-You can integrate the device with Home Assistant using [hass-geekmagic](https://github.com/aydarik/hass-geekmagic) HACS add-on:
+You can integrate the device with Home Assistant using [hass-geekmagic](https://github.com/aydarik/hass-geekmagic) HACS
+add-on:
 
 [![Add to Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Faydarik%2Fhass-addons)
 
 ## 🛠️ Installation
 
 ### First Flash (UART Required ⚠️)
+
 Since initial devices come with factory firmware, the **first** flash must be done via serial.
 
 1. Connect your device via USB/Serial.
 2. Recommended tool: [web.esphome.io](https://web.esphome.io/)
 3. Flash the `firmware.bin` from the latest release.
 
-Please check the instructions in the original repository for more details: [FLASHING.md](https://github.com/bvweerd/geekmagic-tv-esp8266/blob/dev/FLASHING.md)
+Please check the instructions in the original repository for more
+details: [FLASHING.md](https://github.com/bvweerd/geekmagic-tv-esp8266/blob/dev/FLASHING.md)
 
 ### Bootstrapping
-1. Device starts in AP mode. 
+
+1. Device starts in AP mode.
 2. Check the display for the **AP Credentials** ((SSID, password).
 3. Connect and navigate to the shown IP address (typically `192.168.4.1`).
 4. Configure your Wi-Fi credentials on the Web UI.
 5. Device will restart and connect to your network.
-6. The new assigned IP address will be shown at startup and at the top of the clock screen. You can now navigate to it to access the Web UI:
+6. The new assigned IP address will be shown at startup and at the top of the clock screen. You can now navigate to it
+   to access the Web UI:
 
 ![WEB UI](/assets/web_ui.png)
 
@@ -59,6 +65,7 @@ _Optional:_ configure a static IP for the device on your router, so it won’t b
 If you are not using Home Assistant, you can still automate your device via simple HTTP calls.
 
 ### Display Control
+
 ```bash
 # Set brightness
 curl "http://DEVICE_IP/set?brt=50"
@@ -71,21 +78,28 @@ curl "http://DEVICE_IP/set?sec=true"
 ```
 
 ### Messaging & Notifications
+
 ```bash
 # Show custom message
-curl "http://DEVICE_IP/set?msg=Hello\nWorld&sbj=Alert&style=center&timeout=10"
+curl "http://DEVICE_IP/set?msg=Hello%20world!%0A%D0%9F%D1%80%D0%B8%D0%B2%D0%B5%D1%82%2C%20%D0%BC%D0%B8%D1%80!%0A&sbj=Notification&style=center&timeout=10"
 
 # Set a sticky note on the clock screen
-curl "http://DEVICE_IP/set?note=Don%27t%20forget%20milk%21&timeout=3600"
+curl "http://DEVICE_IP/set?note=-1%2C%20snow&timeout=3600"
 ```
 
+![Custom Message](/assets/photo_message.jpg) ![Sticky Note](/assets/photo_note.jpg)
+
 ### Countdown
+
 ```bash
 # Start a countdown to the specific date and time
 curl "http://DEVICE_IP/set?cnt=2026-02-19T09%3A30&sbj=Next%20call&timeout=5"
 ```
 
+![Countdown](/assets/photo_countdown.jpg)
+
 ### Filesystem & Images
+
 ```bash
 # Upload an image file
 curl -F "file=@photo.jpg" "http://DEVICE_IP/doUpload?dir=/image/"
@@ -98,6 +112,7 @@ curl "http://DEVICE_IP/filelist"
 ```
 
 ### System
+
 ```bash
 # Get device status
 curl "http://DEVICE_IP/app.json"
@@ -110,4 +125,5 @@ curl "http://DEVICE_IP/log"
 ```
 
 ## 📜 License
+
 This project is licensed under the MIT License - see the [LICENSE](/LICENSE) file for details.
