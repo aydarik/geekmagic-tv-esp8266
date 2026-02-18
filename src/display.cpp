@@ -154,31 +154,28 @@ void displayShowMessage(const String &msg) {
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
     tft.setTextDatum(MC_DATUM);
 
-    int currentY = tft.height() / 2;
-    constexpr int linesOffset = 8;
-
     // Calculate line height based on the font
-    const unsigned int lineHeight = tft.fontHeight();
+    const unsigned int lineHeight = 34;
 
-    // Split message by newline characters
-    std::vector<String> linesToProcess;
-    unsigned int prev = 0;
+    // Count lines first to calculate vertical centering
+    unsigned int linesCnt = 1;
     for (unsigned int i = 0; i < msg.length(); i++) {
-        if (msg.charAt(i) == '\n') {
-            linesToProcess.push_back(msg.substring(prev, i));
-            prev = i + 1;
-        }
+        if (msg.charAt(i) == '\n') linesCnt++;
     }
-    linesToProcess.push_back(msg.substring(prev)); // Add the last part
 
-    // Adjust startY to vertically center the block of text
-    const unsigned int linesCnt = linesToProcess.size();
-    currentY -= linesCnt * (lineHeight + linesOffset) / 2;
+    int currentY = tft.height() / 2 - linesCnt * lineHeight / 2 + lineHeight / 2;
+    const int centerX = tft.width() / 2;
 
-    // Draw each wrapped line
     tft.startWrite();
-    for (unsigned int i = 0; i < linesCnt; i++) {
-        tft.drawString(linesToProcess[i], tft.width() / 2, currentY + i * (lineHeight + linesOffset));
+    int startIdx = 0;
+    for (unsigned int i = 0; i <= msg.length(); i++) {
+        if (i == msg.length() || msg.charAt(i) == '\n') {
+            if (i > startIdx) {
+                tft.drawString(msg.substring(startIdx, i), centerX, currentY);
+            }
+            currentY += lineHeight;
+            startIdx = i + 1;
+        }
     }
     tft.endWrite();
 }

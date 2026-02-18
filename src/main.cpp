@@ -32,6 +32,7 @@ bool tryConnectWiFi(int maxAttempts) {
         const unsigned long startAttempt = millis();
         while (WiFi.status() != WL_CONNECTED && millis() - startAttempt < WIFI_CONNECTION_TIMEOUT) {
             delay(1000);
+            yield();
         }
 
         // Wait for IP address to be assigned after WiFi connection
@@ -42,6 +43,7 @@ bool tryConnectWiFi(int maxAttempts) {
                    millis() - ipWaitStart < 10000) {
                 // Wait up to 10 seconds for IP
                 delay(1000);
+                yield();
             }
         }
 
@@ -102,7 +104,7 @@ void setupOTA() {
     ArduinoOTA.setPassword(OTA_PASSWORD);
 
     ArduinoOTA.onStart([] {
-        const String type = ArduinoOTA.getCommand() == U_FLASH ? "firmware" : "filesystem";
+        const String type = ArduinoOTA.getCommand() == U_FLASH ? F("firmware") : F("filesystem");
         Serial.println("OTA Start: " + type);
         displayShowMessage(F("OTA Update..."));
     });

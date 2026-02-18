@@ -34,9 +34,10 @@ void handleAppJson() {
     if (displayState.timeout != 0) {
         doc["timeout"] = displayState.timeout;
     }
-    String json;
-    serializeJson(doc, json);
-    server.send(200, "application/json", json);
+
+    server.setContentLength(measureJson(doc));
+    server.send(200, "application/json", "");
+    serializeJson(doc, server.client());
 }
 
 void handleSpaceJson() {
@@ -48,26 +49,29 @@ void handleSpaceJson() {
     doc["free"] = fs_info.totalBytes - fs_info.usedBytes;
     doc["heap"] = ESP.getFreeHeap();
     doc["fragm"] = ESP.getHeapFragmentation();
-    String json;
-    serializeJson(doc, json);
-    server.send(200, "application/json", json);
+
+    server.setContentLength(measureJson(doc));
+    server.send(200, "application/json", "");
+    serializeJson(doc, server.client());
 }
 
 void handleBrtJson() {
     JsonDocument doc;
     doc["brt"] = appSettings.brightness;
-    String json;
-    serializeJson(doc, json);
-    server.send(200, "application/json", json);
+
+    server.setContentLength(measureJson(doc));
+    server.send(200, "application/json", "");
+    serializeJson(doc, server.client());
 }
 
 void handleVersionJson() {
     JsonDocument doc;
     doc["m"] = "aydarik";
     doc["v"] = FIRMWARE_VERSION_STRING;
-    String json;
-    serializeJson(doc, json);
-    server.send(200, "application/json", json);
+
+    server.setContentLength(measureJson(doc));
+    server.send(200, "application/json", "");
+    serializeJson(doc, server.client());
 }
 
 void handleMessageJson() {
@@ -75,17 +79,19 @@ void handleMessageJson() {
     doc["msg"] = notificationState.message;
     doc["sbj"] = notificationState.subject;
     doc["style"] = notificationState.style;
-    String json;
-    serializeJson(doc, json);
-    server.send(200, "application/json", json);
+
+    server.setContentLength(measureJson(doc));
+    server.send(200, "application/json", "");
+    serializeJson(doc, server.client());
 }
 
 void handleNoteJson() {
     JsonDocument doc;
     doc["note"] = clockState.note;
-    String json;
-    serializeJson(doc, json);
-    server.send(200, "application/json", json);
+
+    server.setContentLength(measureJson(doc));
+    server.send(200, "application/json", "");
+    serializeJson(doc, server.client());
 }
 
 String urlDecode(const String &input) {
@@ -246,59 +252,64 @@ void handleUploadDone() {
 void handleDelete() {
     if (server.hasArg("file")) {
         if (const String filepath = server.arg("file"); LittleFS.remove(filepath)) {
-            server.send(200, "text/plain", "Deleted");
+            server.send(200, "text/plain", F("Deleted"));
         } else {
-            server.send(404, "text/plain", "Not found");
+            server.send(404, "text/plain", F("Not found"));
         }
     } else {
-        server.send(400, "text/plain", "Missing file parameter");
+        server.send(400, "text/plain", F("Missing file parameter"));
     }
 }
 
-String listDirRecursiveHtml(const char *dirname = "/") {
-    String htmlRow = "";
+void streamDirRecursiveHtml(const char *dirname) {
     File root = LittleFS.open(dirname, "r");
+    if (!root || !root.isDirectory()) return;
+
     File file = root.openNextFile();
     while (file) {
         if (file.isDirectory()) {
-            String sub = listDirRecursiveHtml(file.fullName());
-            if (sub.length() > 2) {
-                htmlRow += sub;
-            }
+            streamDirRecursiveHtml(file.fullName());
         } else {
             const char *fileName = file.fullName();
+            const size_t fileSize = file.size();
 
-            char delBtn[128];
-            snprintf(delBtn, sizeof(delBtn),
-                     "<button class='button' onclick=\"deleteImage('/%s')\">DEL</button>",
-                     fileName);
-
-            char setBtn[128] = "";
             auto fnameLower = String(fileName);
-            fnameLower.toLowerCase(); // convert to lowercase
+            fnameLower.toLowerCase();
+
+            server.sendContent(F("<tr><td><a href='/"));
+            server.sendContent(fileName);
+            server.sendContent(F("'>/"));
+            server.sendContent(fileName);
+            server.sendContent(F("</a></td><td class='size'>"));
+            server.sendContent(String(fileSize));
+            server.sendContent(F("</td><td><div class='button-group'>"));
+
+            // Delete button
+            server.sendContent(F("<button class='button' onclick=\"deleteImage('/"));
+            server.sendContent(fileName);
+            server.sendContent(F("')\">DEL</button>"));
+
+            // Set button for JPGs
             if (fnameLower.endsWith(".jpg")) {
-                snprintf(setBtn, sizeof(setBtn),
-                         "<button class='button' onclick=\"displayImage('/%s')\">SET</button>",
-                         fileName);
+                server.sendContent(F("<button class='button' onclick=\"displayImage('/"));
+                server.sendContent(fileName);
+                server.sendContent(F("')\">SET</button>"));
             }
 
-            char row[512];
-            snprintf(row, sizeof(row),
-                     "<tr><td><a href='/%s'>/%s</a></td><td class='size'>%d</td><td><div class='button-group'>%s%s</div></td></tr>\n",
-                     fileName, fileName, file.size(), delBtn, setBtn);
-            htmlRow += row;
+            server.sendContent(F("</div></td></tr>\n"));
         }
         file = root.openNextFile();
     }
-
-    return htmlRow;
 }
 
 void handleFileList() {
-    String htmlTable = "<table><thead><tr><th>Path</th><th>Size</th><th>Actions</th></tr></thead><tbody>\n"
-                       + listDirRecursiveHtml(server.hasArg("dir") ? server.arg("dir").c_str() : "/")
-                       + "</tbody></table>";
-    server.send(200, "text/html", htmlTable);
+    server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+    server.send(200, "text/html", "");
+
+    server.sendContent(F("<table><thead><tr><th>Path</th><th>Size</th><th>Actions</th></tr></thead><tbody>\n"));
+    streamDirRecursiveHtml(server.hasArg("dir") ? server.arg("dir").c_str() : "/");
+    server.sendContent(F("</tbody></table>"));
+    server.sendContent(""); // End of chunked response
 }
 
 // Function to handle factory reset
