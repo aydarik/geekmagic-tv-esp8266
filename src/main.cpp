@@ -106,7 +106,9 @@ void setupOTA() {
     ArduinoOTA.onStart([] {
         const String type = ArduinoOTA.getCommand() == U_FLASH ? F("firmware") : F("filesystem");
         Serial.println("OTA Start: " + type);
-        displayShowMessage(F("OTA Update..."));
+        displayShowMessage(F("OTA Update..."), -25);
+        tft.drawRect(20, 120, 200, 20, TFT_WHITE);
+        tft.fillRect(22, 122, 196, 16, TFT_BLACK);
     });
 
     ArduinoOTA.onEnd([] {
@@ -119,9 +121,8 @@ void setupOTA() {
         const int percent = progress * 100 / total;
         static int lastPercent = -1;
         if (percent != lastPercent) {
-            tft.fillRect(20, 130, 200, 20, TFT_BLACK);
-            tft.drawRect(20, 130, 200, 20, TFT_WHITE);
-            tft.fillRect(22, 132, percent * 196 / 100, 16, TFT_BLUE);
+            const int offset = percent * 196 / 100;
+            tft.fillRect(22, 122, offset, 16, TFT_BLUE);
             lastPercent = percent;
         }
     });

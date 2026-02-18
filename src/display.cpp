@@ -146,7 +146,7 @@ void displayUpdate(const int theme, const bool forceClear) {
     }
 }
 
-void displayShowMessage(const String &msg) {
+void displayShowMessage(const String &msg, const int offsetY) {
     displayState.theme = 0;
 
     tft.fillScreen(TFT_BLACK);
@@ -163,7 +163,7 @@ void displayShowMessage(const String &msg) {
         if (msg.charAt(i) == '\n') linesCnt++;
     }
 
-    int currentY = tft.height() / 2 - linesCnt * lineHeight / 2 + lineHeight / 2;
+    int currentY = tft.height() / 2 - linesCnt * lineHeight / 2 + offsetY;
     const int centerX = tft.width() / 2;
 
     tft.startWrite();

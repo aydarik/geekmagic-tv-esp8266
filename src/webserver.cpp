@@ -268,30 +268,39 @@ void streamDirRecursiveHtml(const char *dirname) {
     File file = root.openNextFile();
     while (file) {
         if (file.isDirectory()) {
-            streamDirRecursiveHtml(file.fullName());
+            const size_t len = strlen(file.fullName()) + 2;
+            char childPath[len];
+            snprintf(childPath, len, "/%s", file.fullName());
+            streamDirRecursiveHtml(childPath);
         } else {
-            const char *fileName = file.fullName();
+            const char *fileName = file.name();
             const size_t fileSize = file.size();
 
             auto fnameLower = String(fileName);
             fnameLower.toLowerCase();
 
-            server.sendContent(F("<tr><td><a href='/"));
+            server.sendContent(F("<tr><td><a href='"));
+            server.sendContent(dirname);
+            server.sendContent(F("/"));
             server.sendContent(fileName);
-            server.sendContent(F("'>/"));
+            server.sendContent(F("'>"));
             server.sendContent(fileName);
             server.sendContent(F("</a></td><td class='size'>"));
             server.sendContent(String(fileSize));
             server.sendContent(F("</td><td><div class='button-group'>"));
 
             // Delete button
-            server.sendContent(F("<button class='button' onclick=\"deleteImage('/"));
+            server.sendContent(F("<button class='button' onclick=\"deleteImage('"));
+            server.sendContent(dirname);
+            server.sendContent(F("/"));
             server.sendContent(fileName);
             server.sendContent(F("')\">DEL</button>"));
 
             // Set button for JPGs
             if (fnameLower.endsWith(".jpg")) {
-                server.sendContent(F("<button class='button' onclick=\"displayImage('/"));
+                server.sendContent(F("<button class='button' onclick=\"displayImage('"));
+                server.sendContent(dirname);
+                server.sendContent(F("/"));
                 server.sendContent(fileName);
                 server.sendContent(F("')\">SET</button>"));
             }
