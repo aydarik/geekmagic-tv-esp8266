@@ -12,7 +12,7 @@ void themeRenderNotification(const bool forceClear) {
     }
 
     if (notificationState.message[0] == '\0') {
-        displayShowMessage(F("No messages"));
+        showMessage(F("No messages"), 5);
         return;
     }
 
@@ -25,12 +25,7 @@ void themeRenderNotification(const bool forceClear) {
 
     // Draw subject
     if (hasSubject) {
-        tft.setTextDatum(TC_DATUM);
-        tft.setTextColor(TFT_ORANGE, TFT_BLACK);
-        tft.loadFont(Roboto_Regular24);
-        tft.drawString(notificationState.subject, centerX, currentY);
-        tft.unloadFont();
-        tft.setTextColor(TFT_WHITE, TFT_BLACK);
+        drawSubject(notificationState.subject);
         currentY = 44;
     }
 
@@ -76,10 +71,6 @@ void themeRenderNotification(const bool forceClear) {
 
     // Draw subject line
     if (hasSubject) {
-        currentY = 32;
-        for (int dx = 0; dx <= centerX; dx += 8) {
-            tft.drawFastHLine(centerX - dx, currentY, dx * 2, TFT_SILVER);
-            delay(20); // control animation speed
-        }
+        drawHLine(32);
     }
 }

@@ -69,8 +69,8 @@ void displayTest() {
     tft.fillScreen(TFT_WHITE);
     delay(500);
     tft.fillScreen(TFT_BLACK);
-
-    displayUpdate();
+    delay(500);
+    showMessage(F("Display test\nsuccessfully\nfinished"), 3);
 }
 
 void displayRenderImage(const bool forceClear) {
@@ -82,13 +82,13 @@ void displayRenderImage(const bool forceClear) {
 
     if (!LittleFS.exists(path)) {
         logPrintf("Image not found: %s", path);
-        displayShowMessage(F("Image not found"));
+        showMessage(F("Image not found"), 5);
         return;
     }
 
     File jpgFile = LittleFS.open(path, "r");
     if (!jpgFile) {
-        displayShowMessage(F("Failed to open\nimage file"));
+        showMessage(F("Failed to open\nimage file"), 5);
         return;
     }
 
@@ -99,29 +99,35 @@ void displayRenderImage(const bool forceClear) {
     const JRESULT res = TJpgDec.drawFsJpg(0, 0, jpgFile);
     tft.endWrite();
     if (res != JDR_OK) {
-        displayShowMessage(F("Failed to\ndecode JPEG"));
+        showMessage(F("Failed to\ndecode JPEG"), 5);
     }
 
     jpgFile.close(); // Close the file after decoding attempt
 }
 
 void displayUpdate(const int theme, const bool forceClear) {
+    time_t now;
+    time(&now);
+
     if (theme > 0) {
         displayState.theme = theme;
     }
 
     if (displayState.timeout != 0) {
-        if (forceClear || displayState.theme < 1) {
+        if (forceClear || displayState.theme < 0) {
             displayState.timeout = 0;
-        } else if (time(nullptr) > displayState.timeout) {
+        } else if (now > displayState.timeout) {
             displayUpdate(1, true);
             return;
         }
     }
 
     switch (displayState.theme) {
+        case -1:
+            themeRenderAPMode(forceClear);
+            break;
         case 1:
-            themeRenderClock(forceClear);
+            themeRenderClock(forceClear, now);
             break;
         case 2:
             themeRenderNotification(forceClear);
@@ -130,7 +136,7 @@ void displayUpdate(const int theme, const bool forceClear) {
             displayRenderImage(forceClear);
             break;
         case 4:
-            themeRenderCountdown(forceClear);
+            themeRenderCountdown(forceClear, now);
             break;
         default:
             break;
@@ -138,40 +144,13 @@ void displayUpdate(const int theme, const bool forceClear) {
 
     if (displayState.timeout != 0) {
         constexpr int minDelay = 60;
-        if (const int diff = displayState.timeout - time(nullptr); diff <= minDelay) {
+        if (const int diff = displayState.timeout - now; diff <= minDelay) {
             const int currentX = diff * tft.width() / minDelay;
             const int currentY = tft.height() - 8;
             tft.drawFastHLine(currentX, currentY, tft.width(), TFT_BLACK);
             tft.drawFastHLine(0, currentY, currentX, TFT_DARKGREY);
         }
     }
-}
-
-void displayShowMessage(const String &s, const int offsetY) {
-    displayState.theme = 0;
-    tft.fillScreen(TFT_BLACK);
-
-    tft.setTextFont(FONT_DEFAULT);
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.setTextDatum(MC_DATUM);
-
-    String wrapped[MAX_LINES];
-    const size_t count = splitString(s, wrapped, MAX_LINES);
-
-    constexpr int lineHeight = 34;
-    const int centerX = tft.width() / 2;
-    int currentY = tft.height() / 2 - count * lineHeight / 2 + offsetY;
-    for (unsigned int i = 0; i <= count; i++) {
-        tft.drawString(wrapped[i], centerX, currentY);
-        currentY += lineHeight;
-    }
-}
-
-void displayShowAPScreen(const char *ssid, const char *password, const char *ip) {
-    strncpy(displayState.ipInfo, ip, sizeof(displayState.ipInfo));
-    displayState.ipInfo[sizeof(displayState.ipInfo) - 1] = '\0'; // Ensure null-termination
-    themeRenderAPMode(ssid, password);
-    displayState.theme = -1;
 }
 
 void displayCycleNextPage() {

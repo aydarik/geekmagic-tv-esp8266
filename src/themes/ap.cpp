@@ -1,10 +1,12 @@
+#include "ap.h"
 #include "config.h"
 #include "display.h"
-#include "settings.h"
 
-extern Settings appSettings;
+void themeRenderAPMode(const bool forceClear) {
+    if (!forceClear) {
+        return;
+    }
 
-void themeRenderAPMode(const char *ssid, const char *pass) {
     tft.fillScreen(TFT_BLACK);
     tft.setTextDatum(TC_DATUM);
 
@@ -41,7 +43,7 @@ void themeRenderAPMode(const char *ssid, const char *pass) {
     currentY += 25;
     tft.setTextFont(valueFont);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.drawString(ssid, currentX, currentY, valueFont);
+    tft.drawString(WIFI_AP_NAME, currentX, currentY, valueFont);
 
     // Draw Password label
     currentY += 40;
@@ -53,5 +55,5 @@ void themeRenderAPMode(const char *ssid, const char *pass) {
     currentY += 25;
     tft.setTextFont(valueFont);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.drawString(pass, currentX, currentY, valueFont);
+    tft.drawString(WIFI_AP_PASSWORD, currentX, currentY, valueFont);
 }

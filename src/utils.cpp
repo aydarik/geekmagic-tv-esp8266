@@ -1,5 +1,8 @@
 #include <WString.h>
+#include "config.h"
+#include "display.h"
 #include "utils.h"
+#include "fonts/Roboto_Regular24.h"
 
 int utf8Length(const char *text) {
     int count = 0;
@@ -85,4 +88,110 @@ size_t splitString(const String &s, String lines[], const size_t maxLines) {
     }
 
     return count;
+}
+
+void drawHLine(const int y) {
+    const int centerX = tft.width() / 2;
+
+    tft.startWrite();
+    for (int dx = 0; dx <= centerX; dx += 8) {
+        tft.drawFastHLine(centerX - dx, y, dx * 2, TFT_SILVER);
+        delay(20); // control animation speed
+    }
+    tft.endWrite();
+}
+
+void drawSubject(const char *text) {
+    tft.setTextDatum(TC_DATUM);
+    tft.setTextColor(TFT_ORANGE, TFT_BLACK);
+    tft.loadFont(Roboto_Regular24);
+    tft.drawString(text, tft.width() / 2, 0, FONT_DEFAULT);
+    tft.unloadFont();
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+}
+
+// Parse "YYYY-MM-DD HH:MM:SS"
+time_t parseDateTime(const String &s) {
+    const char *str = s.c_str();
+
+    // Validate fixed characters
+    if (str[4] != '-' || str[7] != '-' ||
+        (str[10] != ' ' && str[10] != 'T') ||
+        str[13] != ':') {
+        return 0;
+    }
+
+    if (s.length() > 16 && str[16] != ':') {
+        return 0;
+    }
+
+    auto toInt2 = [](const char a, const char b) -> int {
+        if (!isdigit(a) || !isdigit(b)) return -1;
+        return (a - '0') * 10 + (b - '0');
+    };
+
+    auto toInt4 = [](const char *p) -> int {
+        for (int i = 0; i < 4; i++) {
+            if (!isdigit(p[i])) return -1;
+        }
+        return (p[0] - '0') * 1000 +
+               (p[1] - '0') * 100 +
+               (p[2] - '0') * 10 +
+               (p[3] - '0');
+    };
+
+    const int year = toInt4(str);
+    const int month = toInt2(str[5], str[6]);
+    const int day = toInt2(str[8], str[9]);
+    const int hour = toInt2(str[11], str[12]);
+    const int min = toInt2(str[14], str[15]);
+
+    int sec = 0;
+    if (s.length() > 16) {
+        sec = toInt2(str[17], str[18]);
+    }
+
+    // Basic validation
+    if (year < 1970 || month < 1 || month > 12 ||
+        day < 1 || day > 31 ||
+        hour < 0 || hour > 23 ||
+        min < 0 || min > 59 ||
+        sec < 0 || sec > 59) {
+        return 0;
+    }
+
+    tm tm = {};
+    tm.tm_year = year - 1900;
+    tm.tm_mon = month - 1;
+    tm.tm_mday = day;
+    tm.tm_hour = hour;
+    tm.tm_min = min;
+    tm.tm_sec = sec;
+    tm.tm_isdst = -1;
+
+    return mktime(&tm);
+}
+
+void showMessage(const String &s, const int timeout, const int offsetY) {
+    displayState.theme = 0;
+    tft.fillScreen(TFT_BLACK);
+
+    tft.setTextFont(FONT_DEFAULT);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.setTextDatum(MC_DATUM);
+
+    String wrapped[MAX_LINES];
+    const size_t count = splitString(s, wrapped, MAX_LINES);
+
+    constexpr int lineHeight = 34;
+    const int centerX = tft.width() / 2;
+    int currentY = tft.height() / 2 - count * lineHeight / 2 + offsetY;
+    for (unsigned int i = 0; i <= count; i++) {
+        tft.drawString(wrapped[i], centerX, currentY);
+        currentY += lineHeight;
+    }
+
+    if (timeout > 0) {
+        displayState.timeout = time(nullptr) + timeout;
+    }
 }

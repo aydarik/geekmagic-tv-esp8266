@@ -11,4 +11,12 @@ size_t wrapText(char *text, char *lines[], size_t maxLines);
 
 size_t splitString(const String &s, String lines[], size_t maxLines);
 
+void drawHLine(int y);
+
+void drawSubject(const char *text);
+
+time_t parseDateTime(const String &s);
+
+void showMessage(const String &msg, int timeout = 0, int offsetY = 0);
+
 #endif

@@ -7,6 +7,7 @@
 #include "themes/clock.h"
 #include "main.h"
 #include "logger.h"
+#include "utils.h"
 #include <LittleFS.h>
 #include <ArduinoJson.h>
 #include <ESP8266WebServer.h>
@@ -201,12 +202,7 @@ void handleTest() {
 }
 
 void handleFileUpload() {
-    if (!server.hasArg("dir")) {
-        displayShowMessage(F("Missing dir"));
-        return;
-    }
-
-    const String dir = server.arg("dir");
+    const String dir = server.hasArg("dir") ? server.arg("dir") : "/";
     if (!LittleFS.exists(dir)) {
         LittleFS.mkdir(dir);
     }
@@ -350,7 +346,7 @@ void handleOTAUpload() {
 
     if (upload.status == UPLOAD_FILE_START) {
         Serial.printf("OTA Update Start: %s\n", upload.filename.c_str());
-        displayShowMessage("OTA Update...");
+        showMessage("OTA Update...");
 
         const uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
         if (!Update.begin(maxSketchSpace)) {
@@ -363,10 +359,10 @@ void handleOTAUpload() {
     } else if (upload.status == UPLOAD_FILE_END) {
         if (Update.end(true)) {
             Serial.printf("OTA Success: %u bytes\n", upload.totalSize);
-            displayShowMessage("Success!");
+            showMessage("Success!");
         } else {
             Update.printError(Serial);
-            displayShowMessage("OTA Failed!");
+            showMessage("OTA Failed!");
         }
     }
 }
@@ -442,10 +438,10 @@ void handleWiFiConnect() {
     if (WiFi.status() == WL_CONNECTED) {
         logPrintf("Successfully connected to %s", ssid.c_str());
         logPrintf("IP address: %s", WiFi.localIP().toString().c_str());
-        displayShowMessage(F("Success!\nRebooting..."));
+        showMessage(F("Success!\nRebooting..."));
     } else {
         logPrintf("Failed to connect to %s", ssid.c_str());
-        displayShowMessage(F("Failed :(\nRebooting..."));
+        showMessage(F("Failed :(\nRebooting..."));
     }
     delay(2000);
     ESP.restart();

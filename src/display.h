@@ -23,10 +23,6 @@ void displayTest();
 
 void displayUpdate(int theme = 0, bool forceClear = true);
 
-void displayShowMessage(const String &msg, int offsetY = 0);
-
-void displayShowAPScreen(const char *ssid, const char *password, const char *ip);
-
 void displayCycleNextPage();
 
 void displayToggleBacklight();

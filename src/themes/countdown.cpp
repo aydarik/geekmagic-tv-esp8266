@@ -1,76 +1,14 @@
 #include "countdown.h"
 #include "config.h"
 #include "display.h"
-#include "fonts/Roboto_Regular24.h"
+#include "utils.h"
 
 CountdownState countdownState;
 
-// Parse "YYYY-MM-DD HH:MM:SS"
-time_t parseDateTime(const String &s) {
-    const char *str = s.c_str();
-
-    // Validate fixed characters
-    if (str[4] != '-' || str[7] != '-' ||
-        (str[10] != ' ' && str[10] != 'T') ||
-        str[13] != ':') {
-        return 0;
-    }
-
-    if (s.length() > 16 && str[16] != ':') {
-        return 0;
-    }
-
-    auto toInt2 = [](const char a, const char b) -> int {
-        if (!isdigit(a) || !isdigit(b)) return -1;
-        return (a - '0') * 10 + (b - '0');
-    };
-
-    auto toInt4 = [](const char *p) -> int {
-        for (int i = 0; i < 4; i++) {
-            if (!isdigit(p[i])) return -1;
-        }
-        return (p[0] - '0') * 1000 +
-               (p[1] - '0') * 100 +
-               (p[2] - '0') * 10 +
-               (p[3] - '0');
-    };
-
-    const int year = toInt4(str);
-    const int month = toInt2(str[5], str[6]);
-    const int day = toInt2(str[8], str[9]);
-    const int hour = toInt2(str[11], str[12]);
-    const int min = toInt2(str[14], str[15]);
-
-    int sec = 0;
-    if (s.length() > 16) {
-        sec = toInt2(str[17], str[18]);
-    }
-
-    // Basic validation
-    if (year < 1970 || month < 1 || month > 12 ||
-        day < 1 || day > 31 ||
-        hour < 0 || hour > 23 ||
-        min < 0 || min > 59 ||
-        sec < 0 || sec > 59) {
-        return 0;
-    }
-
-    tm tm = {};
-    tm.tm_year = year - 1900;
-    tm.tm_mon = month - 1;
-    tm.tm_mday = day;
-    tm.tm_hour = hour;
-    tm.tm_min = min;
-    tm.tm_sec = sec;
-    tm.tm_isdst = -1;
-
-    return mktime(&tm);
-}
-
-void themeRenderCountdown(const bool forceClear) {
+void themeRenderCountdown(const bool forceClear, const time_t &now) {
     if (countdownState.datetime[0] == '\0') {
         if (forceClear) {
-            displayShowMessage(F("No date-time"));
+            showMessage(F("No date-time"), 5);
         }
         return;
     }
@@ -78,12 +16,11 @@ void themeRenderCountdown(const bool forceClear) {
     const time_t targetTime = parseDateTime(countdownState.datetime);
     if (targetTime == 0) {
         if (forceClear) {
-            displayShowMessage(F("Not valid\ndate-time string"));
+            showMessage(F("Not valid\ndate-time string"), 5);
         }
         return;
     }
 
-    const time_t now = time(nullptr);
     long diff = targetTime - now;
     const bool passed = diff < 0;
     if (passed) {
@@ -98,19 +35,12 @@ void themeRenderCountdown(const bool forceClear) {
     }
 
     const bool hasSubject = countdownState.subject[0] != '\0';
-    const int centerY = tft.height() / 2;
-    const int centerX = tft.width() / 2;
     int currentY = 0;
 
     // Draw subject
     if (hasSubject) {
         if (forceClear) {
-            tft.setTextDatum(TC_DATUM);
-            tft.setTextColor(TFT_ORANGE, TFT_BLACK);
-            tft.loadFont(Roboto_Regular24);
-            tft.drawString(String(countdownState.subject), centerX, currentY, FONT_DEFAULT);
-            tft.unloadFont();
-            tft.setTextColor(TFT_WHITE, TFT_BLACK);
+            drawSubject(countdownState.subject);
         }
         currentY = 44;
     }
@@ -123,25 +53,16 @@ void themeRenderCountdown(const bool forceClear) {
         sprintf(buffer, "%d:%02d", minutes, seconds);
     }
 
-    tft.setTextDatum(MC_DATUM);
-
     if (!forceClear && ((!passed && seconds == 59) || (passed && minutes == 0 && seconds == 1))) {
-        constexpr int offset = 10;
-        tft.fillRect(0, currentY + offset, tft.width(), tft.height() - currentY - offset, TFT_BLACK);
+        constexpr int offsetY = 50;
+        tft.fillRect(0, currentY + offsetY, tft.width(), tft.height() - currentY - offsetY, TFT_BLACK);
     }
 
-    if (!passed && minutes < 10) {
-        tft.setTextSize(2);
-    }
-    tft.drawString(buffer, centerX, centerY + currentY / 2, FONT_DIGIT);
-    tft.setTextSize(1);
+    tft.setTextDatum(MC_DATUM);
+    tft.drawString(buffer, tft.height() / 2, tft.width() / 2, FONT_DIGIT);
 
     // Draw subject line
     if (hasSubject && forceClear) {
-        currentY = 32;
-        for (int dx = 0; dx <= centerX; dx += 8) {
-            tft.drawFastHLine(centerX - dx, currentY, dx * 2, TFT_SILVER);
-            delay(20); // control animation speed
-        }
+        drawHLine(32);
     }
 }
