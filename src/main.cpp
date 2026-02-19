@@ -74,11 +74,6 @@ void startAPMode() {
     yield();
     WiFi.softAP(WIFI_AP_NAME, WIFI_AP_PASSWORD);
 
-    Serial.printf("Failsafe AP started\n");
-    Serial.printf("  SSID: %s\n", WIFI_AP_NAME);
-    Serial.printf("  Password: %s\n", WIFI_AP_PASSWORD);
-    Serial.printf("  IP: %s\n", WiFi.softAPIP().toString().c_str());
-
     strncpy(displayState.ipInfo, WiFi.softAPIP().toString().c_str(), sizeof(displayState.ipInfo));
     displayState.ipInfo[sizeof(displayState.ipInfo) - 1] = '\0'; // Ensure null-termination
     displayUpdate(-1);
@@ -227,7 +222,6 @@ void setup() {
     lastDisplayUpdate = millis();
 
     logPrint(F("Setup complete"));
-    logPrintf("IP: %s", WiFi.localIP().toString().c_str());
 }
 
 void loop() {

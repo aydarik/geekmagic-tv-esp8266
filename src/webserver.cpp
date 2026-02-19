@@ -95,40 +95,40 @@ void handleNoteJson() {
     serializeJson(doc, server.client());
 }
 
-String urlDecode(const String &input) {
-    String decoded = "";
-    char temp[] = "0x00";
+inline int hexToInt(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    return -1;
+}
 
-    for (unsigned int i = 0; i < input.length(); i++) {
-        if (input[i] == '+') {
-            decoded += ' ';
-        } else if (input[i] == '%' && i + 2 < input.length()) {
-            temp[2] = input[i + 1];
-            temp[3] = input[i + 2];
-            decoded += static_cast<char>(strtol(temp, nullptr, 16));
-            i += 2;
+void urlDecode(const char *input, char *output) {
+    while (*input) {
+        if (*input == '+') {
+            *output++ = ' ';
+            input++;
+        } else if (*input == '%' && isxdigit(*(input + 1)) && isxdigit(*(input + 2))) {
+            *output++ = hexToInt(*(input + 1)) << 4 | hexToInt(*(input + 2));
+            input += 3;
         } else {
-            decoded += input[i];
+            *output++ = *input++;
         }
     }
-    return decoded;
+    *output = '\0';
 }
 
 void handleSet() {
     if (server.hasArg("msg")) {
-        strncpy(notificationState.message, urlDecode(server.arg("msg")).c_str(), sizeof(notificationState.message));
-        notificationState.message[sizeof(notificationState.message) - 1] = '\0'; // Ensure null-termination
-        strncpy(notificationState.subject, urlDecode(server.arg("sbj")).c_str(), sizeof(notificationState.subject));
-        notificationState.subject[sizeof(notificationState.subject) - 1] = '\0'; // Ensure null-termination
-        strncpy(notificationState.style, urlDecode(server.arg("style")).c_str(), sizeof(notificationState.style));
-        notificationState.style[sizeof(notificationState.style) - 1] = '\0'; // Ensure null-termination
+        urlDecode(server.arg("msg").c_str(), notificationState.message);
+        urlDecode(server.arg("sbj").c_str(), notificationState.subject);
+        urlDecode(server.arg("style").c_str(), notificationState.style);
         displayUpdate(2);
         if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
             displayState.timeout = time(nullptr) + timeout;
         }
     } else if (server.hasArg("note")) {
-        const String decodedNote = urlDecode(server.arg("note"));
-        const char* newNote = decodedNote.c_str();
+        char newNote[CLOCK_NOTE_SIZE];
+        urlDecode(server.arg("note").c_str(), newNote);
         bool changed = true;
         if (strcmp(clockState.note, newNote) == 0) {
             changed = false;
@@ -144,10 +144,8 @@ void handleSet() {
             displayUpdate();
         }
     } else if (server.hasArg("cnt")) {
-        strncpy(countdownState.subject, urlDecode(server.arg("sbj")).c_str(), sizeof(countdownState.subject));
-        countdownState.subject[sizeof(countdownState.subject) - 1] = '\0'; // Ensure null-termination
-        strncpy(countdownState.datetime, urlDecode(server.arg("cnt")).c_str(), sizeof(countdownState.datetime));
-        countdownState.datetime[sizeof(countdownState.datetime) - 1] = '\0'; // Ensure null-termination
+        urlDecode(server.arg("sbj").c_str(), countdownState.subject);
+        urlDecode(server.arg("cnt").c_str(), countdownState.datetime);
         displayUpdate(4);
         if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
             if (const time_t datetime = parseDateTime(countdownState.datetime); datetime > time(nullptr)) {
@@ -161,8 +159,7 @@ void handleSet() {
     } else if (server.hasArg("theme")) {
         displayUpdate(server.arg("theme").toInt());
     } else if (server.hasArg("img")) {
-        strncpy(displayState.image, urlDecode(server.arg("img")).c_str(), sizeof(displayState.image));
-        displayState.image[sizeof(displayState.image) - 1] = '\0'; // Ensure null-termination
+        urlDecode(server.arg("img").c_str(), displayState.image);
         displayUpdate(3);
         if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
             displayState.timeout = time(nullptr) + timeout;
