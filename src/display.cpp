@@ -2,13 +2,13 @@
 #include "config.h"
 #include "logger.h"
 #include "settings.h"
+#include "utils.h"
 #include "themes/clock.h"
 #include "themes/ap.h"
 #include "themes/notification.h"
 #include "themes/countdown.h"
 #include <LittleFS.h>
 #include <TJpg_Decoder.h>
-#include <vector>
 
 TFT_eSPI tft = TFT_eSPI();
 
@@ -138,47 +138,33 @@ void displayUpdate(const int theme, const bool forceClear) {
 
     if (displayState.timeout != 0) {
         constexpr int minDelay = 60;
-        if (const int diff = displayState.timeout - time(nullptr) + 1; diff <= minDelay) {
+        if (const int diff = displayState.timeout - time(nullptr); diff <= minDelay) {
             const int currentX = diff * tft.width() / minDelay;
             const int currentY = tft.height() - 8;
-            tft.drawFastHLine(0, currentY, currentX, TFT_DARKGREY);
             tft.drawFastHLine(currentX, currentY, tft.width(), TFT_BLACK);
+            tft.drawFastHLine(0, currentY, currentX, TFT_DARKGREY);
         }
     }
 }
 
-void displayShowMessage(const String &msg, const int offsetY) {
+void displayShowMessage(const String &s, const int offsetY) {
     displayState.theme = 0;
-
     tft.fillScreen(TFT_BLACK);
+
     tft.setTextFont(FONT_DEFAULT);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
     tft.setTextDatum(MC_DATUM);
 
-    // Calculate line height based on the font
-    const unsigned int lineHeight = 34;
+    String wrapped[MAX_LINES];
+    const size_t count = splitString(s, wrapped, MAX_LINES);
 
-    // Count lines first to calculate vertical centering
-    unsigned int linesCnt = 1;
-    for (unsigned int i = 0; i < msg.length(); i++) {
-        if (msg.charAt(i) == '\n') linesCnt++;
-    }
-
-    int currentY = tft.height() / 2 - linesCnt * lineHeight / 2 + offsetY;
+    constexpr int lineHeight = 34;
     const int centerX = tft.width() / 2;
-
-    tft.startWrite();
-    int startIdx = 0;
-    for (unsigned int i = 0; i <= msg.length(); i++) {
-        if (i == msg.length() || msg.charAt(i) == '\n') {
-            if (i > startIdx) {
-                tft.drawString(msg.substring(startIdx, i), centerX, currentY);
-            }
-            currentY += lineHeight;
-            startIdx = i + 1;
-        }
+    int currentY = tft.height() / 2 - count * lineHeight / 2 + offsetY;
+    for (unsigned int i = 0; i <= count; i++) {
+        tft.drawString(wrapped[i], centerX, currentY);
+        currentY += lineHeight;
     }
-    tft.endWrite();
 }
 
 void displayShowAPScreen(const char *ssid, const char *password, const char *ip) {
@@ -206,11 +192,9 @@ static bool backlightOn = true;
 
 void displayToggleBacklight() {
     if (backlightOn) {
-        // Turn off backlight
         displaySetBrightness(0);
         backlightOn = false;
     } else {
-        // Turn on backlight
         displaySetBrightness(appSettings.brightness);
         backlightOn = true;
     }

@@ -1,74 +1,10 @@
 #include "notification.h"
 #include "config.h"
 #include "display.h"
+#include "utils.h"
 #include "fonts/Roboto_Regular24.h"
 
 NotificationState notificationState;
-
-int utf8Length(const char *text) {
-    int count = 0;
-    while (*text) {
-        // Count only bytes that are NOT continuation bytes (10xxxxxx)
-        if ((*text & 0xC0) != 0x80) {
-            count++;
-        }
-        text++;
-    }
-    return count;
-}
-
-// Helper function to wrap text
-size_t wrapText(char *text, char *lines[], const size_t maxLines, const size_t maxSize) {
-    if (!text || *text == '\0')
-        return 0;
-
-    size_t count = 0;
-    char *lineStart = text;
-    size_t currentWidth = 0;
-    char *p = text;
-
-    while (*p && count < maxLines) {
-        // Handle newline
-        if (*p == '\n') {
-            *p = '\0';
-            lines[count++] = lineStart;
-            lineStart = p + 1;
-            currentWidth = 0;
-            p++;
-            continue;
-        }
-
-        // Find next word
-        char *wordStart = p;
-        while (*p && *p != ' ' && *p != '\n') p++;
-        const char saved = *p;
-        *p = '\0';
-
-        const size_t wordWidth = utf8Length(wordStart);
-        if (currentWidth == 0) {
-            currentWidth = wordWidth;
-        } else if (currentWidth + wordWidth + 1 <= maxSize) {
-            currentWidth += wordWidth + 1;
-        } else {
-            // Wrap line BEFORE current word
-            *(wordStart - 1) = '\0'; // Terminate previous line
-            lines[count++] = lineStart;
-            lineStart = wordStart;
-            currentWidth = wordWidth;
-        }
-
-        *p = saved;
-
-        // Move past space
-        if (*p == ' ') p++;
-    }
-
-    // Add last line
-    if (*lineStart && count < maxLines)
-        lines[count++] = lineStart;
-
-    return count;
-}
 
 void themeRenderNotification(const bool forceClear) {
     if (!forceClear) {
@@ -107,10 +43,9 @@ void themeRenderNotification(const bool forceClear) {
         tft.drawString(notificationState.message, centerX, centerY + currentY / 2, FONT_DIGIT);
         tft.setTextSize(1);
     } else {
-        const size_t maxLines = MAX_LINES - (hasSubject ? 1 : 0);
-        char *wrapped[maxLines];
+        char *wrapped[MAX_LINES];
         char *msg = strdup(notificationState.message);
-        const size_t count = wrapText(msg, wrapped, maxLines, MAX_LINE_CHARS);
+        const size_t count = wrapText(msg, wrapped, MAX_LINES);
 
         int currentX = 5;
         if (strcmp(notificationState.style, "center") == 0) {
@@ -126,7 +61,7 @@ void themeRenderNotification(const bool forceClear) {
 
         tft.loadFont(Roboto_Regular24);
         tft.startWrite();
-        for (unsigned int i = 0; i < count; i++) {
+        for (int i = 0; i < count; i++) {
             if (strcmp(wrapped[i], "---") == 0) {
                 const int lineY = currentY + i * LINES_OFFSET + LINES_OFFSET / 3;
                 tft.drawFastHLine(0, lineY, tft.width(), TFT_DARKGREY);

@@ -5,10 +5,6 @@
 #define NOTIFICATION_MSG_BUFFER_SIZE 256
 #define NOTIFICATION_STYLE_BUFFER_SIZE 8
 
-#define MAX_LINES 7
-#define MAX_LINE_CHARS 16
-#define LINES_OFFSET 32
-
 struct NotificationState {
     char subject[NOTIFICATION_SBJ_BUFFER_SIZE];
     char message[NOTIFICATION_MSG_BUFFER_SIZE];
