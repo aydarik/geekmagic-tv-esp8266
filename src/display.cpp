@@ -109,7 +109,7 @@ void displayUpdate(const int theme, const bool forceClear) {
     time_t now;
     time(&now);
 
-    if (theme > 0) {
+    if (theme != 0) {
         displayState.theme = theme;
     }
 

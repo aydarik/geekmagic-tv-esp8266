@@ -102,50 +102,47 @@ inline int hexToInt(char c) {
     return -1;
 }
 
-void urlDecode(const char *input, char *output) {
-    while (*input) {
+void urlDecode(const char *input, char *output, const size_t output_size) {
+    const size_t max_size = output_size - 1;
+    size_t written = 0;
+    while (*input && written < max_size) {
         if (*input == '+') {
-            *output++ = ' ';
+            output[written++] = ' ';
             input++;
         } else if (*input == '%' && isxdigit(*(input + 1)) && isxdigit(*(input + 2))) {
-            *output++ = hexToInt(*(input + 1)) << 4 | hexToInt(*(input + 2));
+            output[written++] = hexToInt(*(input + 1)) << 4 | hexToInt(*(input + 2));
             input += 3;
         } else {
-            *output++ = *input++;
+            output[written++] = *input++;
         }
     }
-    *output = '\0';
+    output[written] = '\0';
 }
 
 void handleSet() {
     if (server.hasArg("msg")) {
-        urlDecode(server.arg("msg").c_str(), notificationState.message);
-        urlDecode(server.arg("sbj").c_str(), notificationState.subject);
-        urlDecode(server.arg("style").c_str(), notificationState.style);
+        urlDecode(server.arg("msg").c_str(), notificationState.message, NOTIFICATION_MSG_BUFFER_SIZE);
+        urlDecode(server.arg("sbj").c_str(), notificationState.subject, NOTIFICATION_SBJ_BUFFER_SIZE);
+        urlDecode(server.arg("style").c_str(), notificationState.style, NOTIFICATION_STYLE_BUFFER_SIZE);
         displayUpdate(2);
         if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
             displayState.timeout = time(nullptr) + timeout;
         }
     } else if (server.hasArg("note")) {
-        char newNote[CLOCK_NOTE_SIZE];
-        urlDecode(server.arg("note").c_str(), newNote);
-        bool changed = true;
-        if (strcmp(clockState.note, newNote) == 0) {
-            changed = false;
-        } else {
-            strncpy(clockState.note, newNote, sizeof(clockState.note));
-            clockState.note[sizeof(clockState.note) - 1] = '\0'; // Ensure null-termination
-        }
-        clockState.noteTimeout = 0;
+        const bool hadNote = clockState.note[0] != '\0';
+        urlDecode(server.arg("note").c_str(), clockState.note, CLOCK_NOTE_SIZE);
+        const boolean hasNote = clockState.note[0] != '\0';
         if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
             clockState.noteTimeout = time(nullptr) + timeout;
+        } else {
+            clockState.noteTimeout = 0;
         }
-        if (displayState.theme == 1 && changed) {
+        if (displayState.theme == 1 && hadNote != hasNote) {
             displayUpdate();
         }
     } else if (server.hasArg("cnt")) {
-        urlDecode(server.arg("sbj").c_str(), countdownState.subject);
-        urlDecode(server.arg("cnt").c_str(), countdownState.datetime);
+        urlDecode(server.arg("sbj").c_str(), countdownState.subject, COUNTDOWN_SBJ_BUFFER_SIZE);
+        urlDecode(server.arg("cnt").c_str(), countdownState.datetime, COUNTDOWN_DATETIME_BUFFER_SIZE);
         displayUpdate(4);
         if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
             if (const time_t datetime = parseDateTime(countdownState.datetime); datetime > time(nullptr)) {
@@ -159,7 +156,7 @@ void handleSet() {
     } else if (server.hasArg("theme")) {
         displayUpdate(server.arg("theme").toInt());
     } else if (server.hasArg("img")) {
-        urlDecode(server.arg("img").c_str(), displayState.image);
+        urlDecode(server.arg("img").c_str(), displayState.image, DISPLAY_IMG_PATH_BUFFER_SIZE);
         displayUpdate(3);
         if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
             displayState.timeout = time(nullptr) + timeout;

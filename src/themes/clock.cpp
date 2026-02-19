@@ -26,12 +26,7 @@ void getFormattedDate(char *buffer, const size_t bufferSize, const tm &timeinfo)
 }
 
 void clearNote() {
-    tft.startWrite();
-    for (int i = 1; i <= 15; i++) {
-        tft.fillRect(0, tft.height() - 45 + i * 2, tft.width(), 2, TFT_BLACK);
-        delay(20);
-    }
-    tft.endWrite();
+    tft.fillRect(0, tft.height() - 45, tft.width(), 30, TFT_BLACK);
 }
 
 void themeRenderClock(const bool forceClear, const time_t &now) {
@@ -58,7 +53,7 @@ void themeRenderClock(const bool forceClear, const time_t &now) {
         tft.drawString(currentSeconds, centerX + 71, clockY + 26, FONT_DEFAULT);
     }
 
-    // Draw or clear note
+    // Draw or clear a note
     if (hasNote) {
         if (clockState.noteTimeout != 0 && now > clockState.noteTimeout) {
             clockState.note[0] = '\0';
@@ -72,12 +67,14 @@ void themeRenderClock(const bool forceClear, const time_t &now) {
         const size_t count = splitString(String(clockState.note), lines, MAX_LINES);
         const unsigned int idx = sec * count / 60;
         const unsigned int idxPrev = (sec - 1 < 0 ? 59 : sec - 1) * count / 60;
-        if (!forceClear && idxPrev != idx) {
+        if ((idxPrev != idx || sec == 0) && !forceClear) {
             clearNote(); // Clear old note first
         }
-        tft.loadFont(Roboto_Regular24);
-        tft.drawString(lines[idx], centerX, tft.height() - 40);
-        tft.unloadFont();
+        if (idx != idxPrev || sec == 0 || forceClear) {
+            tft.loadFont(Roboto_Regular24);
+            tft.drawString(lines[idx], centerX, tft.height() - 40);
+            tft.unloadFont();
+        }
     }
 
     if (!forceClear && sec != 0) {

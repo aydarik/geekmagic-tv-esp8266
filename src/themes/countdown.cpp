@@ -35,7 +35,7 @@ void themeRenderCountdown(const bool forceClear, const time_t &now) {
     }
 
     const bool hasSubject = countdownState.subject[0] != '\0';
-    int currentY = 0;
+    int currentY = -8;
 
     // Draw subject
     if (hasSubject) {
@@ -53,9 +53,10 @@ void themeRenderCountdown(const bool forceClear, const time_t &now) {
         sprintf(buffer, "%d:%02d", minutes, seconds);
     }
 
+    const int clockY = (tft.width() + currentY) / 2;
+    // Redraw every minute, as the width may change
     if (!forceClear && ((!passed && seconds == 59) || (passed && minutes == 0 && seconds == 1))) {
-        constexpr int offsetY = 50;
-        tft.fillRect(0, currentY + offsetY, tft.width(), tft.height() - currentY - offsetY, TFT_BLACK);
+        tft.fillRect(0, clockY - 30, tft.width(), 60, TFT_BLACK);
     }
 
     tft.setTextDatum(MC_DATUM);
@@ -65,7 +66,7 @@ void themeRenderCountdown(const bool forceClear, const time_t &now) {
     } else if (minutes == 0 && seconds <= 10) {
         tft.setTextColor(TFT_ORANGE, TFT_BLACK);
     }
-    tft.drawString(buffer, tft.height() / 2, tft.width() / 2, FONT_DIGIT);
+    tft.drawString(buffer, tft.height() / 2, clockY, FONT_DIGIT);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
     // Draw subject line
