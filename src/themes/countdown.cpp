@@ -59,7 +59,14 @@ void themeRenderCountdown(const bool forceClear, const time_t &now) {
     }
 
     tft.setTextDatum(MC_DATUM);
+
+    if (passed) {
+        tft.setTextColor(TFT_RED, TFT_BLACK);
+    } else if (minutes == 0 && seconds <= 10) {
+        tft.setTextColor(TFT_ORANGE, TFT_BLACK);
+    }
     tft.drawString(buffer, tft.height() / 2, tft.width() / 2, FONT_DIGIT);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
     // Draw subject line
     if (hasSubject && forceClear) {
