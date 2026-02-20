@@ -30,30 +30,16 @@ ButtonPress buttonUpdate() {
         // If the button state has changed after debounce
         if (reading != currentButtonState) {
             currentButtonState = reading;
-
-            // Button was just pressed (HIGH -> LOW with pullup)
             if (currentButtonState == LOW && !buttonPressed) {
+                // Button was just pressed (HIGH -> LOW with pullup)
                 buttonPressStartTime = millis();
                 buttonPressed = true;
-                logPrint(F("Button pressed"));
-            }
-            // Button was just released (LOW -> HIGH with pullup)
-            else if (currentButtonState == HIGH && buttonPressed) {
+            } else if (currentButtonState == HIGH && buttonPressed) {
+                // Button was just released (LOW -> HIGH with pullup)
                 const unsigned long pressDuration = millis() - buttonPressStartTime;
                 buttonPressed = false;
-
-                logPrintf("Button released after %lu ms", pressDuration);
-
-                // Determine press type
-                if (pressDuration >= BUTTON_LONG_PRESS_MIN_MS) {
-                    logPrint(F("Long press detected"));
-                    return BUTTON_LONG;
-                }
-                if (pressDuration <= BUTTON_SHORT_PRESS_MAX_MS) {
-                    logPrint(F("Short press detected"));
-                    return BUTTON_SHORT;
-                }
-                // Between short and long threshold - ignore
+                if (pressDuration >= BUTTON_LONG_PRESS_MIN_MS) return BUTTON_LONG;
+                if (pressDuration <= BUTTON_SHORT_PRESS_MAX_MS) return BUTTON_SHORT;
             }
         }
     }

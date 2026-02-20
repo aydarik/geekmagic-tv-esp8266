@@ -37,7 +37,7 @@ void handleAppJson() {
     }
 
     server.setContentLength(measureJson(doc));
-    server.send(200, "application/json", "");
+    server.send(200, CONTENT_TYPE_JSON, F(""));
     serializeJson(doc, server.client());
 }
 
@@ -48,11 +48,22 @@ void handleSpaceJson() {
     JsonDocument doc;
     doc["total"] = fs_info.totalBytes;
     doc["free"] = fs_info.totalBytes - fs_info.usedBytes;
+
+    server.setContentLength(measureJson(doc));
+    server.send(200, CONTENT_TYPE_JSON, F(""));
+    serializeJson(doc, server.client());
+}
+
+void handleMemoryJson() {
+    FSInfo fs_info;
+    LittleFS.info(fs_info);
+
+    JsonDocument doc;
     doc["heap"] = ESP.getFreeHeap();
     doc["fragm"] = ESP.getHeapFragmentation();
 
     server.setContentLength(measureJson(doc));
-    server.send(200, "application/json", "");
+    server.send(200, CONTENT_TYPE_JSON, F(""));
     serializeJson(doc, server.client());
 }
 
@@ -61,17 +72,17 @@ void handleBrtJson() {
     doc["brt"] = appSettings.brightness;
 
     server.setContentLength(measureJson(doc));
-    server.send(200, "application/json", "");
+    server.send(200, CONTENT_TYPE_JSON, F(""));
     serializeJson(doc, server.client());
 }
 
 void handleVersionJson() {
     JsonDocument doc;
-    doc["m"] = "aydarik";
+    doc["m"] = FIRMWARE_MODEL;
     doc["v"] = FIRMWARE_VERSION_STRING;
 
     server.setContentLength(measureJson(doc));
-    server.send(200, "application/json", "");
+    server.send(200, CONTENT_TYPE_JSON, F(""));
     serializeJson(doc, server.client());
 }
 
@@ -82,7 +93,7 @@ void handleMessageJson() {
     doc["style"] = notificationState.style;
 
     server.setContentLength(measureJson(doc));
-    server.send(200, "application/json", "");
+    server.send(200, CONTENT_TYPE_JSON, F(""));
     serializeJson(doc, server.client());
 }
 
@@ -91,7 +102,7 @@ void handleNoteJson() {
     doc["note"] = clockState.note;
 
     server.setContentLength(measureJson(doc));
-    server.send(200, "application/json", "");
+    server.send(200, CONTENT_TYPE_JSON, F(""));
     serializeJson(doc, server.client());
 }
 
@@ -183,78 +194,58 @@ void handleSet() {
         }
         settingsSave(appSettings);
     } else {
-        server.send(400, "text/plain", "No action");
+        server.send(400, CONTENT_TYPE_TEXT, F("No action"));
         return;
     }
 
-    server.send(200, "text/plain", "OK");
+    server.send(200, CONTENT_TYPE_TEXT, F("OK"));
 }
 
 void handleTest() {
     displayTest();
-    server.send(200, "text/plain", "OK");
+    server.send(200, CONTENT_TYPE_TEXT, F("OK"));
 }
 
 void handleFileUpload() {
     const String dir = server.hasArg("dir") ? server.arg("dir") : "/";
-    if (!LittleFS.exists(dir)) {
-        LittleFS.mkdir(dir);
-    }
+    if (!LittleFS.exists(dir)) LittleFS.mkdir(dir);
 
     const HTTPUpload &upload = server.upload();
-
     if (upload.status == UPLOAD_FILE_START) {
         const String filename = upload.filename;
-        Serial.printf("Upload start: %s\n", filename.c_str());
-
         const String filepath = dir + filename;
         uploadFile = LittleFS.open(filepath, "w");
-
         if (!uploadFile) {
-            Serial.println(F("Failed to open file for writing"));
-            logPrintf("ERROR! Failed to open file %s for writing!", filepath.c_str());
-        } else {
-            logPrintf("Opened file %s for writing.", filepath.c_str());
+            logPrintf("Failed to open file for writing!");
         }
     } else if (upload.status == UPLOAD_FILE_WRITE) {
         if (uploadFile) {
             if (const size_t bytesWritten = uploadFile.write(upload.buf, upload.currentSize);
                 bytesWritten != upload.currentSize) {
-                logPrintf("WARNING! Only %u of %u bytes written to file!", bytesWritten, upload.currentSize);
+                logPrintf("Only %u of %u bytes written!", bytesWritten, upload.currentSize);
             }
         }
     } else if (upload.status == UPLOAD_FILE_END) {
         if (uploadFile) {
             uploadFile.close();
-            logPrintf("File %s closed. Total size: %u bytes", upload.filename.c_str(), upload.totalSize);
-            Serial.printf("Upload complete: %s (%u bytes)\n",
-                          upload.filename.c_str(), upload.totalSize);
+            logPrintf("File closed.Size: %u bytes", upload.totalSize);
         }
     }
 }
 
 void handleUploadDone() {
-    server.send(200, "text/plain", "OK");
-
-    // After upload, verify file size on LittleFS
-    const String filepath = server.arg("dir") + server.upload().filename;
-    if (File uploadedFile = LittleFS.open(filepath, "r")) {
-        logPrintf("Actual file size on LittleFS for %s: %u bytes", filepath.c_str(), uploadedFile.size());
-        uploadedFile.close();
-    } else {
-        logPrintf("ERROR! Could not open %s after upload to check size.", filepath.c_str());
-    }
+    server.send(200, CONTENT_TYPE_TEXT, F("OK"));
 }
 
 void handleDelete() {
     if (server.hasArg("file")) {
         if (const String filepath = server.arg("file"); LittleFS.remove(filepath)) {
-            server.send(200, "text/plain", F("Deleted"));
+            server.send(200, CONTENT_TYPE_TEXT, F("Deleted"));
         } else {
-            server.send(404, "text/plain", F("Not found"));
+            server.send(404, CONTENT_TYPE_TEXT, F("Not found"));
         }
     } else {
-        server.send(400, "text/plain", F("Missing file parameter"));
+        server.send(400, CONTENT_TYPE_TEXT, F("Missing file parameter"));
     }
 }
 
@@ -310,17 +301,17 @@ void streamDirRecursiveHtml(const char *dirname) {
 
 void handleFileList() {
     server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-    server.send(200, "text/html", "");
+    server.send(200, CONTENT_TYPE_HTML, F(""));
 
     server.sendContent(F("<table><thead><tr><th>Path</th><th>Size</th><th>Actions</th></tr></thead><tbody>\n"));
     streamDirRecursiveHtml(server.hasArg("dir") ? server.arg("dir").c_str() : "/");
-    server.sendContent(F("</tbody></table>"));
-    server.sendContent(""); // End of chunked response
+    server.sendContent(F("</tbody></table>\n"));
+    server.sendContent(F("")); // End of chunked response
 }
 
 // Function to handle factory reset
 void handleFactoryReset() {
-    server.send(200, "text/plain", "Factory Reset triggered. Clearing data and restarting...");
+    server.send(200, CONTENT_TYPE_TEXT, F("Factory Reset triggered. Clearing data and restarting..."));
     delay(100); // Give time for response to send
     factoryReset();
 }
@@ -339,9 +330,7 @@ void handleOTAUpload() {
     HTTPUpload &upload = server.upload();
 
     if (upload.status == UPLOAD_FILE_START) {
-        Serial.printf("OTA Update Start: %s\n", upload.filename.c_str());
-        showMessage("OTA Update...");
-
+        showMessage(F("OTA Update..."));
         const uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
         if (!Update.begin(maxSketchSpace)) {
             Update.printError(Serial);
@@ -351,29 +340,22 @@ void handleOTAUpload() {
             Update.printError(Serial);
         }
     } else if (upload.status == UPLOAD_FILE_END) {
-        if (Update.end(true)) {
-            Serial.printf("OTA Success: %u bytes\n", upload.totalSize);
-            showMessage("Success!");
-        } else {
+        if (!Update.end(true)) {
             Update.printError(Serial);
-            showMessage("OTA Failed!");
+            showMessage(F("OTA Failed!"));
         }
     }
 }
 
 void handleOTADone() {
     const bool shouldReboot = !Update.hasError();
-    server.send(200, "text/plain", shouldReboot ? "OK - Rebooting..." : "FAIL");
-
-    if (shouldReboot) {
-        delay(2000);
-        ESP.restart();
-    }
+    server.send(200, CONTENT_TYPE_TEXT, shouldReboot ? F("OK - Rebooting...") : F("FAIL"));
+    if (shouldReboot) ESP.restart();
 }
 
 void handleLog() {
     const String log = logGetAll();
-    server.send(200, "text/plain", log);
+    server.send(200, CONTENT_TYPE_TEXT, log);
 }
 
 void handleWiFiScan() {
@@ -391,20 +373,19 @@ void handleWiFiScan() {
 
     String json;
     serializeJson(docRoot, json);
-    server.send(200, "application/json", json);
+    server.send(200, CONTENT_TYPE_JSON, json);
 }
 
 void handleWiFiConnect() {
     if (!server.hasArg("ssid")) {
-        server.send(400, "text/plain", "Missing SSID parameter");
+        server.send(400, CONTENT_TYPE_TEXT, F("Missing SSID"));
         return;
     }
 
     const String ssid = server.arg("ssid");
     const String password = server.hasArg("password") ? server.arg("password") : "";
 
-    logPrintf("Attempting to connect to WiFi: %s", ssid.c_str());
-    server.send(200, "text/plain", "Connecting to " + ssid + "...");
+    server.send(200, CONTENT_TYPE_TEXT, F("Connecting..."));
     delay(100);
 
     // Enable persistent WiFi credentials storage
@@ -424,17 +405,14 @@ void handleWiFiConnect() {
     // Wait up to 20 seconds for connection
     int attempts = 0;
     while (WiFi.status() != WL_CONNECTED && attempts < 40) {
-        delay(500);
         attempts++;
+        delay(500);
         yield();
     }
 
     if (WiFi.status() == WL_CONNECTED) {
-        logPrintf("Successfully connected to %s", ssid.c_str());
-        logPrintf("IP address: %s", WiFi.localIP().toString().c_str());
         showMessage(F("Success!\nRebooting..."));
     } else {
-        logPrintf("Failed to connect to %s", ssid.c_str());
         showMessage(F("Failed :(\nRebooting..."));
     }
     delay(2000);
@@ -446,26 +424,28 @@ void handleStatic() {
 
     // Check if file exists in LittleFS
     if (!LittleFS.exists(path)) {
-        server.send(404, "text/plain", "File not found");
+        server.send(404, CONTENT_TYPE_TEXT, F("File not found"));
         return;
     }
 
     File file = LittleFS.open(path, "r");
     if (!file) {
-        server.send(500, "text/plain", "Failed to open file");
+        server.send(500, CONTENT_TYPE_TEXT, F("Failed to open file"));
         return;
     }
 
     // Determine content type based on file extension
-    String contentType = "application/octet-stream";
-    if (path.endsWith(".jpg") || path.endsWith(".jpeg")) {
-        contentType = "image/jpeg";
-    } else if (path.endsWith(".png")) {
-        contentType = "image/png";
-    } else if (path.endsWith(".bmp")) {
-        contentType = "image/bmp";
-    } else if (path.endsWith(".gif")) {
-        contentType = "image/gif";
+    String contentType;
+    if (path.endsWith(F(".jpg")) || path.endsWith(F(".jpeg"))) {
+        contentType = F("image/jpeg");
+    } else if (path.endsWith(F(".png"))) {
+        contentType = F("image/png");
+    } else if (path.endsWith(F(".bmp"))) {
+        contentType = F("image/bmp");
+    } else if (path.endsWith(F(".gif"))) {
+        contentType = F("image/gif");
+    } else {
+        contentType = F("application/octet-stream");
     }
 
     // Stream the file to the client
@@ -474,38 +454,39 @@ void handleStatic() {
 }
 
 void handleRoot() {
-    server.sendHeader("Content-Encoding", "gzip");
-    server.sendHeader("Cache-Control", "max-age=600");
-    server.send_P(200, "text/html", reinterpret_cast<const char *>(src_generated_index_html_gz),
+    server.sendHeader(F("Content-Encoding"), F("gzip"));
+    server.sendHeader(F("Cache-Control"), F("max-age=600"));
+    server.send_P(200, CONTENT_TYPE_HTML, reinterpret_cast<const char *>(src_generated_index_html_gz),
                   src_generated_index_html_gz_len);
 }
 
 void webserverInit() {
     // GET endpoints
-    server.on("/", HTTP_GET, handleRoot);
-    server.on("/app.json", HTTP_GET, handleAppJson);
-    server.on("/space.json", HTTP_GET, handleSpaceJson);
-    server.on("/brt.json", HTTP_GET, handleBrtJson);
-    server.on("/v.json", HTTP_GET, handleVersionJson);
-    server.on("/message.json", HTTP_GET, handleMessageJson);
-    server.on("/note.json", HTTP_GET, handleNoteJson);
+    server.on(F("/"), HTTP_GET, handleRoot);
+    server.on(F("/app.json"), HTTP_GET, handleAppJson);
+    server.on(F("/space.json"), HTTP_GET, handleSpaceJson);
+    server.on(F("/memory.json"), HTTP_GET, handleMemoryJson);
+    server.on(F("/brt.json"), HTTP_GET, handleBrtJson);
+    server.on(F("/v.json"), HTTP_GET, handleVersionJson);
+    server.on(F("/message.json"), HTTP_GET, handleMessageJson);
+    server.on(F("/note.json"), HTTP_GET, handleNoteJson);
 
-    server.on("/filelist", HTTP_GET, handleFileList);
-    server.on("/delete", HTTP_GET, handleDelete);
-    server.on("/set", HTTP_GET, handleSet);
+    server.on(F("/filelist"), HTTP_GET, handleFileList);
+    server.on(F("/delete"), HTTP_GET, handleDelete);
+    server.on(F("/set"), HTTP_GET, handleSet);
 
-    server.on("/test", HTTP_GET, handleTest);
-    server.on("/log", HTTP_GET, handleLog);
-    server.on("/factoryreset", HTTP_GET, handleFactoryReset);
-    server.on("/scan", HTTP_GET, handleWiFiScan);
-    server.on("/connect", HTTP_GET, handleWiFiConnect);
+    server.on(F("/test"), HTTP_GET, handleTest);
+    server.on(F("/log"), HTTP_GET, handleLog);
+    server.on(F("/factoryreset"), HTTP_GET, handleFactoryReset);
+    server.on(F("/scan"), HTTP_GET, handleWiFiScan);
+    server.on(F("/connect"), HTTP_GET, handleWiFiConnect);
 
     // File upload
-    server.on("/doUpload", HTTP_POST, handleUploadDone, handleFileUpload);
+    server.on(F("/doUpload"), HTTP_POST, handleUploadDone, handleFileUpload);
 
     // OTA
-    server.on("/update", HTTP_GET, handleOTAForm);
-    server.on("/update", HTTP_POST, handleOTADone, handleOTAUpload);
+    server.on(F("/update"), HTTP_GET, handleOTAForm);
+    server.on(F("/update"), HTTP_POST, handleOTADone, handleOTAUpload);
 
     // Serve images from LittleFS (catches all unhandled routes)
     server.onNotFound(handleStatic);

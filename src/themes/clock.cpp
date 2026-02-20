@@ -36,9 +36,7 @@ void themeRenderClock(const bool forceClear, const time_t &now) {
     // Calculate seconds
     const int sec = timeinfo.tm_sec;
 
-    if (forceClear) {
-        tft.fillScreen(TFT_BLACK);
-    }
+    if (forceClear) tft.fillScreen(TFT_BLACK);
 
     const int centerX = tft.width() / 2;
     tft.setTextDatum(TC_DATUM);
@@ -77,10 +75,8 @@ void themeRenderClock(const bool forceClear, const time_t &now) {
         }
     }
 
-    if (!forceClear && sec != 0) {
-        // Stop here, no need to update the rest
-        return;
-    }
+    // Stop here, no need to update the rest
+    if (!forceClear && sec != 0) return;
 
     // Display IP Info at the top (small font)
     if (appSettings.showIP) {
@@ -94,10 +90,8 @@ void themeRenderClock(const bool forceClear, const time_t &now) {
     getFormattedTime(currentTime, sizeof(currentTime), timeinfo);
     tft.drawString(currentTime, appSettings.showSec ? centerX - 20 : centerX, clockY, FONT_DIGIT);
 
-    if (!forceClear && strcmp(currentTime, "00:00") != 0) {
-        // Stop here, no need to update the date
-        return;
-    }
+    // Stop here, no need to update the date
+    if (!forceClear && strcmp(currentTime, "00:00") != 0) return;
 
     // Draw date
     char currentDate[16];

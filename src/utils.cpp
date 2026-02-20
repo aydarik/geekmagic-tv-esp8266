@@ -8,9 +8,7 @@ int utf8Length(const char *text) {
     int count = 0;
     while (*text) {
         // Count only bytes that are NOT continuation bytes (10xxxxxx)
-        if ((*text & 0xC0) != 0x80) {
-            count++;
-        }
+        if ((*text & 0xC0) != 0x80) count++;
         text++;
     }
     return count;
@@ -18,8 +16,7 @@ int utf8Length(const char *text) {
 
 // Helper function to wrap text
 size_t wrapText(char *text, char *lines[], const size_t maxLines) {
-    if (!text || *text == '\0')
-        return 0;
+    if (!text || *text == '\0') return 0;
 
     size_t count = 0;
     char *lineStart = text;
@@ -71,9 +68,7 @@ size_t wrapText(char *text, char *lines[], const size_t maxLines) {
 
 // Helper function to split text
 size_t splitString(const String &s, String lines[], const size_t maxLines) {
-    if (s.length() == 0) {
-        return 0;
-    }
+    if (s.length() == 0) return 0;
 
     size_t count = 0;
     int start = 0;
@@ -172,7 +167,7 @@ time_t parseDateTime(const String &s) {
     return mktime(&tm);
 }
 
-void showMessage(const String &s, const int timeout, const int offsetY) {
+void showMessage(const String &msg, const int timeout, const int offsetY) {
     displayState.theme = 0;
     tft.fillScreen(TFT_BLACK);
 
@@ -181,7 +176,7 @@ void showMessage(const String &s, const int timeout, const int offsetY) {
     tft.setTextDatum(MC_DATUM);
 
     String wrapped[MAX_LINES];
-    const size_t count = splitString(s, wrapped, MAX_LINES);
+    const size_t count = splitString(msg, wrapped, MAX_LINES);
 
     constexpr int lineHeight = 34;
     const int centerX = tft.width() / 2;

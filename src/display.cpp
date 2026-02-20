@@ -37,7 +37,7 @@ void displayInit() {
     analogWriteFreq(1000); // Zet PWM frequency
     analogWriteRange(1023); // 10bit
 
-    logPrint(F("Display init complete"));
+    logPrint("Display init complete");
 }
 
 void displaySetBrightness(int brightness) {
@@ -69,19 +69,18 @@ void displayTest() {
     tft.fillScreen(TFT_WHITE);
     delay(500);
     tft.fillScreen(TFT_BLACK);
-    delay(500);
     showMessage(F("Display test\nsuccessfully\nfinished"), 3);
 }
 
 void displayRenderImage(const bool forceClear) {
-    if (!forceClear) {
-        return;
-    }
+    if (!forceClear) return;
 
     const char *path = displayState.image;
+    if (path[0] == '\0') {
+        showMessage(F("No image\nselected yet"), 5);
+    }
 
     if (!LittleFS.exists(path)) {
-        logPrintf("Image not found: %s", path);
         showMessage(F("Image not found"), 5);
         return;
     }
@@ -109,9 +108,7 @@ void displayUpdate(const int theme, const bool forceClear) {
     time_t now;
     time(&now);
 
-    if (theme != 0) {
-        displayState.theme = theme;
-    }
+    if (theme != 0) displayState.theme = theme;
 
     if (displayState.timeout != 0) {
         if (forceClear || displayState.theme < 0) {
@@ -123,23 +120,17 @@ void displayUpdate(const int theme, const bool forceClear) {
     }
 
     switch (displayState.theme) {
-        case -1:
-            themeRenderAPMode(forceClear);
+        case -1: themeRenderAPMode(forceClear);
             break;
-        case 1:
-            themeRenderClock(forceClear, now);
+        case 1: themeRenderClock(forceClear, now);
             break;
-        case 2:
-            themeRenderNotification(forceClear);
+        case 2: themeRenderNotification(forceClear);
             break;
-        case 3:
-            displayRenderImage(forceClear);
+        case 3: displayRenderImage(forceClear);
             break;
-        case 4:
-            themeRenderCountdown(forceClear, now);
+        case 4: themeRenderCountdown(forceClear, now);
             break;
-        default:
-            break;
+        default: break;
     }
 
     if (displayState.timeout != 0) {

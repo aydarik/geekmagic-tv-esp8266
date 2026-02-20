@@ -4,6 +4,8 @@
 #include <Arduino.h>
 #include <EEPROM.h>
 
+// Firmware model
+#define FIRMWARE_MODEL "aydarik"
 // Firmware version - increment when Settings structure changes
 #define FIRMWARE_VERSION 1
 

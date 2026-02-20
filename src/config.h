@@ -5,10 +5,6 @@
 #define PIN_BACKLIGHT 5
 #define PIN_BUTTON 4
 
-// Display settings
-#define DISPLAY_WIDTH 240
-#define DISPLAY_HEIGHT 240
-
 // Font size definitions
 #define FONT_MICRO 1     // Font 1. Original Adafruit 8 pixel font needs ~1820 bytes in FLASH
 #define FONT_SMALL 2     // Font 2. Small 16 pixel high font, needs ~3534 bytes in FLASH, 96 characters
@@ -37,5 +33,9 @@
 #define BUTTON_DEBOUNCE_MS 50
 #define BUTTON_SHORT_PRESS_MAX_MS 800
 #define BUTTON_LONG_PRESS_MIN_MS 2000
+
+// Defaults
+#define DEFAULT_TIMEZONE "CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00"
+#define DEFAULT_BRIGHTNESS 50
 
 #endif

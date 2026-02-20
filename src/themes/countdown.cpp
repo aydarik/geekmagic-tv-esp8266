@@ -7,51 +7,38 @@ CountdownState countdownState;
 
 void themeRenderCountdown(const bool forceClear, const time_t &now) {
     if (countdownState.datetime[0] == '\0') {
-        if (forceClear) {
-            showMessage(F("No date-time"), 5);
-        }
+        if (forceClear) showMessage(F("No date-time"), 5);
         return;
     }
 
     const time_t targetTime = parseDateTime(countdownState.datetime);
     if (targetTime == 0) {
-        if (forceClear) {
-            showMessage(F("Not valid\ndate-time string"), 5);
-        }
+        if (forceClear) showMessage(F("Not valid\ndate-time string"), 5);
         return;
     }
 
     long diff = targetTime - now;
     const bool passed = diff < 0;
-    if (passed) {
-        diff *= -1;
-    }
+    if (passed) diff *= -1;
 
     const int minutes = diff / 60;
     const int seconds = diff % 60;
 
-    if (forceClear) {
-        tft.fillScreen(TFT_BLACK);
-    }
+    if (forceClear) tft.fillScreen(TFT_BLACK);
 
     const bool hasSubject = countdownState.subject[0] != '\0';
     int currentY = -8;
 
     // Draw subject
     if (hasSubject) {
-        if (forceClear) {
-            drawSubject(countdownState.subject);
-        }
+        if (forceClear) drawSubject(countdownState.subject);
         currentY = 44;
     }
 
     // Draw countdown
     char buffer[8];
-    if (passed) {
-        sprintf(buffer, "-%d:%02d", minutes, seconds);
-    } else {
-        sprintf(buffer, "%d:%02d", minutes, seconds);
-    }
+    if (passed) sprintf(buffer, "-%d:%02d", minutes, seconds);
+    else sprintf(buffer, "%d:%02d", minutes, seconds);
 
     const int clockY = (tft.width() + currentY) / 2;
     // Redraw every minute, as the width may change
@@ -70,7 +57,5 @@ void themeRenderCountdown(const bool forceClear, const time_t &now) {
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
     // Draw subject line
-    if (hasSubject && forceClear) {
-        drawHLine(32);
-    }
+    if (hasSubject && forceClear) drawHLine(32);
 }

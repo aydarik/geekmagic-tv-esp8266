@@ -3,9 +3,7 @@
 #include "display.h"
 
 void themeRenderAPMode(const bool forceClear) {
-    if (!forceClear) {
-        return;
-    }
+    if (!forceClear) return;
 
     tft.fillScreen(TFT_BLACK);
     tft.setTextDatum(TC_DATUM);

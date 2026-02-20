@@ -176,7 +176,7 @@ void setup() {
     delay(100);
 
     loggerInit();
-    logPrint(F("Starting..."));
+    logPrint("Starting...");
     logPrintf("Firmware Version: %d", FIRMWARE_VERSION);
 
     // Initialize EEPROM and boot counter
@@ -184,7 +184,7 @@ void setup() {
     powerCycleCounterIncrement(); // Increment power cycle counter
 
     displayInit();
-    displaySetBrightness(50);
+    displaySetBrightness(DEFAULT_BRIGHTNESS);
     showMessage(F("Starting..."));
 
     // Load and validate settings
@@ -210,9 +210,7 @@ void setup() {
     displayState.ipInfo[sizeof(displayState.ipInfo) - 1] = '\0';
 
     // Stop setup if in service mode
-    if (displayState.theme < 0) {
-        return;
-    }
+    if (displayState.theme < 0) return;
 
     // NTP initialization
     configTzTime(appSettings.tz, NTP_SERVER); // Set timezone and NTP server for system time
@@ -221,7 +219,7 @@ void setup() {
     displayUpdate(1);
     lastDisplayUpdate = millis();
 
-    logPrint(F("Setup complete"));
+    logPrint("Setup complete");
 }
 
 void loop() {

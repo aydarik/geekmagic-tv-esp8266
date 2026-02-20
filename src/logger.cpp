@@ -10,18 +10,11 @@ void loggerInit() {
     logCount = 0;
 }
 
-void logPrint(const String &msg) {
-    // Print to serial
+void logPrint(const char* msg) {
+    snprintf(logBuffer[logIndex], LOG_LINE_LENGTH, "%lu: %s", millis(), msg);
     Serial.println(msg);
-
-    // Store in circular buffer
-    strncpy(logBuffer[logIndex], msg.c_str(), LOG_LINE_LENGTH - 1);
-    logBuffer[logIndex][LOG_LINE_LENGTH - 1] = '\0';
-
     logIndex = (logIndex + 1) % LOG_BUFFER_SIZE;
-    if (logCount < LOG_BUFFER_SIZE) {
-        logCount++;
-    }
+    if (logCount < LOG_BUFFER_SIZE) logCount++;
 }
 
 void logPrintf(const char *format, ...) {
@@ -30,8 +23,7 @@ void logPrintf(const char *format, ...) {
     va_start(args, format);
     vsnprintf(buffer, LOG_LINE_LENGTH, format, args);
     va_end(args);
-
-    logPrint(String(buffer));
+    logPrint(buffer);
 }
 
 String logGetAll() {
