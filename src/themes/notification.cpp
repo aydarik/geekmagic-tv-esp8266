@@ -35,33 +35,32 @@ void parseValue(const char *input) {
 }
 
 void drawGauge(const int x, const int y, const int r, const float current, const float max) {
-    if (max <= 0) return;
+    if (max <= 0.0f) return;
 
     float percent = current / max;
-    if (percent < 0) percent = 0;
-    if (percent > 1) percent = 1;
+    if (percent < 0.0f) percent = 0.0f;
+    if (percent > 1.0f) percent = 1.0f;
 
     constexpr int startAngle = 55;
     constexpr int endAngle = 305;
-    const uint32_t valueAngle = startAngle + (endAngle - startAngle) * percent;
-    tft.startWrite();
+    constexpr int totalAngle = endAngle - startAngle;
     tft.drawArc(x, y, r, r - 12, startAngle, endAngle, TFT_DARKGREY, TFT_BLACK);
 
     const bool hasSubject = notificationState.subject[0] != '\0';
     const int centerX = tft.width() / 2;
-    const int32_t subjectOffset = hasSubject ? centerX / ANIMATION_STEPS : 0;
-    const uint32_t gaugeOffset = (valueAngle - startAngle) / ANIMATION_STEPS;
-    const uint32_t gaugeColor = percent < 0.2f || percent > 0.8 ? TFT_RED : TFT_OLIVE;
-    for (int i = 1; i <= ANIMATION_STEPS; i++) {
+    const int subjectOffset = hasSubject ? centerX / ANIMATION_STEPS : 0;
+
+    const uint32_t gaugeColor = percent < 0.2f || percent > 0.8f ? TFT_RED : TFT_OLIVE;
+
+    tft.startWrite();
+    for (int i = 1; i <= ANIMATION_STEPS; ++i) {
         // Draw line together with gauge for smooth animation
         if (hasSubject) tft.drawFastHLine(centerX - i * subjectOffset, 32, i * subjectOffset * 2, TFT_SILVER);
         // Draw gauge
-        uint32_t currentGaugeOffset = i * gaugeOffset;
-        currentGaugeOffset = currentGaugeOffset < valueAngle ? currentGaugeOffset : valueAngle;
-        tft.drawArc(x, y, r, r - 12, startAngle, startAngle + currentGaugeOffset, gaugeColor, TFT_BLACK);
+        const int currentAngle = startAngle + totalAngle * percent * static_cast<float>(i) / ANIMATION_STEPS;
+        tft.drawArc(x, y, r, r - 12, startAngle, currentAngle, gaugeColor, TFT_BLACK);
         delay(ANIMATION_STEP_DELAY);
     }
-
     tft.endWrite();
 }
 

@@ -348,7 +348,11 @@ void handleOTAUpload() {
 void handleOTADone() {
     const bool shouldReboot = !Update.hasError();
     server.send(200, CONTENT_TYPE_TEXT, shouldReboot ? F("OK - Rebooting...") : F("FAIL"));
-    if (shouldReboot) ESP.restart();
+    if (shouldReboot) {
+        showMessage(F("Success!\nRebooting..."));
+        delay(2000);
+        ESP.restart();
+    }
 }
 
 void handleLog() {

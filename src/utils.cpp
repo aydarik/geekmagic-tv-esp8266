@@ -90,7 +90,7 @@ void animateHLine(const int y) {
     const int32_t offset = centerX / ANIMATION_STEPS;
 
     tft.startWrite();
-    for (int i = 1; i <= ANIMATION_STEPS; i++) {
+    for (int i = 1; i <= ANIMATION_STEPS; ++i) {
         tft.drawFastHLine(centerX - i * offset, y, i * offset * 2, TFT_SILVER);
         delay(ANIMATION_STEP_DELAY);
     }
