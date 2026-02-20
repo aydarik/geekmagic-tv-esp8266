@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>OTA Update</title>
+    <style>
+        :root {
+            --bg: #0f1115;
+            --card: #1a1d23;
+            --border: #2a2f38;
+            --text: #e9ecef;
+            --muted: #9aa0a6;
+            --accent: #4caf50;
+            --accent-hover: #43a047;
+            --shadow-color: rgba(0, 0, 0, 0.6);
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: var(--font-family);
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .card {
+            background: var(--card);
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px var(--shadow-color);
+            width: 100%;
+            max-width: 420px;
+            border: 1px solid var(--border);
+        }
+
+        h1 {
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 0.5rem;
+            background: #2a2a2a;
+            color: var(--muted);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+
+        input[type="submit"] {
+            margin-top: 1.5rem;
+            width: 100%;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 6px;
+            background-color: var(--accent);
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        input[type="submit"]:hover {
+            background-color: var(--accent-hover);
+        }
+
+        input[type="submit"]:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>OTA Update</h1>
+    <form method="POST" action="/update" enctype="multipart/form-data">
+        <input type="file" name="update" required>
+        <input type="submit" value="Update Firmware">
+    </form>
+</div>
+</body>
+</html>

@@ -14,6 +14,7 @@
 #include <ESP8266WiFi.h>
 
 #include "generated/index_html.h"
+#include "generated/ota_html.h"
 
 ESP8266WebServer server(WEB_SERVER_PORT);
 
@@ -317,13 +318,10 @@ void handleFactoryReset() {
 }
 
 void handleOTAForm() {
-    server.send(200, "text/html",
-                "<!DOCTYPE html><html><body>"
-                "<h1>SmartClock OTA Update</h1>"
-                "<form method='POST' action='/update' enctype='multipart/form-data'>"
-                "<input type='file' name='update'><br><br>"
-                "<input type='submit' value='Update Firmware'>"
-                "</form></body></html>");
+    server.sendHeader(F("Content-Encoding"), F("gzip"));
+    server.sendHeader(F("Cache-Control"), F("max-age=600"));
+    server.send_P(200, CONTENT_TYPE_HTML, reinterpret_cast<const char *>(src_generated_ota_html_gz),
+                  src_generated_index_html_gz_len);
 }
 
 void handleOTAUpload() {
