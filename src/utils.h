@@ -11,7 +11,7 @@ size_t wrapText(char *text, char *lines[], size_t maxLines);
 
 size_t splitString(const String &s, String lines[], size_t maxLines);
 
-void drawHLine(int y);
+void animateHLine(int y);
 
 void drawSubject(const char *text);
 

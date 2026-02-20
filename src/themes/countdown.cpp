@@ -57,5 +57,5 @@ void themeRenderCountdown(const bool forceClear, const time_t &now) {
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
     // Draw subject line
-    if (hasSubject && forceClear) drawHLine(32);
+    if (hasSubject && forceClear) animateHLine(32);
 }

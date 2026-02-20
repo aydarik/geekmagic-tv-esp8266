@@ -39,6 +39,13 @@ Since initial devices come with factory firmware, the **first** flash must be do
 Please check the instructions in the original repository for more
 details: [FLASHING.md](https://github.com/bvweerd/geekmagic-tv-esp8266/blob/dev/FLASHING.md)
 
+<details>
+<summary>Looks messy, but works :)</summary>
+
+![Flashing 1](/assets/photo_flash_1.jpg) ![Flashing 2](/assets/photo_flash_2.jpg)
+
+</details>
+
 ### Bootstrapping
 
 1. Device starts in AP mode.
@@ -80,14 +87,17 @@ curl "http://DEVICE_IP/set?sec=true"
 ### Messaging & Notifications
 
 ```bash
-# Show custom message
+# Show custom message (Hello world!\nПривет, мир!)
 curl "http://DEVICE_IP/set?msg=Hello%20world!%0A%D0%9F%D1%80%D0%B8%D0%B2%D0%B5%D1%82%2C%20%D0%BC%D0%B8%D1%80!%0A&sbj=Notification&style=center&timeout=10"
 
-# Set a sticky note on the clock screen
-curl "http://DEVICE_IP/set?note=-1%2C%20snow&timeout=3600"
+# Show gauge (21.4/40 ℃)
+curl 'http://DEVICE_IP/set?msg=21.4%2F40%20%E2%84%83&sbj=Living%20room&style=big_num&timeout=60'
+
+# Set a sticky note on the clock screen (-1℃, cloudy, multiline rotates within a minute)
+curl "http://DEVICE_IP/set?note=-1%E2%84%83%2C%20cloudy&timeout=3600"
 ```
 
-![Custom Message](/assets/photo_message.jpg) ![Sticky Note](/assets/photo_note.jpg)
+![Custom Message](/assets/photo_message.jpg) ![Gauge](/assets/photo_gauge.jpg) ![Sticky Note](/assets/photo_note.jpg)
 
 ### Countdown
 

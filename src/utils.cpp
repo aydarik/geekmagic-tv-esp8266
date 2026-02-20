@@ -85,13 +85,14 @@ size_t splitString(const String &s, String lines[], const size_t maxLines) {
     return count;
 }
 
-void drawHLine(const int y) {
-    const int centerX = tft.width() / 2;
+void animateHLine(const int y) {
+    const int32_t centerX = tft.width() / 2;
+    const int32_t offset = centerX / ANIMATION_STEPS;
 
     tft.startWrite();
-    for (int dx = 0; dx <= centerX; dx += 8) {
-        tft.drawFastHLine(centerX - dx, y, dx * 2, TFT_SILVER);
-        delay(20); // control animation speed
+    for (int i = 1; i <= ANIMATION_STEPS; i++) {
+        tft.drawFastHLine(centerX - i * offset, y, i * offset * 2, TFT_SILVER);
+        delay(ANIMATION_STEP_DELAY);
     }
     tft.endWrite();
 }
