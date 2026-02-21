@@ -16,7 +16,7 @@ DisplayState displayState;
 
 extern Settings appSettings;
 
-bool tft_output(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t *bitmap) {
+bool tft_output(const int16_t x, const int16_t y, const uint16_t w, const uint16_t h, uint16_t *bitmap) {
     if (y >= tft.height()) return false;
     tft.pushImage(x, y, w, h, bitmap);
     return true;

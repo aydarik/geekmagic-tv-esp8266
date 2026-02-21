@@ -5,6 +5,25 @@
 
 CountdownState countdownState;
 
+void drawGauge(const int x, const int y, const int r, const long sec, const bool passed) {
+    if (!passed && sec > COUNTDOWN_GAUGE_OFFSET) return;
+    const int rInner = r - 12;
+
+    if (passed) {
+        if (sec == 1)
+            // Clear first if just passed
+            tft.drawArc(x, y, r, rInner, 0, 360, TFT_BLACK, TFT_BLACK);
+
+        const bool secEven = sec % 2 == 0;
+        tft.drawArc(x, y, r, rInner, 120, 240, secEven ? TFT_RED : TFT_ORANGE, TFT_BLACK);
+        tft.drawArc(x, y, r, rInner, 300, 60, !secEven ? TFT_RED : TFT_ORANGE, TFT_BLACK);
+        return;
+    }
+
+    const int endAngle = (COUNTDOWN_GAUGE_OFFSET - sec) * 360 / COUNTDOWN_GAUGE_OFFSET;
+    tft.drawArc(x, y, r, rInner, 0, endAngle, sec < 10 ? TFT_RED : TFT_ORANGE, TFT_BLACK);
+}
+
 void themeRenderCountdown(const bool forceClear, const time_t &now) {
     if (countdownState.datetime[0] == '\0') {
         if (forceClear) showMessage(F("No date-time"), 5);
@@ -41,18 +60,21 @@ void themeRenderCountdown(const bool forceClear, const time_t &now) {
     else sprintf(buffer, "%d:%02d", minutes, seconds);
 
     const int clockY = (tft.width() + currentY) / 2;
-    // Redraw every minute, as the width may change
-    if (!forceClear && ((!passed && seconds == 59) || (passed && minutes == 0 && seconds == 1))) {
+
+    // Clear every 10 minutes, as the width shrinks
+    if (!forceClear && !passed && seconds == 59 && (minutes + 1) % 10 == 0) {
         tft.fillRect(0, clockY - 30, tft.width(), 60, TFT_BLACK);
     }
 
-    tft.setTextDatum(MC_DATUM);
+    // Draw gauge
+    drawGauge(tft.height() / 2, clockY, 100, diff, passed);
 
     if (passed) {
         tft.setTextColor(TFT_RED, TFT_BLACK);
     } else if (minutes == 0 && seconds <= 10) {
         tft.setTextColor(TFT_ORANGE, TFT_BLACK);
     }
+    tft.setTextDatum(MC_DATUM);
     tft.drawString(buffer, tft.height() / 2, clockY, FONT_DIGIT);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
 

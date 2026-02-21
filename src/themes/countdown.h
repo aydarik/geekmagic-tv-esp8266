@@ -3,6 +3,8 @@
 
 #include <ctime>
 
+#define COUNTDOWN_GAUGE_OFFSET 60
+
 #define COUNTDOWN_SBJ_BUFFER_SIZE 32
 #define COUNTDOWN_DATETIME_BUFFER_SIZE 32
 

@@ -40,7 +40,7 @@ Please check the instructions in the original repository for more
 details: [FLASHING.md](https://github.com/bvweerd/geekmagic-tv-esp8266/blob/dev/FLASHING.md)
 
 <details>
-<summary>Looks messy, but works :)</summary>
+<summary>Looks messy, but works 🫢</summary>
 
 ![Flashing 1](/assets/photo_flash_1.jpg) ![Flashing 2](/assets/photo_flash_2.jpg)
 

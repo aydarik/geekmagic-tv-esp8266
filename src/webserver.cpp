@@ -286,7 +286,7 @@ void streamDirRecursiveHtml(const char *dirname) {
             server.sendContent(F("')\">DEL</button>"));
 
             // Set button for JPGs
-            if (fnameLower.endsWith(".jpg")) {
+            if (fnameLower.endsWith(F(".jpg")) || fnameLower.endsWith(F(".jpeg")) || fnameLower.endsWith(F(".gif"))) {
                 server.sendContent(F("<button class='button' onclick=\"displayImage('"));
                 server.sendContent(dirname);
                 server.sendContent(F("/"));
