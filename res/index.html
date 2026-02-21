@@ -268,6 +268,8 @@
                 <div class="spacer"></div>
                 <label for="clockNoteTimeout">Timeout (sec):</label>
                 <input type="number" id="clockNoteTimeout"/>
+                <div class="spacer"></div>
+                <div><input type="checkbox" id="clockNoteForce"/> Force update</div>
             </div>
             <button class="button" onclick="sendClockNote()">Send</button>
         </div>
@@ -402,8 +404,10 @@
 
     function sendClockNote() {
         const clockNote = document.getElementById('clockNote').value;
+        const clockNoteForce = document.getElementById('clockNoteForce').checked;
         const clockNoteTimeout = document.getElementById('clockNoteTimeout').value;
         fetch('/set?note=' + encodeURIComponent(clockNote)
+            + '&force=' + clockNoteForce
             + '&timeout=' + clockNoteTimeout
         ).catch(error => console.error('Error:', error));
     }

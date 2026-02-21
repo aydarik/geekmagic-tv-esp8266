@@ -149,7 +149,12 @@ void handleSet() {
         } else {
             clockState.noteTimeout = 0;
         }
-        if (displayState.theme == 1 && hadNote != hasNote) {
+
+        const String force = server.arg("force");
+        if ((displayState.theme == 1 && hadNote != hasNote)
+            || force.equalsIgnoreCase("true")
+            || force.equals("1")
+        ) {
             displayUpdate();
         }
     } else if (server.hasArg("cnt")) {
