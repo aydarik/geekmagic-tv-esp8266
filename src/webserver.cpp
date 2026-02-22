@@ -275,7 +275,10 @@ void streamDirRecursiveHtml(const char *dirname) {
             auto fnameLower = String(fileName);
             fnameLower.toLowerCase();
 
-            server.sendContent(F("<tr><td><a href='"));
+            server.sendContent(F("<tr><td>"));
+            if (strcmp(displayState.image, file.fullName()) == 0)
+                server.sendContent(F("&#x2714; "));
+            server.sendContent(F("<a href='"));
             server.sendContent(dirname);
             server.sendContent(F("/"));
             server.sendContent(fileName);

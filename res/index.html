@@ -269,7 +269,7 @@
                 <label for="clockNoteTimeout">Timeout (sec):</label>
                 <input type="number" id="clockNoteTimeout"/>
                 <div class="spacer"></div>
-                <div><input type="checkbox" id="clockNoteForce"/> Force update</div>
+                <div><input type="checkbox" id="clockNoteForce" checked/> Force update</div>
             </div>
             <button class="button" onclick="sendClockNote()">Send</button>
         </div>
@@ -348,32 +348,32 @@
 
 <script>
     function setBrightness() {
-        var brightness = document.getElementById("brightness").value;
+        const brightness = document.getElementById("brightness").value;
         fetch('/set?brt=' + brightness).catch(error => console.error('Error:', error));
     }
 
     function setShowIP() {
-        var val = document.getElementById("showIP").checked;
+        const val = document.getElementById("showIP").checked;
         fetch('/set?ip=' + val).catch(error => console.error('Error:', error));
     }
 
     function setShowSeconds() {
-        var val = document.getElementById("showSec").checked;
+        const val = document.getElementById("showSec").checked;
         fetch('/set?sec=' + val).catch(error => console.error('Error:', error));
     }
 
     function setTimezone() {
-        var tz = document.getElementById("tz").value;
+        const tz = document.getElementById("tz").value;
         fetch('/set?tz=' + encodeURIComponent(tz)).then(response => response.text()).then(data => alert('Timezone set: ' + data)).catch(error => console.error('Error:', error));
     }
 
     function displayImage(imagePath) {
         const imageTimeout = document.getElementById('imageTimeout').value;
-        fetch('/set?img=' + encodeURIComponent(imagePath) + '&timeout=' + imageTimeout).catch(error => console.error('Error:', error));
+        fetch('/set?img=' + encodeURIComponent(imagePath) + '&timeout=' + imageTimeout).then(_ => loadFiles()).catch(error => console.error('Error:', error));
     }
 
     function deleteImage(imagePath) {
-        fetch('/delete?file=' + encodeURIComponent(imagePath)).then(_ => loadData()).catch(error => console.error('Error:', error));
+        fetch('/delete?file=' + encodeURIComponent(imagePath)).then(_ => loadFiles()).catch(error => console.error('Error:', error));
     }
 
     function setTheme(id) {
@@ -525,6 +525,10 @@
             console.error('Error fetching custom message:', error);
         });
 
+        loadFiles();
+    }
+
+    function loadFiles() {
         fetch('/filelist').then(response => response.text()).then(data => {
             document.getElementById('filesTable').innerHTML = data;
         }).catch(error => {
