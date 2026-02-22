@@ -108,6 +108,7 @@ void displayUpdate(const int theme, const bool forceClear) {
     time_t now;
     time(&now);
 
+    // If set manually
     if (theme != 0) displayState.theme = theme;
 
     if (displayState.timeout != 0) {
@@ -133,7 +134,7 @@ void displayUpdate(const int theme, const bool forceClear) {
         default: break;
     }
 
-    if (displayState.timeout != 0) {
+    if (displayState.timeout > 0) {
         constexpr int minDelay = 60;
         if (const int diff = displayState.timeout - now; diff <= minDelay) {
             const int currentX = diff * tft.width() / minDelay;

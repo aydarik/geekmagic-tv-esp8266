@@ -5,7 +5,7 @@
 #include <TFT_eSPI.h>
 
 #define DISPLAY_IP_BUFFER_SIZE 24
-#define DISPLAY_IMG_PATH_BUFFER_SIZE 64
+#define DISPLAY_IMG_PATH_BUFFER_SIZE 32
 #define DISPLAY_MSG_BUFFER_SIZE 512
 
 struct DisplayState {

@@ -221,9 +221,8 @@ void handleFileUpload() {
         const String filename = upload.filename;
         const String filepath = dir + filename;
         uploadFile = LittleFS.open(filepath, "w");
-        if (!uploadFile) {
-            logPrintf("Failed to open file for writing!");
-        }
+        if (!uploadFile)
+            logPrint("Failed to open file for writing!");
     } else if (upload.status == UPLOAD_FILE_WRITE) {
         if (uploadFile) {
             if (const size_t bytesWritten = uploadFile.write(upload.buf, upload.currentSize);
@@ -234,7 +233,7 @@ void handleFileUpload() {
     } else if (upload.status == UPLOAD_FILE_END) {
         if (uploadFile) {
             uploadFile.close();
-            logPrintf("File closed.Size: %u bytes", upload.totalSize);
+            logPrintf("File uploaded: %u bytes", upload.totalSize);
         }
     }
 }
@@ -245,8 +244,11 @@ void handleUploadDone() {
 
 void handleDelete() {
     if (server.hasArg("file")) {
-        if (const String filepath = server.arg("file"); LittleFS.remove(filepath)) {
+        char imagePath[DISPLAY_IMG_PATH_BUFFER_SIZE];
+        urlDecode(server.arg("file").c_str(), imagePath, DISPLAY_IMG_PATH_BUFFER_SIZE);
+        if (LittleFS.remove(imagePath)) {
             server.send(200, CONTENT_TYPE_TEXT, F("Deleted"));
+            logPrintf("File deleted", imagePath);
         } else {
             server.send(404, CONTENT_TYPE_TEXT, F("Not found"));
         }
