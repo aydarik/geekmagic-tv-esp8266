@@ -26,7 +26,17 @@ void getFormattedDate(char *buffer, const size_t bufferSize, const tm &timeinfo)
 }
 
 void clearNote() {
-    tft.fillRect(0, tft.height() - 45, tft.width(), 30, TFT_BLACK);
+    constexpr int h = 30;
+    const int w = tft.width();
+    const int yTop = tft.height() - 45;
+    const int yBottom = yTop + 30;
+    tft.startWrite();
+    for (int i = 1; i <= h / 2; ++i) {
+        tft.drawFastHLine(0, yTop + i, w, TFT_BLACK);
+        tft.drawFastHLine(0, yBottom - i, w, TFT_BLACK);
+        delay(ANIMATION_STEP_DELAY);
+    }
+    tft.endWrite();
 }
 
 void themeRenderClock(const bool forceClear, const time_t &now) {
@@ -48,7 +58,7 @@ void themeRenderClock(const bool forceClear, const time_t &now) {
     if (appSettings.showSec) {
         char currentSeconds[4];
         getFormattedSeconds(currentSeconds, sizeof(currentSeconds), timeinfo);
-        tft.drawString(currentSeconds, centerX + 71, clockY + 26, FONT_DEFAULT);
+        tft.drawString(currentSeconds, centerX + 71, clockY + 27, FONT_DEFAULT);
     }
 
     // Draw or clear a note

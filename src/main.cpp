@@ -250,8 +250,8 @@ void loop() {
 
     // Automatic screen updates for clock rendering
     if (const unsigned long now = millis(); now - lastDisplayUpdate > DISPLAY_UPDATE_INTERVAL) {
-        displayUpdate(0, false);
         lastDisplayUpdate = now;
+        displayUpdate(0, false);
     }
 
     yield();
