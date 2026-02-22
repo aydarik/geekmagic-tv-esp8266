@@ -9,6 +9,8 @@
         :root {
             --primary-color: #4dabf7;
             --primary-hover-color: #339af0;
+            --accent-color: #4caf50;
+            --accent-hover-color: #43a047;
             --danger-color: #ff6b6b;
             --danger-hover-color: #fa5252;
             --background-color: #0f1115;
@@ -132,6 +134,14 @@
             background-color: var(--danger-hover-color)
         }
 
+        .button.green {
+            background-color: var(--accent-color)
+        }
+
+        .button.green:hover {
+            background-color: var(--accent-hover-color)
+        }
+
         .button-group {
             display: flex;
             flex-wrap: wrap;
@@ -153,7 +163,7 @@
             font-size: 0.9em
         }
 
-        .version-info {
+        .note {
             background-color: #15181e;
             color: var(--light-text-color);
             padding: 8px 10px;
@@ -199,17 +209,9 @@
     </style>
 </head>
 <body>
-<div class="container"><h1>SmartClock Control</h1>
-    <div class="card">
-        <div class="card-header">Status & Info</div>
-        <div class="card-body">
-            <div class="version-info">Firmware Version: <strong id="firmwareVersion">Loading...</strong></div>
-            <div class="button-group">
-                <a href="/log" class="button">View Logs</a>
-                <button class="button" onclick="displayTestImage()">Display Test</button>
-            </div>
-        </div>
-    </div>
+<div class="container">
+    <h1>SmartClock Control</h1>
+    <div class="note">Firmware Version: <strong id="firmwareVersion">Loading...</strong></div>
     <div class="card">
         <div class="card-header">WiFi Configuration</div>
         <div class="card-body">
@@ -231,7 +233,7 @@
     <div class="card">
         <div class="card-header">Themes</div>
         <div class="card-body">
-            <div class="version-info">Current theme: <strong id="currentTheme">Loading...</strong></div>
+            <div class="note">Current theme: <strong id="currentTheme">Loading...</strong></div>
             <div class="button-group">
                 <button class="button" onclick="setTheme(1)">1. Clock</button>
                 <button class="button" onclick="setTheme(2)">2. Message</button>
@@ -336,8 +338,10 @@
     <div class="card">
         <div class="card-header">Advanced Actions</div>
         <div class="card-body button-group">
-            <a href="/update" class="button">Firmware Update (OTA)</a>
+            <a href="/update" class="button green">Firmware Update</a>
             <button class="button red" onclick="factoryReset()">Factory Reset</button>
+            <button class="button" onclick="displayTest()">Test</button>
+            <a href="/log" class="button">Logs</a>
         </div>
     </div>
 </div>
@@ -412,7 +416,7 @@
         ).catch(error => console.error('Error:', error));
     }
 
-    function displayTestImage() {
+    function displayTest() {
         fetch('/test').catch(error => console.error('Error:', error));
     }
 

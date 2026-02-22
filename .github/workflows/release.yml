@@ -6,7 +6,6 @@ permissions:
 on:
   push:
     tags: [ '*.*.*' ]
-  workflow_dispatch:
 
 jobs:
   build:
@@ -14,7 +13,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Extract version
         id: get_version
@@ -30,7 +29,7 @@ jobs:
           grep "FIRMWARE_VERSION_STRING" src/settings.h
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.x"
 
@@ -41,7 +40,7 @@ jobs:
 
       - name: Build
         run: |
-          mkdir src/generated
+          mkdir -p src/generated
           gzip -9 -c res/index.html > src/generated/index.html.gz
           xxd -i src/generated/index.html.gz > src/generated/index_html.h
           gzip -9 -c res/ota.html > src/generated/ota.html.gz
