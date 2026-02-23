@@ -49,6 +49,7 @@ void handleSpaceJson() {
     JsonDocument doc;
     doc["total"] = fs_info.totalBytes;
     doc["free"] = fs_info.totalBytes - fs_info.usedBytes;
+    // 4 blocks × 4096 bytes -> LittleFS overhead
 
     server.setContentLength(measureJson(doc));
     server.send(200, CONTENT_TYPE_JSON, F(""));
@@ -154,7 +155,8 @@ void handleSet() {
         if ((displayState.theme == 1 && hadNote != hasNote)
             || force.equalsIgnoreCase("true")
             || force.equals("1")
-        ) displayUpdate();
+        )
+            displayUpdate();
     } else if (server.hasArg("cnt")) {
         urlDecode(server.arg("sbj").c_str(), countdownState.subject, COUNTDOWN_SBJ_BUFFER_SIZE);
         urlDecode(server.arg("cnt").c_str(), countdownState.datetime, COUNTDOWN_DATETIME_BUFFER_SIZE);

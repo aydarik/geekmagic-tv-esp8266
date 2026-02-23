@@ -91,14 +91,15 @@ curl "http://DEVICE_IP/set?sec=true"
 ### Messaging & Notifications
 
 ```bash
-# Show custom message (Hello world!\nПривет, мир!)
+# Show custom message (Hello world! \n Привет, мир!)
 curl "http://DEVICE_IP/set?msg=Hello%20world!%0A%D0%9F%D1%80%D0%B8%D0%B2%D0%B5%D1%82%2C%20%D0%BC%D0%B8%D1%80!%0A&sbj=Notification&style=center&timeout=10"
 
 # Show gauge (21.4/40 ℃)
 curl 'http://DEVICE_IP/set?msg=21.4%2F40%20%E2%84%83&sbj=Living%20room&style=big_num&timeout=60'
 
-# Set a sticky note on the clock screen (-1℃, cloudy, multiline rotates within a minute)
-curl "http://DEVICE_IP/set?note=-1%E2%84%83%2C%20cloudy&timeout=3600"
+# Set a sticky note on the clock screen (+8℃, cloudy \n 20.3℃ | 63% \n CO₂ 857 ppm)
+# Multiline notes rotate within a minute)
+curl "http://DEVICE_IP/set?note=%252B8%E2%84%83%2C%20cloudy%0A20.3%E2%84%83%20%7C%2063%25%0ACO%E2%82%82%20857%20ppm&rpm=6&force=false&timeout=3600"
 ```
 
 ![Custom Message](/assets/photo_message.jpg) ![Gauge](/assets/photo_gauge.jpg) ![Sticky Note](/assets/photo_note.jpg)
@@ -128,11 +129,17 @@ curl "http://DEVICE_IP/filelist"
 ### System
 
 ```bash
+# Get firmware version
+curl "http://DEVICE_IP/v.json"
+
 # Get device status
 curl "http://DEVICE_IP/app.json"
 
-# Get system info (Heap, FS usage)
+# Get FS space info
 curl "http://DEVICE_IP/space.json"
+
+# Get Heap usage info
+curl "http://DEVICE_IP/memory.json"
 
 # View logs
 curl "http://DEVICE_IP/log"

@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
     <title>OTA Update</title>
     <style>
         :root {
@@ -12,8 +11,8 @@
             --border: #2a2f38;
             --text: #e9ecef;
             --muted: #9aa0a6;
-            --accent: #4caf50;
-            --accent-hover: #43a047;
+            --primary-color: #4dabf7;
+            --primary-hover-color: #339af0;
             --shadow-color: rgba(0, 0, 0, 0.6);
             --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
@@ -59,36 +58,68 @@
             border-radius: 6px;
         }
 
-        input[type="submit"] {
+        .button {
             margin-top: 1.5rem;
             width: 100%;
             padding: 0.75rem;
             border: none;
             border-radius: 6px;
-            background-color: var(--accent);
-            color: white;
+            background-color: var(--primary-color);
+            color: var(--text);
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
             transition: background-color 0.2s ease;
         }
 
-        input[type="submit"]:hover {
-            background-color: var(--accent-hover);
-        }
-
-        input[type="submit"]:active {
-            transform: scale(0.98);
+        .button:hover {
+            background-color: var(--primary-hover-color);
         }
     </style>
 </head>
 <body>
 <div class="card">
     <h1>OTA Update</h1>
-    <form method="POST" action="/update" enctype="multipart/form-data">
+    <form id="otaForm" enctype="multipart/form-data">
         <input type="file" name="update" accept=".bin" required>
-        <input type="submit" value="Update Firmware">
+        <input type="submit" id="updateBtn" value="Update Firmware" class="button">
     </form>
 </div>
+
+<script>
+    const form = document.getElementById('otaForm');
+    const btn = document.getElementById('updateBtn');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fileInput = form.querySelector('input[type="file"]');
+        if (!fileInput.files.length) return;
+
+        const file = fileInput.files[0];
+        const formData = new FormData();
+        formData.append('update', file);
+
+        // change button to loading
+        btn.value = 'Updating...';
+        btn.disabled = true;
+
+        const response = await fetch('/update', {
+            method: 'POST',
+            body: formData
+        });
+
+        const text = await response.text();
+        let countdown = 30;
+        const interval = setInterval(() => {
+            btn.value = `${text}\nRedirecting in ${countdown} seconds...`;
+            countdown--;
+
+            if (countdown < 0) {
+                clearInterval(interval);
+                window.location.href = '/';
+            }
+        }, 1000);
+    });
+</script>
 </body>
 </html>
