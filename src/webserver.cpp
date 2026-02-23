@@ -101,6 +101,8 @@ void handleMessageJson() {
 void handleNoteJson() {
     JsonDocument doc;
     doc["note"] = clockState.note;
+    if (clockState.noteRotations > 0)
+        doc["rpm"] = clockState.noteRotations;
 
     server.setContentLength(measureJson(doc));
     server.send(200, CONTENT_TYPE_JSON, F(""));
@@ -137,35 +139,29 @@ void handleSet() {
         urlDecode(server.arg("sbj").c_str(), notificationState.subject, NOTIFICATION_SBJ_BUFFER_SIZE);
         urlDecode(server.arg("style").c_str(), notificationState.style, NOTIFICATION_STYLE_BUFFER_SIZE);
         displayUpdate(2);
-        if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
+        if (const int timeout = server.arg("timeout").toInt(); timeout > 0)
             displayState.timeout = time(nullptr) + timeout;
-        }
     } else if (server.hasArg("note")) {
         const bool hadNote = clockState.note[0] != '\0';
         urlDecode(server.arg("note").c_str(), clockState.note, CLOCK_NOTE_SIZE);
         const boolean hasNote = clockState.note[0] != '\0';
-        if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
+        clockState.noteRotations = server.arg("rpm").toInt();
+        if (clockState.noteRotations > 60) clockState.noteRotations = 60; // Not more than every second
+        if (const int timeout = server.arg("timeout").toInt(); timeout > 0)
             clockState.noteTimeout = time(nullptr) + timeout;
-        } else {
-            clockState.noteTimeout = 0;
-        }
-
+        else clockState.noteTimeout = 0;
         const String force = server.arg("force");
         if ((displayState.theme == 1 && hadNote != hasNote)
             || force.equalsIgnoreCase("true")
             || force.equals("1")
-        ) {
-            displayUpdate();
-        }
+        ) displayUpdate();
     } else if (server.hasArg("cnt")) {
         urlDecode(server.arg("sbj").c_str(), countdownState.subject, COUNTDOWN_SBJ_BUFFER_SIZE);
         urlDecode(server.arg("cnt").c_str(), countdownState.datetime, COUNTDOWN_DATETIME_BUFFER_SIZE);
         displayUpdate(4);
-        if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
-            if (const time_t datetime = parseDateTime(countdownState.datetime); datetime > time(nullptr)) {
+        if (const int timeout = server.arg("timeout").toInt(); timeout > 0)
+            if (const time_t datetime = parseDateTime(countdownState.datetime); datetime > time(nullptr))
                 displayState.timeout = datetime + timeout;
-            }
-        }
     } else if (server.hasArg("brt")) {
         appSettings.brightness = server.arg("brt").toInt();
         displaySetBrightness(appSettings.brightness);
@@ -175,35 +171,27 @@ void handleSet() {
     } else if (server.hasArg("img")) {
         urlDecode(server.arg("img").c_str(), displayState.image, DISPLAY_IMG_PATH_BUFFER_SIZE);
         displayUpdate(3);
-        if (const int timeout = server.arg("timeout").toInt(); timeout > 0) {
+        if (const int timeout = server.arg("timeout").toInt(); timeout > 0)
             displayState.timeout = time(nullptr) + timeout;
-        }
     } else if (server.hasArg("ip")) {
         appSettings.showIP = server.arg("ip") != "false";
-        if (displayState.theme == 1) {
-            displayUpdate();
-        }
+        if (displayState.theme == 1) displayUpdate();
         settingsSave(appSettings);
     } else if (server.hasArg("sec")) {
         appSettings.showSec = server.arg("sec") != "false";
-        if (displayState.theme == 1) {
-            displayUpdate();
-        }
+        if (displayState.theme == 1) displayUpdate();
         settingsSave(appSettings);
     } else if (server.hasArg("tz")) {
         strncpy(appSettings.tz, server.arg("tz").c_str(), sizeof(appSettings.tz));
         appSettings.tz[sizeof(appSettings.tz) - 1] = '\0'; // Ensure null-termination
         setenv("TZ", appSettings.tz, 1);
         tzset();
-        if (displayState.theme == 1) {
-            displayUpdate();
-        }
+        if (displayState.theme == 1) displayUpdate();
         settingsSave(appSettings);
     } else {
         server.send(400, CONTENT_TYPE_TEXT, F("No action"));
         return;
     }
-
     server.send(200, CONTENT_TYPE_TEXT, F("OK"));
 }
 
@@ -249,12 +237,8 @@ void handleDelete() {
         if (LittleFS.remove(imagePath)) {
             server.send(200, CONTENT_TYPE_TEXT, F("Deleted"));
             logPrintf("File deleted", imagePath);
-        } else {
-            server.send(404, CONTENT_TYPE_TEXT, F("Not found"));
-        }
-    } else {
-        server.send(400, CONTENT_TYPE_TEXT, F("Missing file parameter"));
-    }
+        } else server.send(404, CONTENT_TYPE_TEXT, F("Not found"));
+    } else server.send(400, CONTENT_TYPE_TEXT, F("Missing file parameter"));
 }
 
 void streamDirRecursiveHtml(const char *dirname) {
@@ -296,7 +280,7 @@ void streamDirRecursiveHtml(const char *dirname) {
             server.sendContent(F("')\">DEL</button>"));
 
             // Set button for JPGs
-            if (fnameLower.endsWith(F(".jpg")) || fnameLower.endsWith(F(".jpeg")) || fnameLower.endsWith(F(".gif"))) {
+            if (fnameLower.endsWith(F(".jpg"))) {
                 server.sendContent(F("<button class='button' onclick=\"displayImage('"));
                 server.sendContent(dirname);
                 server.sendContent(F("/"));
@@ -340,13 +324,11 @@ void handleOTAUpload() {
     if (upload.status == UPLOAD_FILE_START) {
         showMessage(F("OTA Update..."));
         const uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
-        if (!Update.begin(maxSketchSpace)) {
+        if (!Update.begin(maxSketchSpace))
             Update.printError(Serial);
-        }
     } else if (upload.status == UPLOAD_FILE_WRITE) {
-        if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
+        if (Update.write(upload.buf, upload.currentSize) != upload.currentSize)
             Update.printError(Serial);
-        }
     } else if (upload.status == UPLOAD_FILE_END) {
         if (!Update.end(true)) {
             Update.printError(Serial);
@@ -422,11 +404,8 @@ void handleWiFiConnect() {
         yield();
     }
 
-    if (WiFi.status() == WL_CONNECTED) {
-        showMessage(F("Success!\nRebooting..."));
-    } else {
-        showMessage(F("Failed :(\nRebooting..."));
-    }
+    if (WiFi.status() == WL_CONNECTED) showMessage(F("Success!\nRebooting..."));
+    else showMessage(F("Failed :(\nRebooting..."));
     delay(2000);
     ESP.restart();
 }
@@ -446,22 +425,7 @@ void handleStatic() {
         return;
     }
 
-    // Determine content type based on file extension
-    String contentType;
-    if (path.endsWith(F(".jpg")) || path.endsWith(F(".jpeg"))) {
-        contentType = F("image/jpeg");
-    } else if (path.endsWith(F(".png"))) {
-        contentType = F("image/png");
-    } else if (path.endsWith(F(".bmp"))) {
-        contentType = F("image/bmp");
-    } else if (path.endsWith(F(".gif"))) {
-        contentType = F("image/gif");
-    } else {
-        contentType = F("application/octet-stream");
-    }
-
-    // Stream the file to the client
-    server.streamFile(file, contentType);
+    server.streamFile(file, path.endsWith(F(".jpg")) ? F("image/jpeg") : F("application/octet-stream"));
     file.close();
 }
 

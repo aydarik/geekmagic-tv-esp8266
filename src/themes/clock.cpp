@@ -73,8 +73,11 @@ void themeRenderClock(const bool forceClear, const time_t &now) {
 
         String lines[MAX_LINES];
         const size_t count = splitString(String(clockState.note), lines, MAX_LINES);
-        const unsigned int idx = sec * count / 60;
-        const unsigned int idxPrev = (sec - 1 < 0 ? 59 : sec - 1) * count / 60;
+        const unsigned int rotations = clockState.noteRotations > count ? clockState.noteRotations : count;
+        const unsigned int idx = sec * rotations / 60 % count;
+        const unsigned int idxPrev = (sec == 0 ? 59 : sec - 1) * rotations / 60 % count;
+
+        // Clear always on second 0 in case there is a single line note change
         if ((idxPrev != idx || sec == 0) && !forceClear) {
             clearNote(); // Clear old note first
         }

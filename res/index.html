@@ -267,9 +267,11 @@
             <div class="input-group">
                 <label for="clockNote">Note:</label>
                 <textarea id="clockNote" rows="5" cols="33"></textarea>
+                <label for="clockNoteRotations">RPM:</label>
+                <input type="number" id="clockNoteRotations" min="1" max="60"/>
                 <div class="spacer"></div>
                 <label for="clockNoteTimeout">Timeout (sec):</label>
-                <input type="number" id="clockNoteTimeout"/>
+                <input type="number" id="clockNoteTimeout" min="1"/>
                 <div class="spacer"></div>
                 <div><input type="checkbox" id="clockNoteForce" checked/> Force update</div>
             </div>
@@ -293,7 +295,7 @@
                 <label for="customMessage">Message:</label>
                 <textarea id="customMessage" rows="5" cols="33"></textarea>
                 <label for="customTimeout">Timeout (sec):</label>
-                <input type="number" id="customTimeout"/>
+                <input type="number" id="customTimeout" min="1"/>
             </div>
             <button class="button" onclick="sendCustomNotification()">Send</button>
         </div>
@@ -309,7 +311,7 @@
                 <input type="datetime-local" id="countdownDateTime">
                 <div class="spacer"></div>
                 <label for="countdownTimeout">Timeout after expiration (sec):</label>
-                <input type="number" id="countdownTimeout"/>
+                <input type="number" id="countdownTimeout" min="1"/>
             </div>
             <button class="button" onclick="sendCountdown()">Start</button>
         </div>
@@ -331,7 +333,7 @@
             <div class="spacer"></div>
             <div class="input-group">
                 <label for="imageTimeout">Timeout after set (sec):</label>
-                <input type="number" id="imageTimeout"/>
+                <input type="number" id="imageTimeout" min="1"/>
             </div>
         </div>
     </div>
@@ -408,9 +410,11 @@
 
     function sendClockNote() {
         const clockNote = document.getElementById('clockNote').value;
+        const clockNoteRotations = document.getElementById('clockNoteRotations').value;
         const clockNoteForce = document.getElementById('clockNoteForce').checked;
         const clockNoteTimeout = document.getElementById('clockNoteTimeout').value;
         fetch('/set?note=' + encodeURIComponent(clockNote)
+            + '&rpm=' + clockNoteRotations
             + '&force=' + clockNoteForce
             + '&timeout=' + clockNoteTimeout
         ).catch(error => console.error('Error:', error));
@@ -525,6 +529,9 @@
 
         fetch('/note.json').then(response => response.json()).then(data => {
             document.getElementById("clockNote").value = data.note;
+            if (data.rpm) {
+                document.getElementById("clockNoteRotations").value = data.rpm;
+            }
         }).catch(error => {
             console.error('Error fetching custom message:', error);
         });
