@@ -211,7 +211,13 @@
 <body>
 <div class="container">
     <h1>SmartClock Control</h1>
-    <div class="note">Firmware Version: <strong id="firmwareVersion">Loading...</strong></div>
+    <div class="note">
+        <div>Firmware Version: <strong id="firmwareVersion">Loading...</strong></div>
+        <div id="newVersion" style="display: none"><a
+                href="https://github.com/aydarik/geekmagic-tv-esp8266/releases" target="_blank">New version available
+            &#x1F680;</a></div>
+    </div>
+
     <div class="card">
         <div class="card-header">WiFi Configuration</div>
         <div class="card-body">
@@ -504,6 +510,7 @@
 
         fetch('/v.json').then(response => response.json()).then(data => {
             document.getElementById('firmwareVersion').textContent = data.v;
+            checkForUpdate(data.v);
         }).catch(error => {
             console.error('Error fetching version:', error);
             document.getElementById('firmwareVersion').textContent = 'Unknown';
@@ -595,6 +602,36 @@
                     }, 3000);
                 });
         });
+    }
+
+    function compareVersions(v1, v2) {
+        const a = v1.split('.').map(Number);
+        const b = v2.split('.').map(Number);
+
+        for (let i = 0; i < Math.max(a.length, b.length); i++) {
+            const num1 = a[i] || 0;
+            const num2 = b[i] || 0;
+            if (num1 > num2) return 1;
+            if (num1 < num2) return -1;
+        }
+        return 0;
+    }
+
+    async function checkForUpdate(currentVersion) {
+        const lastCheck = localStorage.getItem("lastUpdateCheck");
+        const now = Date.now();
+        if (!lastCheck || (now - Number(lastCheck)) / (1000 * 60 * 60) > 3) {
+            const response = await fetch("https://api.github.com/repos/aydarik/geekmagic-tv-esp8266/releases/latest");
+            localStorage.setItem("lastUpdateCheck", now);
+            if (response.ok) {
+                const data = await response.json();
+                localStorage.setItem("lastVersion", data.tag_name);
+            }
+        }
+
+        const lastVersion = localStorage.getItem("lastVersion");
+        if (currentVersion === "dev" || (lastVersion && compareVersions(lastVersion, currentVersion) > 0))
+            document.getElementById('newVersion').style.display = "block";
     }
 
     window.onload = function () {
