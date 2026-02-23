@@ -67,6 +67,10 @@ _Optional:_ configure a static IP for the device on your router, so it won’t b
 2. Select `firmware.bin`
 3. Upload
 
+## 💬 Supported Characters
+
+![Charset](assets/charset.png)
+
 ## 📡 HTTP API
 
 If you are not using Home Assistant, you can still automate your device via simple HTTP calls.
