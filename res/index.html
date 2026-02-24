@@ -29,7 +29,7 @@
             padding: 20px;
             background-color: var(--background-color);
             color: var(--text-color);
-            line-height: 1.5
+            line-height: 1.5;
         }
 
         .container {
@@ -38,7 +38,7 @@
             background-color: var(--card-bg-color);
             border-radius: 8px;
             box-shadow: 0 4px 12px var(--shadow-color);
-            overflow: hidden
+            overflow: hidden;
         }
 
         h1 {
@@ -66,7 +66,7 @@
             border-radius: 8px;
             margin: 20px;
             overflow: hidden;
-            box-shadow: 0 2px 5px var(--shadow-color)
+            box-shadow: 0 2px 5px var(--shadow-color);
         }
 
         .card-header {
@@ -75,22 +75,22 @@
             font-size: 1.2em;
             font-weight: bold;
             color: var(--primary-color);
-            border-bottom: 1px solid var(--border-color)
+            border-bottom: 1px solid var(--border-color);
         }
 
         .card-body {
-            padding: 15px
+            padding: 15px;
         }
 
         .input-group {
-            margin-bottom: 15px
+            margin-bottom: 15px;
         }
 
         .input-group label {
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
-            color: var(--text-color)
+            color: var(--text-color);
         }
 
         .input-group input[type="number"], .input-group input[type="text"], .input-group input[type="password"], .input-group input[type="range"], .input-group input[type="datetime-local"], .input-group select, .input-group textarea {
@@ -102,11 +102,11 @@
             background-color: #111318;
             color: var(--text-color);
             font-size: 1em;
-            margin-top: 3px
+            margin-top: 3px;
         }
 
         .input-group input[type="file"] {
-            margin-top: 5px
+            margin-top: 5px;
         }
 
         .button {
@@ -124,33 +124,36 @@
 
         .button:hover {
             background-color: var(--primary-hover-color);
+            color: var(--text-color);
         }
 
         .button.red {
-            background-color: var(--danger-color)
+            background-color: var(--danger-color);
         }
 
         .button.red:hover {
-            background-color: var(--danger-hover-color)
+            background-color: var(--danger-hover-color);
+            color: var(--text-color);
         }
 
         .button.green {
-            background-color: var(--accent-color)
+            background-color: var(--accent-color);
         }
 
         .button.green:hover {
-            background-color: var(--accent-hover-color)
+            background-color: var(--accent-hover-color);
+            color: var(--text-color);
         }
 
         .button-group {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
-            margin-top: 10px
+            margin-top: 10px;
         }
 
         .button-group .button {
-            margin-top: 0
+            margin-top: 0;
         }
 
         .info {
@@ -160,7 +163,7 @@
             padding: 10px;
             border-radius: 5px;
             margin-top: 15px;
-            font-size: 0.9em
+            font-size: 0.9em;
         }
 
         .note {
@@ -170,17 +173,17 @@
             border-radius: 4px;
             margin-bottom: 15px;
             font-size: 0.9em;
-            text-align: center
+            text-align: center;
         }
 
         #scanStatus {
             margin-top: 10px;
             font-style: italic;
-            color: var(--light-text-color)
+            color: var(--light-text-color);
         }
 
         form {
-            margin-bottom: 0
+            margin-bottom: 0;
         }
 
         table {
@@ -204,7 +207,7 @@
         }
 
         .spacer {
-            height: 10px
+            height: 10px;
         }
     </style>
 </head>
@@ -213,9 +216,10 @@
     <h1>SmartClock Control</h1>
     <div class="note">
         <div>Firmware Version: <strong id="firmwareVersion">Loading...</strong></div>
-        <div id="newVersion" style="display: none"><a
-                href="https://github.com/aydarik/geekmagic-tv-esp8266/releases" target="_blank">New version available
-            &#x1F680;</a></div>
+        <div id="newVersion" style="display: none;">
+            <a href="https://github.com/aydarik/geekmagic-tv-esp8266/releases" target="_blank">New version available
+                &#x1F680;</a>
+        </div>
     </div>
 
     <div class="card">
@@ -354,8 +358,9 @@
     </div>
 </div>
 
-<div style="text-align: center">
-    <a href="https://github.com/aydarik/geekmagic-tv-esp8266/releases">Check for new version &#x1F449;</a>
+<div style="text-align: center;">
+    <a href="https://github.com/aydarik/geekmagic-tv-esp8266/releases" target="_blank">Check for new version
+        &#x1F449;</a>
 </div>
 
 <script>
@@ -510,7 +515,16 @@
 
         fetch('/v.json').then(response => response.json()).then(data => {
             document.getElementById('firmwareVersion').textContent = data.v;
-            checkForUpdate(data.v);
+            let currentVersion = data.v;
+            if (currentVersion !== "dev") {
+                localStorage.setItem("currentVersion", currentVersion);
+                checkForUpdate(currentVersion);
+            } else {
+                currentVersion = localStorage.getItem("currentVersion");
+                if (currentVersion) {
+                    checkForUpdate(currentVersion);
+                }
+            }
         }).catch(error => {
             console.error('Error fetching version:', error);
             document.getElementById('firmwareVersion').textContent = 'Unknown';
@@ -630,7 +644,7 @@
         }
 
         const lastVersion = localStorage.getItem("lastVersion");
-        if (currentVersion === "dev" || (lastVersion && compareVersions(lastVersion, currentVersion) > 0))
+        if (lastVersion && compareVersions(lastVersion, currentVersion) > 0)
             document.getElementById('newVersion').style.display = "block";
     }
 

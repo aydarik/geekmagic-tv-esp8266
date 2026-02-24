@@ -4,7 +4,7 @@
 #include <cstddef>
 
 #define MAX_LINES 7
-#define MAX_LINE_CHARS 16
+#define MAX_LINE_CHARS 19
 #define LINES_OFFSET 32
 
 size_t wrapText(char *text, char *lines[], size_t maxLines);
