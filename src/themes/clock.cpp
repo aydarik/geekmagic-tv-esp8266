@@ -4,6 +4,7 @@
 #include "display.h"
 #include "settings.h"
 #include "utils.h"
+#include "weather.h"
 #include "fonts/Roboto_Regular24.h"
 
 extern Settings appSettings;
@@ -52,7 +53,7 @@ void themeRenderClock(const bool forceClear, const time_t &now) {
     tft.setTextDatum(TC_DATUM);
 
     const bool hasNote = clockState.note[0] != '\0';
-    const int clockY = (hasNote ? 50 : 63) + (appSettings.showIP ? 7 : 0);
+    const int clockY = (hasNote ? 50 : 63) + (appSettings.showIP ? 7 : 0) + (appSettings.showWeather ? 15 : 0);
 
     // Draw seconds
     if (appSettings.showSec) {
@@ -66,6 +67,7 @@ void themeRenderClock(const bool forceClear, const time_t &now) {
         if (clockState.noteTimeout != 0 && now > clockState.noteTimeout) {
             clockState.note[0] = '\0';
             clockState.noteTimeout = 0;
+            clockState.noteRotations = 0;
             clearNote();
             themeRenderClock(true, now);
             return;
@@ -92,10 +94,16 @@ void themeRenderClock(const bool forceClear, const time_t &now) {
     if (!forceClear && sec != 0) return;
 
     // Display IP Info at the top (small font)
-    if (appSettings.showIP) {
+    if (forceClear && appSettings.showIP) {
         tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
-        tft.drawString(displayState.ipInfo, centerX, 5, FONT_MICRO);
+        tft.drawString(displayState.ipInfo, centerX, appSettings.showIP ? 35 : 5, FONT_MICRO);
         tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    }
+
+    // Weather information
+    if (forceClear && appSettings.showWeather) {
+        renderWeather(5);
+        tft.setTextDatum(TC_DATUM);
     }
 
     // Draw time
@@ -110,6 +118,6 @@ void themeRenderClock(const bool forceClear, const time_t &now) {
     char currentDate[16];
     getFormattedDate(currentDate, sizeof(currentDate), timeinfo);
     tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
-    tft.drawString(currentDate, centerX, clockY + 75, FONT_DEFAULT);
+    tft.drawString(currentDate, centerX, clockY + (appSettings.showWeather ? 65 : 75), FONT_DEFAULT);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
 }

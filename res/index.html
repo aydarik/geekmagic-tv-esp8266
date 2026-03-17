@@ -269,6 +269,19 @@
                 <input type="text" id="tz"/>
             </div>
             <button class="button" onclick="setTimezone()">Set Timezone</button>
+            <div class="spacer"></div>
+            <div class="input-group">
+                <div><input type="checkbox" id="showWeather" onchange="setShowWeather()"/> Show Weather</div>
+            </div>
+            <div class="input-group">
+                <label for="owmLocation">OpenWeatherMap Location:</label>
+                <input type="text" id="owmLocation"/>
+            </div>
+            <div class="input-group">
+                <label for="owmApiKey">OpenWeatherMap API Key:</label>
+                <input type="text" id="owmApiKey"/>
+            </div>
+            <button class="button" onclick="setOpenWeather()">Save</button>
         </div>
     </div>
     <div class="card">
@@ -379,22 +392,44 @@
         fetch('/set?sec=' + val).catch(error => console.error('Error:', error));
     }
 
+    function setShowWeather() {
+        const val = document.getElementById("showWeather").checked;
+        fetch('/set?weather=' + val).catch(error => console.error('Error:', error));
+    }
+
     function setTimezone() {
         const tz = document.getElementById("tz").value;
-        fetch('/set?tz=' + encodeURIComponent(tz)).then(response => response.text()).then(data => alert('Timezone set: ' + data)).catch(error => console.error('Error:', error));
+        fetch('/set?tz=' + encodeURIComponent(tz))
+            .then(response => response.text())
+            .then(data => alert('Timezone: ' + data))
+            .catch(error => console.error('Error:', error));
+    }
+
+    function setOpenWeather() {
+        const tz = document.getElementById("tz").value;
+        const owmLocation = document.getElementById("owmLocation").value;
+        const owmApiKey = document.getElementById("owmApiKey").value;
+        fetch('/set?owmLoc=' + encodeURIComponent(owmLocation) + '&owmKey=' + encodeURIComponent(owmApiKey))
+            .then(response => response.text())
+            .then(data => alert('OpenWeather: ' + data))
+            .catch(error => console.error('Error:', error));
     }
 
     function displayImage(imagePath) {
         const imageTimeout = document.getElementById('imageTimeout').value;
-        fetch('/set?img=' + encodeURIComponent(imagePath) + '&timeout=' + imageTimeout).then(_ => loadFiles()).catch(error => console.error('Error:', error));
+        fetch('/set?img=' + encodeURIComponent(imagePath) + '&timeout=' + imageTimeout)
+            .then(_ => loadFiles()).catch(error => console.error('Error:', error));
     }
 
     function deleteImage(imagePath) {
-        fetch('/delete?file=' + encodeURIComponent(imagePath)).then(_ => loadFiles()).catch(error => console.error('Error:', error));
+        fetch('/delete?file=' + encodeURIComponent(imagePath))
+            .then(_ => loadFiles()).catch(error => console.error('Error:', error));
     }
 
     function setTheme(id) {
-        fetch('/set?theme=' + id).then(_ => document.getElementById('currentTheme').textContent = id).catch(error => console.error('Error:', error));
+        fetch('/set?theme=' + id)
+            .then(_ => document.getElementById('currentTheme').textContent = id)
+            .catch(error => console.error('Error:', error));
     }
 
     function sendCustomNotification() {
@@ -501,6 +536,9 @@
             document.getElementById('tz').value = data.tz;
             document.getElementById('showIP').checked = data.showIP !== false;
             document.getElementById('showSec').checked = data.showSec !== false;
+            document.getElementById('showWeather').checked = data.showWeather === true;
+            document.getElementById('owmLocation').value = data.owmLoc || "Berlin,DE";
+            document.getElementById('owmApiKey').value = data.owmKey || "";
         }).catch(error => {
             console.error('Error fetching app data:', error)
             document.getElementById('currentTheme').textContent = 'Unknown';

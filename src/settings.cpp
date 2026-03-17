@@ -35,6 +35,10 @@ void settingsReset(Settings &settings) {
     settings.showIP = true;
     settings.showSec = true;
 
+    settings.showWeather = false;
+    settings.owmApiKey[0] = '\0';
+    settings.owmLocation[0] = '\0';
+
     settingsSave(settings);
 }
 

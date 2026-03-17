@@ -33,6 +33,9 @@ void handleAppJson() {
     doc["tz"] = appSettings.tz;
     doc["showIP"] = appSettings.showIP;
     doc["showSec"] = appSettings.showSec;
+    doc["showWeather"] = appSettings.showWeather;
+    doc["owmLoc"] = appSettings.owmLocation;
+    doc["owmKey"] = appSettings.owmApiKey;
     if (displayState.timeout != 0) {
         doc["timeout"] = displayState.timeout;
     }
@@ -183,11 +186,22 @@ void handleSet() {
         appSettings.showSec = server.arg("sec") != "false";
         if (displayState.theme == 1) displayUpdate();
         settingsSave(appSettings);
+    } else if (server.hasArg("weather")) {
+        appSettings.showWeather = server.arg("weather") != "false";
+        if (displayState.theme == 1) displayUpdate();
+        settingsSave(appSettings);
     } else if (server.hasArg("tz")) {
         strncpy(appSettings.tz, server.arg("tz").c_str(), sizeof(appSettings.tz));
         appSettings.tz[sizeof(appSettings.tz) - 1] = '\0'; // Ensure null-termination
         setenv("TZ", appSettings.tz, 1);
         tzset();
+        if (displayState.theme == 1) displayUpdate();
+        settingsSave(appSettings);
+    } else if (server.hasArg("owmLoc") && server.hasArg("owmKey")) {
+        strncpy(appSettings.owmLocation, server.arg("owmLoc").c_str(), sizeof(appSettings.owmLocation));
+        appSettings.owmLocation[sizeof(appSettings.owmLocation) - 1] = '\0';
+        strncpy(appSettings.owmApiKey, server.arg("owmKey").c_str(), sizeof(appSettings.owmApiKey));
+        appSettings.owmApiKey[sizeof(appSettings.owmApiKey) - 1] = '\0';
         if (displayState.theme == 1) displayUpdate();
         settingsSave(appSettings);
     } else {

@@ -20,6 +20,9 @@ struct Settings {
     char tz[64];
     bool showIP;
     bool showSec;
+    bool showWeather;
+    char owmApiKey[64];
+    char owmLocation[64];
 };
 
 // Power cycle reset structure (user-initiated factory reset)

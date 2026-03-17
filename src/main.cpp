@@ -11,6 +11,7 @@
 #include "logger.h"
 #include "button.h"
 #include "utils.h"
+#include "weather.h"
 
 #define NTP_SERVER "pool.ntp.org"
 
@@ -22,7 +23,7 @@ unsigned long lastDisplayUpdate = 0;
 
 bool powerCycleCounterCleared = false; // Track if power cycle counter has been reset
 
-bool tryConnectWiFi(int maxAttempts) {
+bool tryConnectWiFi(const int maxAttempts) {
     Serial.printf("Attempting WiFi connection (max %d attempts)...\n", maxAttempts);
 
     for (int attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -245,11 +246,14 @@ void loop() {
         }
     }
 
+    const unsigned long now = millis();
+
     ArduinoOTA.handle();
     webserverHandle();
+    weatherUpdateTask(now);
 
     // Automatic screen updates for clock rendering
-    if (const unsigned long now = millis(); now - lastDisplayUpdate > DISPLAY_UPDATE_INTERVAL) {
+    if (now - lastDisplayUpdate > DISPLAY_UPDATE_INTERVAL) {
         lastDisplayUpdate = now;
         displayUpdate(0, false);
     }
