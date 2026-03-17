@@ -1,6 +1,5 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
-#include <WiFiManager.h>
 #include <ArduinoOTA.h>
 #include <LittleFS.h>
 #include "main.h"
@@ -16,8 +15,6 @@
 #define NTP_SERVER "pool.ntp.org"
 
 Settings appSettings;
-
-WiFiManager wifiManager;
 
 unsigned long lastDisplayUpdate = 0;
 unsigned long lastWeatherUpdate = 0;
@@ -154,8 +151,6 @@ void factoryReset() {
     showMessage(F("Performing\nfactory reset..."));
 
     WiFi.disconnect(true);
-    yield();
-    wifiManager.resetSettings();
     yield();
 
     ESP.eraseConfig();

@@ -66,8 +66,7 @@ bool weatherUpdateTask() {
     http.begin(client, url);
     httpCode = http.GET();
     if (httpCode == HTTP_CODE_OK) {
-        String payload = http.getString();
-        if (JsonDocument doc; !deserializeJson(doc, payload)) {
+        if (JsonDocument doc; !deserializeJson(doc, http.getStream())) {
             currentTemp = doc["main"]["temp"] | currentTemp;
             feelsLike = doc["main"]["feels_like"] | feelsLike;
             if (const char *icon = doc["weather"][0]["icon"]; icon) {

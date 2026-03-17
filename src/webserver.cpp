@@ -381,9 +381,9 @@ void handleWiFiScan() {
 
     WiFi.scanDelete(); // Clear scan results
 
-    String json;
-    serializeJson(docRoot, json);
-    server.send(200, CONTENT_TYPE_JSON, json);
+    server.setContentLength(measureJson(docRoot));
+    server.send(200, CONTENT_TYPE_JSON, F(""));
+    serializeJson(docRoot, server.client());
 }
 
 void handleWiFiConnect() {
