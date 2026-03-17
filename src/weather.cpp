@@ -6,11 +6,11 @@
 #include <ArduinoJson.h>
 #include <weather_icons.h>
 #include "TJpg_Decoder.h"
+#include "utils.h"
 #include "fonts/Roboto_Regular24.h"
 
 extern Settings appSettings;
 
-static unsigned long lastWeatherUpdate = 0;
 static int httpCode = 0;
 static float currentTemp = 0.0f;
 static float feelsLike = 0.0f;
@@ -52,12 +52,9 @@ const IconMap *getIcon(const char *key) {
     return nullptr;
 }
 
-void weatherUpdateTask(const unsigned long now) {
-    if (!appSettings.showWeather) return;
-    if (appSettings.owmApiKey[0] == '\0' || appSettings.owmLocation[0] == '\0') return;
-
-    if (lastWeatherUpdate != 0 && now - lastWeatherUpdate < WEATHER_UPDATE_INTERVAL) return;
-    lastWeatherUpdate = now;
+bool weatherUpdateTask() {
+    if (!appSettings.showWeather || appSettings.brightness == 0) return false;
+    if (appSettings.owmApiKey[0] == '\0' || appSettings.owmLocation[0] == '\0') return false;
 
     char url[256];
     snprintf(url, sizeof(url),
@@ -82,6 +79,7 @@ void weatherUpdateTask(const unsigned long now) {
     http.end();
 
     if (displayState.theme == 1) displayUpdate();
+    return true;
 }
 
 void renderWeather(const int32_t y) {

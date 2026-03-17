@@ -20,6 +20,7 @@ Settings appSettings;
 WiFiManager wifiManager;
 
 unsigned long lastDisplayUpdate = 0;
+unsigned long lastWeatherUpdate = 0;
 
 bool powerCycleCounterCleared = false; // Track if power cycle counter has been reset
 
@@ -250,12 +251,17 @@ void loop() {
 
     ArduinoOTA.handle();
     webserverHandle();
-    weatherUpdateTask(now);
 
-    // Automatic screen updates for clock rendering
+    // Updates
     if (now - lastDisplayUpdate > DISPLAY_UPDATE_INTERVAL) {
         lastDisplayUpdate = now;
         displayUpdate(0, false);
+
+        if (lastWeatherUpdate == 0 || now - lastWeatherUpdate > WEATHER_UPDATE_INTERVAL) {
+            if (weatherUpdateTask()) {
+                lastWeatherUpdate = now;
+            }
+        }
     }
 
     yield();

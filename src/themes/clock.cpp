@@ -96,7 +96,7 @@ void themeRenderClock(const bool forceClear, const time_t &now) {
     // Display IP Info at the top (small font)
     if (forceClear && appSettings.showIP) {
         tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
-        tft.drawString(displayState.ipInfo, centerX, appSettings.showIP ? 35 : 5, FONT_MICRO);
+        tft.drawString(displayState.ipInfo, centerX, appSettings.showWeather ? 35 : 5, FONT_MICRO);
         tft.setTextColor(TFT_WHITE, TFT_BLACK);
     }
 
