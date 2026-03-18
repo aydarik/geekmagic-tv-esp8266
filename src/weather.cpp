@@ -18,35 +18,37 @@ static char iconCode[8] = "";
 
 struct IconMap {
     const char *key;
-    const unsigned char *value;
+    const uint8_t *value;
     const unsigned int size;
 };
 
-const IconMap icons[] = {
-    {"01d", __01d, __01d_len},
-    {"01n", __01n, __01n_len},
-    {"02d", __02d, __02d_len},
-    {"02n", __02n, __02n_len},
-    {"03d", __03d, __03d_len},
-    {"03n", __03n, __03n_len},
-    {"04d", __04d, __04d_len},
-    {"04n", __04n, __04n_len},
-    {"09d", __09d, __09d_len},
-    {"09n", __09n, __09n_len},
-    {"10d", __10d, __10d_len},
-    {"10n", __10n, __10n_len},
-    {"11d", __11d, __11d_len},
-    {"11n", __11n, __11n_len},
-    {"13d", __13d, __13d_len},
-    {"13n", __13n, __13n_len},
-    {"50d", __50d, __50d_len},
-    {"50n", __50n, __50n_len},
+const IconMap icons[] PROGMEM = {
+    {"01d", owm_icon_01d, owm_icon_01d_len},
+    {"01n", owm_icon_01n, owm_icon_01n_len},
+    {"02d", owm_icon_02d, owm_icon_02d_len},
+    {"02n", owm_icon_02n, owm_icon_02n_len},
+    {"03d", owm_icon_03d, owm_icon_03d_len},
+    {"03n", owm_icon_03n, owm_icon_03n_len},
+    {"04d", owm_icon_04d, owm_icon_04d_len},
+    {"04n", owm_icon_04n, owm_icon_04n_len},
+    {"09d", owm_icon_09d, owm_icon_09d_len},
+    {"09n", owm_icon_09n, owm_icon_09n_len},
+    {"10d", owm_icon_10d, owm_icon_10d_len},
+    {"10n", owm_icon_10n, owm_icon_10n_len},
+    {"11d", owm_icon_11d, owm_icon_11d_len},
+    {"11n", owm_icon_11n, owm_icon_11n_len},
+    {"13d", owm_icon_13d, owm_icon_13d_len},
+    {"13n", owm_icon_13n, owm_icon_13n_len},
+    {"50d", owm_icon_50d, owm_icon_50d_len},
+    {"50n", owm_icon_50n, owm_icon_50n_len},
 };
 
 const IconMap *getIcon(const char *key) {
     for (const auto &icon: icons) {
-        if (strcmp(icon.key, key) == 0) {
-            return &icon;
+        const IconMap *entry = &icon;
+        const auto storedKey = static_cast<const char *>(pgm_read_ptr(&entry->key));
+        if (strcmp_P(key, storedKey) == 0) {
+            return entry; // pointer to PROGMEM
         }
     }
     return nullptr;
@@ -94,6 +96,8 @@ void renderWeather(const int32_t y) {
 
     if (httpCode == HTTP_CODE_OK && strlen(iconCode) > 0) {
         const IconMap *icon = getIcon(iconCode);
-        TJpgDec.drawJpg(10, y - 5, icon->value, icon->size);
+        TJpgDec.drawJpg(10, y - 5,
+                        static_cast<const uint8_t *>(pgm_read_ptr(&icon->value)),
+                        pgm_read_dword(&icon->size));
     }
 }
