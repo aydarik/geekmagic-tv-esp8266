@@ -27,14 +27,10 @@ void getFormattedDate(char *buffer, const size_t bufferSize, const tm &timeinfo)
 }
 
 void clearNote() {
-    constexpr int h = 30;
-    const int w = tft.width();
-    const int yTop = tft.height() - 45;
-    const int yBottom = yTop + 30;
     tft.startWrite();
-    for (int i = 1; i <= h / 2; ++i) {
-        tft.drawFastHLine(0, yTop + i, w, TFT_BLACK);
-        tft.drawFastHLine(0, yBottom - i, w, TFT_BLACK);
+    for (int i = 1; i <= 30 / 2; ++i) {
+        tft.drawFastHLine(0, 195 + i, 240, TFT_BLACK);
+        tft.drawFastHLine(0, 225 - i, 240, TFT_BLACK);
         delay(ANIMATION_STEP_DELAY);
     }
     tft.endWrite();
@@ -53,7 +49,7 @@ void themeRenderClock(const bool forceClear, const time_t &now) {
     tft.setTextDatum(TC_DATUM);
 
     const bool hasNote = clockState.note[0] != '\0';
-    const int clockY = (hasNote ? 50 : 63) + (appSettings.showIP ? 7 : 0) + (appSettings.showWeather ? 15 : 0);
+    const int clockY = (hasNote ? 50 : 63) + (appSettings.showIP ? 7 : 0) + (appSettings.showWeather ? 17 : 0);
 
     // Draw seconds
     if (appSettings.showSec) {
@@ -96,13 +92,13 @@ void themeRenderClock(const bool forceClear, const time_t &now) {
     // Display IP Info at the top (small font)
     if (forceClear && appSettings.showIP) {
         tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
-        tft.drawString(displayState.ipInfo, centerX, appSettings.showWeather ? 35 : 5, FONT_MICRO);
+        tft.drawString(displayState.ipInfo, centerX, appSettings.showWeather ? 40 : 5, FONT_MICRO);
         tft.setTextColor(TFT_WHITE, TFT_BLACK);
     }
 
     // Weather information
     if (forceClear && appSettings.showWeather) {
-        renderWeather(5);
+        renderWeather();
         tft.setTextDatum(TC_DATUM);
     }
 
@@ -118,6 +114,7 @@ void themeRenderClock(const bool forceClear, const time_t &now) {
     char currentDate[16];
     getFormattedDate(currentDate, sizeof(currentDate), timeinfo);
     tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
-    tft.drawString(currentDate, centerX, clockY + (appSettings.showWeather ? 65 : 75), FONT_DEFAULT);
+    const int32_t offset = appSettings.showWeather && hasNote ? 65 : appSettings.showWeather || hasNote ? 70 : 75;
+    tft.drawString(currentDate, centerX, clockY + offset, FONT_DEFAULT);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
 }

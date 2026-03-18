@@ -5,6 +5,7 @@
 #include <ESP8266HTTPClient.h>
 #include <ArduinoJson.h>
 #include <weather_icons.h>
+#include "config.h"
 #include "TJpg_Decoder.h"
 #include "utils.h"
 #include "fonts/Roboto_Regular24.h"
@@ -55,7 +56,7 @@ const IconMap *getIcon(const char *key) {
 }
 
 bool weatherUpdateTask() {
-    if (!appSettings.showWeather || appSettings.brightness == 0) return false;
+    if (!appSettings.showWeather || appSettings.brightness == 0 || displayState.theme != 1) return false;
     if (appSettings.owmApiKey[0] == '\0' || appSettings.owmLocation[0] == '\0') return false;
 
     char url[256];
@@ -79,24 +80,36 @@ bool weatherUpdateTask() {
     }
     http.end();
 
-    if (displayState.theme == 1) displayUpdate();
+    renderWeather(true);
     return true;
 }
 
-void renderWeather(const int32_t y) {
+void clearWeather() {
+    tft.startWrite();
+    for (int i = 1; i <= 36 / 2; ++i) {
+        tft.drawFastHLine(0, i, 240, TFT_BLACK);
+        tft.drawFastHLine(0, 36 - i, 240, TFT_BLACK);
+        delay(ANIMATION_STEP_DELAY);
+    }
+    tft.endWrite();
+}
+
+void renderWeather(const bool clear) {
     char tempStr[24];
     if (httpCode == HTTP_CODE_OK) snprintf(tempStr, sizeof(tempStr), "%.0f°, feels like %.0f°", currentTemp, feelsLike);
     else if (httpCode == 0) snprintf(tempStr, sizeof(tempStr), "Loading...");
     else snprintf(tempStr, sizeof(tempStr), "FAILED: %d", httpCode);
 
+    if (clear) clearWeather();
+
     tft.setTextDatum(TL_DATUM);
     tft.loadFont(Roboto_Regular24);
-    tft.drawString(tempStr, 50, y);
+    tft.drawString(tempStr, 35, 7);
     tft.unloadFont();
 
     if (httpCode == HTTP_CODE_OK && strlen(iconCode) > 0) {
         const IconMap *icon = getIcon(iconCode);
-        TJpgDec.drawJpg(10, y - 5,
+        TJpgDec.drawJpg(1, 1,
                         static_cast<const uint8_t *>(pgm_read_ptr(&icon->value)),
                         pgm_read_dword(&icon->size));
     }
