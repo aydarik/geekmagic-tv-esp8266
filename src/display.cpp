@@ -4,6 +4,7 @@
 #include "settings.h"
 #include "utils.h"
 #include "themes/clock.h"
+#include "themes/big_clock.h"
 #include "themes/ap.h"
 #include "themes/notification.h"
 #include "themes/countdown.h"
@@ -130,6 +131,8 @@ void displayUpdate(const int theme, const bool forceClear) {
         case 3: displayRenderImage(forceClear);
             break;
         case 4: themeRenderCountdown(forceClear, now);
+            break;
+        case 5: themeRenderBigClock(forceClear, now);
             break;
         default: break;
     }
