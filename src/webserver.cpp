@@ -184,7 +184,7 @@ void handleSet() {
         settingsSave(appSettings);
     } else if (server.hasArg("sec")) {
         appSettings.showSec = server.arg("sec") != "false";
-        if (displayState.theme == 1) displayUpdate();
+        if (displayState.theme == 1 || displayState.theme == 5) displayUpdate();
         settingsSave(appSettings);
     } else if (server.hasArg("weather")) {
         appSettings.showWeather = server.arg("weather") != "false";
