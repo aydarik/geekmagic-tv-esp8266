@@ -17,7 +17,7 @@ DisplayState displayState;
 
 extern Settings appSettings;
 
-bool tft_output(const int16_t x, const int16_t y, const uint16_t w, const uint16_t h, uint16_t *bitmap) {
+static bool tft_output(const int16_t x, const int16_t y, const uint16_t w, const uint16_t h, uint16_t *bitmap) {
     if (y >= tft.height()) return false;
     tft.pushImage(x, y, w, h, bitmap);
     return true;
@@ -73,7 +73,7 @@ void displayTest() {
     showMessage(F("Display test\nsuccessfully\nfinished"), 3);
 }
 
-void displayRenderImage(const bool forceClear) {
+static void displayRenderImage(const bool forceClear) {
     if (!forceClear) return;
 
     const char *path = displayState.image;

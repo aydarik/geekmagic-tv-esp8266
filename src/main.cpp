@@ -16,12 +16,12 @@
 
 Settings appSettings;
 
-unsigned long lastDisplayUpdate = 0;
-unsigned long lastWeatherUpdate = 0;
+static unsigned long lastDisplayUpdate = 0;
+static unsigned long lastWeatherUpdate = 0;
 
-bool powerCycleCounterCleared = false; // Track if power cycle counter has been reset
+static bool powerCycleCounterCleared = false; // Track if power cycle counter has been reset
 
-bool tryConnectWiFi(const int maxAttempts) {
+static bool tryConnectWiFi(const int maxAttempts) {
     Serial.printf("Attempting WiFi connection (max %d attempts)...\n", maxAttempts);
 
     for (int attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -65,7 +65,7 @@ bool tryConnectWiFi(const int maxAttempts) {
     return false;
 }
 
-void startAPMode() {
+static void startAPMode() {
     Serial.println(F("Entering failsafe AP mode"));
     WiFi.disconnect(true);
     yield();
@@ -78,7 +78,7 @@ void startAPMode() {
     displayUpdate(-1);
 }
 
-void setupWiFi() {
+static void setupWiFi() {
     Serial.println(F("Starting WiFi Setup..."));
     // Check if WiFi credentials are saved BEFORE attempting connection
     if (const String ssid = WiFi.SSID(); ssid.isEmpty() || ssid.length() == 0) {
@@ -97,7 +97,7 @@ void setupWiFi() {
     Serial.println(F("WiFi setup completed"));
 }
 
-void setupOTA() {
+static void setupOTA() {
     ArduinoOTA.setHostname(OTA_HOSTNAME);
     ArduinoOTA.setPassword(OTA_PASSWORD);
 
@@ -134,7 +134,7 @@ void setupOTA() {
     Serial.println(F("OTA ready"));
 }
 
-void setupFilesystem() {
+static void setupFilesystem() {
     if (!LittleFS.begin()) {
         Serial.println(F("LittleFS mount failed. Formatting LittleFS..."));
         showMessage(F("Formatting FS..."));

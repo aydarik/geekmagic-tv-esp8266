@@ -11,22 +11,22 @@ extern Settings appSettings;
 
 ClockState clockState;
 
-void getFormattedTime(char *buffer, const size_t bufferSize, const tm &timeinfo) {
+static void getFormattedTime(char *buffer, const size_t bufferSize, const tm &timeinfo) {
     strftime(buffer, bufferSize, "%H:%M", &timeinfo);
     buffer[bufferSize - 1] = '\0'; // Ensure null-termination
 }
 
-void getFormattedSeconds(char *buffer, const size_t bufferSize, const tm &timeinfo) {
+static void getFormattedSeconds(char *buffer, const size_t bufferSize, const tm &timeinfo) {
     strftime(buffer, bufferSize, "%S", &timeinfo);
     buffer[bufferSize - 1] = '\0'; // Ensure null-termination
 }
 
-void getFormattedDate(char *buffer, const size_t bufferSize, const tm &timeinfo) {
+static void getFormattedDate(char *buffer, const size_t bufferSize, const tm &timeinfo) {
     strftime(buffer, bufferSize, "%d-%m-%Y", &timeinfo);
     buffer[bufferSize - 1] = '\0'; // Ensure null-termination
 }
 
-void clearNote() {
+static void clearNote() {
     tft.startWrite();
     for (int i = 1; i <= 30 / 2; ++i) {
         tft.drawFastHLine(0, 195 + i, 240, TFT_BLACK);
@@ -45,7 +45,6 @@ void themeRenderClock(const bool forceClear, const time_t &now) {
 
     if (forceClear) tft.fillScreen(TFT_BLACK);
 
-    const int centerX = tft.width() / 2;
     tft.setTextDatum(TC_DATUM);
 
     const bool hasNote = clockState.note[0] != '\0';
@@ -55,7 +54,7 @@ void themeRenderClock(const bool forceClear, const time_t &now) {
     if (appSettings.showSec) {
         char currentSeconds[4];
         getFormattedSeconds(currentSeconds, sizeof(currentSeconds), timeinfo);
-        tft.drawString(currentSeconds, centerX + 71, clockY + 27, FONT_DEFAULT);
+        tft.drawString(currentSeconds, DISPLAY_CENTER + 71, clockY + 27, FONT_DEFAULT);
     }
 
     // Draw or clear a note
@@ -81,7 +80,7 @@ void themeRenderClock(const bool forceClear, const time_t &now) {
         }
         if (idx != idxPrev || sec == 0 || forceClear) {
             tft.loadFont(Roboto_Regular24);
-            tft.drawString(lines[idx], centerX, tft.height() - 40);
+            tft.drawString(lines[idx], DISPLAY_CENTER, tft.height() - 40);
             tft.unloadFont();
         }
     }
@@ -92,7 +91,7 @@ void themeRenderClock(const bool forceClear, const time_t &now) {
     // Display IP Info at the top (small font)
     if (forceClear && appSettings.showIP) {
         tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
-        tft.drawString(displayState.ipInfo, centerX, appSettings.showWeather ? 40 : 5, FONT_MICRO);
+        tft.drawString(displayState.ipInfo, DISPLAY_CENTER, appSettings.showWeather ? 40 : 5, FONT_MICRO);
         tft.setTextColor(TFT_WHITE, TFT_BLACK);
     }
 
@@ -105,7 +104,7 @@ void themeRenderClock(const bool forceClear, const time_t &now) {
     // Draw time
     char currentTime[8];
     getFormattedTime(currentTime, sizeof(currentTime), timeinfo);
-    tft.drawString(currentTime, appSettings.showSec ? centerX - 20 : centerX, clockY, FONT_DIGIT);
+    tft.drawString(currentTime, appSettings.showSec ? DISPLAY_CENTER - 20 : DISPLAY_CENTER, clockY, FONT_DIGIT);
 
     // Stop here, no need to update the date
     if (!forceClear && strcmp(currentTime, "00:00") != 0) return;
@@ -115,6 +114,6 @@ void themeRenderClock(const bool forceClear, const time_t &now) {
     getFormattedDate(currentDate, sizeof(currentDate), timeinfo);
     tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
     const int32_t offset = appSettings.showWeather && hasNote ? 65 : appSettings.showWeather || hasNote ? 70 : 75;
-    tft.drawString(currentDate, centerX, clockY + offset, FONT_DEFAULT);
+    tft.drawString(currentDate, DISPLAY_CENTER, clockY + offset, FONT_DEFAULT);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
 }

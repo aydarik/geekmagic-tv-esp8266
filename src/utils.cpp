@@ -4,7 +4,7 @@
 #include "utils.h"
 #include "fonts/Roboto_Regular24.h"
 
-int utf8Length(const char *text) {
+static int utf8Length(const char *text) {
     int count = 0;
     while (*text) {
         // Count only bytes that are NOT continuation bytes (10xxxxxx)
@@ -86,12 +86,11 @@ size_t splitString(const String &s, String lines[], const size_t maxLines) {
 }
 
 void animateHLine(const int y) {
-    const int32_t centerX = tft.width() / 2;
-    const int32_t offset = centerX / ANIMATION_STEPS;
+    constexpr int32_t offset = DISPLAY_CENTER / ANIMATION_STEPS;
 
     tft.startWrite();
     for (int i = 1; i <= ANIMATION_STEPS; ++i) {
-        tft.drawFastHLine(centerX - i * offset, y, i * offset * 2, TFT_SILVER);
+        tft.drawFastHLine(DISPLAY_CENTER - i * offset, y, i * offset * 2, TFT_SILVER);
         delay(ANIMATION_STEP_DELAY);
     }
     tft.endWrite();
@@ -180,10 +179,9 @@ void showMessage(const String &msg, const int timeout, const int offsetY) {
     const size_t count = splitString(msg, wrapped, MAX_LINES);
 
     constexpr int lineHeight = 34;
-    const int centerX = tft.width() / 2;
-    int currentY = tft.height() / 2 - count * lineHeight / 2 + offsetY;
+    int currentY = DISPLAY_CENTER - count * lineHeight / 2 + offsetY;
     for (unsigned int i = 0; i <= count; i++) {
-        tft.drawString(wrapped[i], centerX, currentY);
+        tft.drawString(wrapped[i], DISPLAY_CENTER, currentY);
         currentY += lineHeight;
     }
 

@@ -84,7 +84,7 @@ bool weatherUpdateTask() {
     return true;
 }
 
-void clearWeather() {
+static void clearWeather() {
     tft.startWrite();
     for (int i = 1; i <= 36 / 2; ++i) {
         tft.drawFastHLine(0, i, 240, TFT_BLACK);

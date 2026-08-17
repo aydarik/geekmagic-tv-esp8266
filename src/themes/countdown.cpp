@@ -5,7 +5,7 @@
 
 CountdownState countdownState;
 
-void drawGauge(const int x, const int y, const int r, const long sec, const bool passed) {
+static void drawGauge(const int x, const int y, const int r, const long sec, const bool passed) {
     if (!passed && sec > COUNTDOWN_GAUGE_OFFSET) return;
     const int rInner = r - 12;
 

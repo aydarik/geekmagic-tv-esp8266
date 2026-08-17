@@ -8,7 +8,6 @@ void themeRenderAPMode(const bool forceClear) {
     tft.fillScreen(TFT_BLACK);
     tft.setTextDatum(TC_DATUM);
 
-    const int currentX = tft.width() / 2;
     int currentY = 10; // Start from top with small margin
 
     // Display IP Info at the top (small font)
@@ -17,7 +16,7 @@ void themeRenderAPMode(const bool forceClear) {
         constexpr int ipFont = FONT_MICRO;
         tft.setTextFont(ipFont);
         const int ipLineHeight = tft.fontHeight();
-        tft.drawString(String(displayState.ipInfo), currentX, currentY, ipFont);
+        tft.drawString(String(displayState.ipInfo), DISPLAY_CENTER, currentY, ipFont);
         currentY += ipLineHeight;
     }
 
@@ -29,29 +28,29 @@ void themeRenderAPMode(const bool forceClear) {
     currentY += 40;
     tft.setTextFont(headerFont);
     tft.setTextColor(TFT_CYAN, TFT_BLACK);
-    tft.drawString("AP Mode", currentX, currentY, headerFont);
+    tft.drawString("AP Mode", DISPLAY_CENTER, currentY, headerFont);
 
     // Draw SSID label
     currentY += 40;
     tft.setTextFont(labelFont);
     tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
-    tft.drawString("SSID:", currentX, currentY, labelFont);
+    tft.drawString("SSID:", DISPLAY_CENTER, currentY, labelFont);
 
     // Draw SSID value
     currentY += 25;
     tft.setTextFont(valueFont);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.drawString(WIFI_AP_NAME, currentX, currentY, valueFont);
+    tft.drawString(WIFI_AP_NAME, DISPLAY_CENTER, currentY, valueFont);
 
     // Draw Password label
     currentY += 40;
     tft.setTextFont(labelFont);
     tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
-    tft.drawString("Password:", currentX, currentY, labelFont);
+    tft.drawString("Password:", DISPLAY_CENTER, currentY, labelFont);
 
     // Draw Password value
     currentY += 25;
     tft.setTextFont(valueFont);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.drawString(WIFI_AP_PASSWORD, currentX, currentY, valueFont);
+    tft.drawString(WIFI_AP_PASSWORD, DISPLAY_CENTER, currentY, valueFont);
 }

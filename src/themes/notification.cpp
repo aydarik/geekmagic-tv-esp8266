@@ -6,9 +6,9 @@
 
 NotificationState notificationState;
 
-GaugeState gaugeState;
+static GaugeState gaugeState;
 
-void parseValue(const char *input) {
+static void parseValue(const char *input) {
     char buffer[32];
     strncpy(buffer, input, sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0';
@@ -34,7 +34,7 @@ void parseValue(const char *input) {
     }
 }
 
-void drawGauge(const int x, const int y, const int r, const float current, const float max) {
+static void drawGauge(const int x, const int y, const int r, const float current, const float max) {
     if (max <= 0.0f) return;
 
     float percent = current / max;
@@ -47,15 +47,14 @@ void drawGauge(const int x, const int y, const int r, const float current, const
     tft.drawArc(x, y, r, r - 12, startAngle, endAngle, TFT_DARKGREY, TFT_BLACK);
 
     const bool hasSubject = notificationState.subject[0] != '\0';
-    const int centerX = tft.width() / 2;
-    const int subjectOffset = hasSubject ? centerX / ANIMATION_STEPS : 0;
+    const int subjectOffset = hasSubject ? DISPLAY_CENTER / ANIMATION_STEPS : 0;
 
     const uint32_t gaugeColor = percent < 0.2f || percent > 0.8f ? TFT_RED : TFT_OLIVE;
 
     tft.startWrite();
     for (int i = 1; i <= ANIMATION_STEPS; ++i) {
         // Draw line together with gauge for smooth animation
-        if (hasSubject) tft.drawFastHLine(centerX - i * subjectOffset, 32, i * subjectOffset * 2, TFT_SILVER);
+        if (hasSubject) tft.drawFastHLine(DISPLAY_CENTER - i * subjectOffset, 32, i * subjectOffset * 2, TFT_SILVER);
         // Draw gauge
         const int currentAngle = startAngle + totalAngle * percent * static_cast<float>(i) / ANIMATION_STEPS;
         tft.drawArc(x, y, r, r - 12, startAngle, currentAngle, gaugeColor, TFT_BLACK);
@@ -64,7 +63,7 @@ void drawGauge(const int x, const int y, const int r, const float current, const
     tft.endWrite();
 }
 
-void showNumber(const char *input, const int x, const int y) {
+static void showNumber(const char *input, const int x, const int y) {
     parseValue(input);
     const bool hasGauge = gaugeState.max > 0;
     const bool hasUnit = gaugeState.unit[0] != '\0';
@@ -106,8 +105,6 @@ void themeRenderNotification(const bool forceClear) {
     tft.fillScreen(TFT_BLACK);
 
     const bool hasSubject = notificationState.subject[0] != '\0';
-    const int centerY = tft.height() / 2;
-    const int centerX = tft.width() / 2;
     int currentY = 0;
 
     // Draw subject
@@ -118,7 +115,7 @@ void themeRenderNotification(const bool forceClear) {
 
     // Draw message
     if (strcmp(notificationState.style, "big_num") == 0) {
-        showNumber(notificationState.message, centerX, centerY + currentY / 2);
+        showNumber(notificationState.message, DISPLAY_CENTER, DISPLAY_CENTER + currentY / 2);
         // Subject line also handled separately, stop here
         return;
     }
@@ -130,8 +127,8 @@ void themeRenderNotification(const bool forceClear) {
     int currentX = 5;
     if (strcmp(notificationState.style, "center") == 0) {
         tft.setTextDatum(TC_DATUM);
-        currentX = centerX;
-        currentY = centerY + currentY / 2 - LINES_OFFSET * count / 2;
+        currentX = DISPLAY_CENTER;
+        currentY = DISPLAY_CENTER + currentY / 2 - LINES_OFFSET * count / 2;
     } else {
         if (!hasSubject) currentY = 5;
         tft.setTextDatum(TL_DATUM);

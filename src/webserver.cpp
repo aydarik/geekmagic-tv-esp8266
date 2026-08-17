@@ -24,9 +24,9 @@ extern CountdownState countdownState;
 extern ClockState clockState;
 
 // File upload buffer
-File uploadFile;
+static File uploadFile;
 
-void handleAppJson() {
+static void handleAppJson() {
     JsonDocument doc;
     doc["theme"] = displayState.theme;
     doc["img"] = displayState.image;
@@ -45,7 +45,7 @@ void handleAppJson() {
     serializeJson(doc, server.client());
 }
 
-void handleSpaceJson() {
+static void handleSpaceJson() {
     FSInfo fs_info;
     LittleFS.info(fs_info);
 
@@ -59,7 +59,7 @@ void handleSpaceJson() {
     serializeJson(doc, server.client());
 }
 
-void handleMemoryJson() {
+static void handleMemoryJson() {
     FSInfo fs_info;
     LittleFS.info(fs_info);
 
@@ -72,7 +72,7 @@ void handleMemoryJson() {
     serializeJson(doc, server.client());
 }
 
-void handleBrtJson() {
+static void handleBrtJson() {
     JsonDocument doc;
     doc["brt"] = appSettings.brightness;
 
@@ -81,7 +81,7 @@ void handleBrtJson() {
     serializeJson(doc, server.client());
 }
 
-void handleVersionJson() {
+static void handleVersionJson() {
     JsonDocument doc;
     doc["m"] = FIRMWARE_MODEL;
     doc["v"] = FIRMWARE_VERSION_STRING;
@@ -91,7 +91,7 @@ void handleVersionJson() {
     serializeJson(doc, server.client());
 }
 
-void handleMessageJson() {
+static void handleMessageJson() {
     JsonDocument doc;
     doc["msg"] = notificationState.message;
     doc["sbj"] = notificationState.subject;
@@ -102,7 +102,7 @@ void handleMessageJson() {
     serializeJson(doc, server.client());
 }
 
-void handleNoteJson() {
+static void handleNoteJson() {
     JsonDocument doc;
     doc["note"] = clockState.note;
     if (clockState.noteRotations > 0)
@@ -113,14 +113,14 @@ void handleNoteJson() {
     serializeJson(doc, server.client());
 }
 
-inline int hexToInt(char c) {
+static int hexToInt(char c) {
     if (c >= '0' && c <= '9') return c - '0';
     if (c >= 'A' && c <= 'F') return c - 'A' + 10;
     if (c >= 'a' && c <= 'f') return c - 'a' + 10;
     return -1;
 }
 
-void urlDecode(const char *input, char *output, const size_t output_size) {
+static void urlDecode(const char *input, char *output, const size_t output_size) {
     const size_t max_size = output_size - 1;
     size_t written = 0;
     while (*input && written < max_size) {
@@ -137,7 +137,7 @@ void urlDecode(const char *input, char *output, const size_t output_size) {
     output[written] = '\0';
 }
 
-void handleSet() {
+static void handleSet() {
     if (server.hasArg("msg")) {
         urlDecode(server.arg("msg").c_str(), notificationState.message, NOTIFICATION_MSG_BUFFER_SIZE);
         urlDecode(server.arg("sbj").c_str(), notificationState.subject, NOTIFICATION_SBJ_BUFFER_SIZE);
@@ -211,12 +211,12 @@ void handleSet() {
     server.send(200, CONTENT_TYPE_TEXT, F("OK"));
 }
 
-void handleTest() {
+static void handleTest() {
     displayTest();
     server.send(200, CONTENT_TYPE_TEXT, F("OK"));
 }
 
-void handleFileUpload() {
+static void handleFileUpload() {
     const String dir = server.hasArg("dir") ? server.arg("dir") : "/";
     if (!LittleFS.exists(dir)) LittleFS.mkdir(dir);
 
@@ -242,11 +242,11 @@ void handleFileUpload() {
     }
 }
 
-void handleUploadDone() {
+static void handleUploadDone() {
     server.send(200, CONTENT_TYPE_TEXT, F("OK"));
 }
 
-void handleDelete() {
+static void handleDelete() {
     if (server.hasArg("file")) {
         char imagePath[DISPLAY_IMG_PATH_BUFFER_SIZE];
         urlDecode(server.arg("file").c_str(), imagePath, DISPLAY_IMG_PATH_BUFFER_SIZE);
@@ -257,7 +257,7 @@ void handleDelete() {
     } else server.send(400, CONTENT_TYPE_TEXT, F("Missing file parameter"));
 }
 
-void streamDirRecursiveHtml(const char *dirname) {
+static void streamDirRecursiveHtml(const char *dirname) {
     File root = LittleFS.open(dirname, "r");
     if (!root || !root.isDirectory()) return;
 
@@ -310,7 +310,7 @@ void streamDirRecursiveHtml(const char *dirname) {
     }
 }
 
-void handleFileList() {
+static void handleFileList() {
     server.setContentLength(CONTENT_LENGTH_UNKNOWN);
     server.send(200, CONTENT_TYPE_HTML, F(""));
 
@@ -321,20 +321,20 @@ void handleFileList() {
 }
 
 // Function to handle factory reset
-void handleFactoryReset() {
+static void handleFactoryReset() {
     server.send(200, CONTENT_TYPE_TEXT, F("Factory Reset triggered. Clearing data and restarting..."));
     delay(100); // Give time for response to send
     factoryReset();
 }
 
-void handleOTAForm() {
+static void handleOTAForm() {
     server.sendHeader(F("Content-Encoding"), F("gzip"));
     server.sendHeader(F("Cache-Control"), F("max-age=600"));
     server.send_P(200, CONTENT_TYPE_HTML, reinterpret_cast<const char *>(src_generated_ota_html_gz),
                   src_generated_index_html_gz_len);
 }
 
-void handleOTAUpload() {
+static void handleOTAUpload() {
     HTTPUpload &upload = server.upload();
 
     if (upload.status == UPLOAD_FILE_START) {
@@ -353,7 +353,7 @@ void handleOTAUpload() {
     }
 }
 
-void handleOTADone() {
+static void handleOTADone() {
     const bool shouldReboot = !Update.hasError();
     server.send(200, CONTENT_TYPE_TEXT, shouldReboot ? F("OK - Rebooting...") : F("FAIL"));
     if (shouldReboot) {
@@ -363,12 +363,12 @@ void handleOTADone() {
     }
 }
 
-void handleLog() {
+static void handleLog() {
     const String log = logGetAll();
     server.send(200, CONTENT_TYPE_TEXT, log);
 }
 
-void handleWiFiScan() {
+static void handleWiFiScan() {
     const int numNetworks = WiFi.scanNetworks(false, true);
 
     JsonDocument docRoot;
@@ -386,7 +386,7 @@ void handleWiFiScan() {
     serializeJson(docRoot, server.client());
 }
 
-void handleWiFiConnect() {
+static void handleWiFiConnect() {
     if (!server.hasArg("ssid")) {
         server.send(400, CONTENT_TYPE_TEXT, F("Missing SSID"));
         return;
@@ -426,7 +426,7 @@ void handleWiFiConnect() {
     ESP.restart();
 }
 
-void handleStatic() {
+static void handleStatic() {
     String path = server.uri();
 
     // Check if file exists in LittleFS
@@ -445,7 +445,7 @@ void handleStatic() {
     file.close();
 }
 
-void handleRoot() {
+static void handleRoot() {
     server.sendHeader(F("Content-Encoding"), F("gzip"));
     server.sendHeader(F("Cache-Control"), F("max-age=600"));
     server.send_P(200, CONTENT_TYPE_HTML, reinterpret_cast<const char *>(src_generated_index_html_gz),
