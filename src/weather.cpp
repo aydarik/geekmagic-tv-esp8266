@@ -13,9 +13,15 @@
 extern Settings appSettings;
 
 static int httpCode = 0;
-static float currentTemp = 0.0f;
-static float feelsLike = 0.0f;
+static float temp = 0.0f;
+static int humidity = 0;
+static float windSpeed = 0.0f;
+static int windDeg = 0.0f;
 static char iconCode[8] = "";
+
+static const char *arrows[] PROGMEM = {
+    "↓", "↙", "←", "↖", "↑", "↗", "→", "↘"
+};
 
 struct IconMap {
     const char *key;
@@ -70,8 +76,10 @@ bool weatherUpdateTask() {
     httpCode = http.GET();
     if (httpCode == HTTP_CODE_OK) {
         if (JsonDocument doc; !deserializeJson(doc, http.getStream())) {
-            currentTemp = doc["main"]["temp"] | currentTemp;
-            feelsLike = doc["main"]["feels_like"] | feelsLike;
+            temp = doc["main"]["temp"] | temp;
+            humidity = doc["main"]["humidity"] | humidity;
+            windSpeed = doc["wind"]["speed"] | windSpeed;
+            windDeg = doc["wind"]["deg"] | windDeg;
             if (const char *icon = doc["weather"][0]["icon"]; icon) {
                 strncpy(iconCode, icon, sizeof(iconCode) - 1);
                 iconCode[sizeof(iconCode) - 1] = '\0';
@@ -96,9 +104,16 @@ static void clearWeather() {
 
 void renderWeather(const bool clear) {
     char tempStr[24];
-    if (httpCode == HTTP_CODE_OK) snprintf(tempStr, sizeof(tempStr), "%.0f°, feels like %.0f°", currentTemp, feelsLike);
-    else if (httpCode == 0) snprintf(tempStr, sizeof(tempStr), "Loading...");
-    else snprintf(tempStr, sizeof(tempStr), "FAILED: %d", httpCode);
+    if (httpCode == HTTP_CODE_OK) {
+        const int roundedTemp = static_cast<int>(roundf(temp));
+        const int roundedWind = static_cast<int>(roundf(windSpeed));
+        const char *windArrow = arrows[static_cast<int>(((windDeg % 360 + 360) % 360 + 22.5) / 45.0) % 8];
+        snprintf(tempStr, sizeof(tempStr), "%d° | %d%% %s%d ㎳", roundedTemp, humidity, windArrow, roundedWind);
+    } else if (httpCode == 0) {
+        snprintf(tempStr, sizeof(tempStr), "Loading...");
+    } else {
+        snprintf(tempStr, sizeof(tempStr), "FAILED: %d", httpCode);
+    }
 
     if (clear) clearWeather();
 
