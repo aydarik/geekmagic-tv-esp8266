@@ -5,7 +5,7 @@
 #include "settings.h"
 #include "utils.h"
 #include "weather.h"
-#include "fonts/Roboto_Regular24.h"
+#include "fonts/NotoSans_Regular24.h"
 
 extern Settings appSettings;
 
@@ -28,9 +28,9 @@ static void getFormattedDate(char *buffer, const size_t bufferSize, const tm &ti
 
 static void clearNote() {
     tft.startWrite();
-    for (int i = 1; i <= 30 / 2; ++i) {
-        tft.drawFastHLine(0, 195 + i, 240, TFT_BLACK);
-        tft.drawFastHLine(0, 225 - i, 240, TFT_BLACK);
+    for (int i = 1; i <= 40 / 2; ++i) {
+        tft.drawFastHLine(0, 190 + i, 240, TFT_BLACK);
+        tft.drawFastHLine(0, 230 - i, 240, TFT_BLACK);
         delay(ANIMATION_STEP_DELAY);
     }
     tft.endWrite();
@@ -79,8 +79,8 @@ void themeRenderClock(const bool forceClear, const time_t &now) {
             clearNote(); // Clear old note first
         }
         if (idx != idxPrev || sec == 0 || forceClear) {
-            tft.loadFont(Roboto_Regular24);
-            tft.drawString(lines[idx], DISPLAY_CENTER, tft.height() - 40);
+            tft.loadFont(NotoSans_Regular24);
+            tft.drawString(lines[idx], DISPLAY_CENTER, 195);
             tft.unloadFont();
         }
     }

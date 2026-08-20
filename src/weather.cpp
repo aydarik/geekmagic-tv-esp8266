@@ -8,7 +8,7 @@
 #include "config.h"
 #include "TJpg_Decoder.h"
 #include "utils.h"
-#include "fonts/Roboto_Regular24.h"
+#include "fonts/NotoSans_Regular24.h"
 
 extern Settings appSettings;
 
@@ -87,8 +87,8 @@ bool weatherUpdateTask() {
 static void clearWeather() {
     tft.startWrite();
     for (int i = 1; i <= 36 / 2; ++i) {
-        tft.drawFastHLine(0, i, 240, TFT_BLACK);
-        tft.drawFastHLine(0, 36 - i, 240, TFT_BLACK);
+        tft.drawFastHLine(0, i, DISPLAY_SIZE, TFT_BLACK);
+        tft.drawFastHLine(0, 36 - i, DISPLAY_SIZE, TFT_BLACK);
         delay(ANIMATION_STEP_DELAY);
     }
     tft.endWrite();
@@ -103,13 +103,13 @@ void renderWeather(const bool clear) {
     if (clear) clearWeather();
 
     tft.setTextDatum(TL_DATUM);
-    tft.loadFont(Roboto_Regular24);
-    tft.drawString(tempStr, 35, 7);
+    tft.loadFont(NotoSans_Regular24);
+    tft.drawString(tempStr, httpCode == HTTP_CODE_OK ? 45 : 12, 1);
     tft.unloadFont();
 
     if (httpCode == HTTP_CODE_OK && strlen(iconCode) > 0) {
         const IconMap *icon = getIcon(iconCode);
-        TJpgDec.drawJpg(1, 1,
+        TJpgDec.drawJpg(8, 1,
                         static_cast<const uint8_t *>(pgm_read_ptr(&icon->value)),
                         pgm_read_dword(&icon->size));
     }

@@ -2,7 +2,7 @@
 #include "config.h"
 #include "display.h"
 #include "utils.h"
-#include "fonts/Roboto_Regular24.h"
+#include "fonts/NotoSans_Regular24.h"
 
 NotificationState notificationState;
 
@@ -81,7 +81,7 @@ static void showNumber(const char *input, const int x, const int y) {
 
     // Draw unit
     if (hasUnit) {
-        tft.loadFont(Roboto_Regular24);
+        tft.loadFont(NotoSans_Regular24);
         tft.drawString(gaugeState.unit, x, currentY + 60);
         tft.unloadFont();
     }
@@ -134,7 +134,7 @@ void themeRenderNotification(const bool forceClear) {
         tft.setTextDatum(TL_DATUM);
     }
 
-    tft.loadFont(Roboto_Regular24);
+    tft.loadFont(NotoSans_Regular24);
     tft.startWrite();
     for (int i = 0; i < count; i++) {
         if (strcmp(wrapped[i], "---") == 0) {

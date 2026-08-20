@@ -2,7 +2,7 @@
 #include "config.h"
 #include "display.h"
 #include "utils.h"
-#include "fonts/Roboto_Regular24.h"
+#include "fonts/NotoSans_Regular24.h"
 
 static int utf8Length(const char *text) {
     int count = 0;
@@ -99,7 +99,7 @@ void animateHLine(const int y) {
 void drawSubject(const char *text) {
     tft.setTextDatum(TC_DATUM);
     tft.setTextColor(TFT_ORANGE, TFT_BLACK);
-    tft.loadFont(Roboto_Regular24);
+    tft.loadFont(NotoSans_Regular24);
     tft.drawString(text, tft.width() / 2, 0, FONT_DEFAULT);
     tft.unloadFont();
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
