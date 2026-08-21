@@ -51,7 +51,7 @@ void themeRenderCountdown(const bool forceClear, const time_t &now) {
     // Draw subject
     if (hasSubject) {
         if (forceClear) drawSubject(countdownState.subject);
-        currentY = 44;
+        currentY = LINES_HEIGHT + LINES_HEIGHT / 2;
     }
 
     // Draw countdown
@@ -67,7 +67,7 @@ void themeRenderCountdown(const bool forceClear, const time_t &now) {
     }
 
     // Draw gauge
-    drawGauge(tft.height() / 2, clockY, 100, diff, passed);
+    drawGauge(tft.height() / 2, clockY, hasSubject ? 96 : 108, diff, passed);
 
     if (passed) {
         tft.setTextColor(TFT_RED, TFT_BLACK);
@@ -79,5 +79,5 @@ void themeRenderCountdown(const bool forceClear, const time_t &now) {
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
     // Draw subject line
-    if (hasSubject && forceClear) animateHLine(32);
+    if (hasSubject && forceClear) animateHLine();
 }

@@ -53,9 +53,6 @@ static void drawGauge(const int x, const int y, const int r, const float current
 
     tft.startWrite();
     for (int i = 1; i <= ANIMATION_STEPS; ++i) {
-        // Draw line together with gauge for smooth animation
-        if (hasSubject) tft.drawFastHLine(DISPLAY_CENTER - i * subjectOffset, 32, i * subjectOffset * 2, TFT_SILVER);
-        // Draw gauge
         const int currentAngle = startAngle + totalAngle * percent * static_cast<float>(i) / ANIMATION_STEPS;
         tft.drawArc(x, y, r, r - 12, startAngle, currentAngle, gaugeColor, TFT_BLACK);
         delay(ANIMATION_STEP_DELAY);
@@ -70,10 +67,8 @@ static void showNumber(const char *input, const int x, const int y) {
 
     // Draw current value
     char numBuffer[8];
-    if (const float val = gaugeState.current; val == (int) val)
-        sprintf(numBuffer, "%d", static_cast<int>(val));
-    else
-        dtostrf(val, 0, 1, numBuffer);
+    const float val = gaugeState.current;
+    dtostrf(val, 0, isfinite(val) && val == truncf(val) ? 0 : 1, numBuffer);
 
     tft.setTextDatum(MC_DATUM);
     const int currentY = hasGauge ? y + 10 : hasUnit ? y - 16 : y;
@@ -86,12 +81,40 @@ static void showNumber(const char *input, const int x, const int y) {
         tft.unloadFont();
     }
 
-    if (hasGauge)
-        // Draw gauge
+    if (hasGauge) {
         drawGauge(x, y + 15, 100, gaugeState.current, gaugeState.max);
-    else if (notificationState.subject[0] != '\0')
-        // Draw missing subject line
-        animateHLine(32);
+    }
+}
+
+static void showNotification(const int maxLines, const int y) {
+    char *wrapped[maxLines];
+    char *msg = strdup(notificationState.message);
+    const size_t count = wrapText(msg, wrapped, maxLines);
+
+    int currentX = 5;
+    int currentY = y;
+    if (strcmp(notificationState.style, "center") == 0) {
+        tft.setTextDatum(TC_DATUM);
+        currentX = DISPLAY_CENTER;
+        currentY = DISPLAY_CENTER + currentY / 2 - LINES_HEIGHT * count / 2;
+    } else {
+        tft.setTextDatum(TL_DATUM);
+    }
+
+    tft.loadFont(NotoSans_Regular24);
+    tft.startWrite();
+    for (int i = 0; i < count; i++) {
+        const int lineY = currentY + i * LINES_HEIGHT;
+        if (strcmp(wrapped[i], "---") == 0) {
+            tft.drawFastHLine(0, lineY + LINES_HEIGHT / 4, DISPLAY_SIZE, TFT_DARKGREY);
+            currentY = currentY - LINES_HEIGHT / 2;
+        } else {
+            tft.drawString(wrapped[i], currentX, lineY);
+        }
+    }
+    tft.endWrite();
+    tft.unloadFont();
+    free(msg);
 }
 
 void themeRenderNotification(const bool forceClear) {
@@ -110,44 +133,16 @@ void themeRenderNotification(const bool forceClear) {
     // Draw subject
     if (hasSubject) {
         drawSubject(notificationState.subject);
-        currentY = 44;
+        currentY = LINES_HEIGHT + LINES_HEIGHT / 2;
     }
 
     // Draw message
     if (strcmp(notificationState.style, "big_num") == 0) {
         showNumber(notificationState.message, DISPLAY_CENTER, DISPLAY_CENTER + currentY / 2);
-        // Subject line also handled separately, stop here
-        return;
-    }
-
-    char *wrapped[MAX_LINES];
-    char *msg = strdup(notificationState.message);
-    const size_t count = wrapText(msg, wrapped, MAX_LINES);
-
-    int currentX = 5;
-    if (strcmp(notificationState.style, "center") == 0) {
-        tft.setTextDatum(TC_DATUM);
-        currentX = DISPLAY_CENTER;
-        currentY = DISPLAY_CENTER + currentY / 2 - LINES_OFFSET * count / 2;
     } else {
-        if (!hasSubject) currentY = 5;
-        tft.setTextDatum(TL_DATUM);
+        showNotification(hasSubject ? MAX_LINES - 2 : MAX_LINES, currentY);
     }
-
-    tft.loadFont(NotoSans_Regular24);
-    tft.startWrite();
-    for (int i = 0; i < count; i++) {
-        if (strcmp(wrapped[i], "---") == 0) {
-            const int lineY = currentY + i * LINES_OFFSET + LINES_OFFSET / 3;
-            tft.drawFastHLine(0, lineY, tft.width(), TFT_DARKGREY);
-        } else {
-            tft.drawString(wrapped[i], currentX, currentY + i * LINES_OFFSET);
-        }
-    }
-    tft.endWrite();
-    tft.unloadFont();
-    free(msg);
 
     // Draw subject line
-    if (hasSubject) animateHLine(32);
+    if (hasSubject) animateHLine();
 }

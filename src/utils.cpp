@@ -100,7 +100,7 @@ void drawSubject(const char *text) {
     tft.setTextDatum(TC_DATUM);
     tft.setTextColor(TFT_ORANGE, TFT_BLACK);
     tft.loadFont(NotoSans_Regular24);
-    tft.drawString(text, tft.width() / 2, 0, FONT_DEFAULT);
+    tft.drawString(text, DISPLAY_CENTER, 0, FONT_DEFAULT);
     tft.unloadFont();
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
 }
