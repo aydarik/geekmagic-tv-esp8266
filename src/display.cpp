@@ -111,12 +111,15 @@ void displayUpdate(const int theme, const bool forceClear) {
 
     // If set manually
     if (theme != 0) displayState.theme = theme;
+    // Fallback
+    if (theme > THEME_COUNT || theme < -1) displayState.theme = DEFAULT_THEME;
 
     if (displayState.timeout != 0) {
         if (forceClear || displayState.theme < 0) {
             displayState.timeout = 0;
         } else if (now > displayState.timeout) {
-            displayUpdate(1, true);
+            displayState.timeout = 0;
+            displayUpdate(appSettings.defaultTheme, true);
             return;
         }
     }

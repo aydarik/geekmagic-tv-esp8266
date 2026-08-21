@@ -211,9 +211,9 @@ void setup() {
 
     // NTP initialization
     configTzTime(appSettings.tz, NTP_SERVER); // Set timezone and NTP server for system time
-    yield();
 
-    displayUpdate(1);
+    delay(2000);
+    displayUpdate(appSettings.defaultTheme);
     lastDisplayUpdate = millis();
 
     logPrint("Setup complete");

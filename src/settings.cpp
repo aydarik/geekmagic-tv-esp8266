@@ -15,9 +15,23 @@ void settingsInit() {
 }
 
 // Validate settings structure
-bool settingsValidate(const Settings &settings) {
+static bool settingsValidate(Settings &settings) {
     if (settings.version != FIRMWARE_VERSION) return false;
-    if (settings.brightness < 0 || settings.brightness > 100) return false;
+
+    bool needFix = false;
+    if (settings.brightness < 0 || settings.brightness > 100) {
+        settings.brightness = DEFAULT_BRIGHTNESS;
+        needFix = true;
+    }
+    if (settings.defaultTheme < 1 || settings.defaultTheme > THEME_COUNT) {
+        settings.brightness = DEFAULT_THEME;
+        needFix = true;
+    }
+
+    if (needFix) {
+        settingsSave(settings);
+    }
+
     return true;
 }
 
@@ -27,6 +41,7 @@ void settingsReset(Settings &settings) {
 
     settings.version = FIRMWARE_VERSION;
     settings.brightness = DEFAULT_BRIGHTNESS;
+    settings.defaultTheme = DEFAULT_THEME;
 
     // TZ default to Europe
     strncpy(settings.tz, DEFAULT_TIMEZONE, sizeof(settings.tz));

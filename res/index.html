@@ -244,12 +244,16 @@
         <div class="card-header">Themes</div>
         <div class="card-body">
             <div class="note">Current theme: <strong id="currentTheme">Loading...</strong></div>
-            <div class="button-group">
+            <div id="themes" class="button-group">
                 <button class="button" onclick="setTheme(1)">1. Clock</button>
                 <button class="button" onclick="setTheme(2)">2. Message</button>
                 <button class="button" onclick="setTheme(3)">3. Image</button>
                 <button class="button" onclick="setTheme(4)">4. Countdown</button>
                 <button class="button" onclick="setTheme(5)">5. Big Clock</button>
+            </div>
+            <div class="spacer"></div>
+            <div class="input-group">
+                <div><input type="checkbox" id="defaultTheme" checked/> Set as default</div>
             </div>
         </div>
     </div>
@@ -432,9 +436,23 @@
     }
 
     function setTheme(id) {
-        fetch('/set?theme=' + id)
+        const defaultTheme = document.getElementById('defaultTheme').checked;
+        fetch('/set?theme=' + id
+            + '&default=' + defaultTheme
+        )
             .then(_ => document.getElementById('currentTheme').textContent = id)
             .catch(error => console.error('Error:', error));
+        if (defaultTheme) {
+            markDefaultTheme(id)
+        }
+    }
+
+    function markDefaultTheme(id) {
+        let buttonElements = document.getElementById('themes').querySelectorAll('button');
+        buttonElements.forEach(button => {
+            button.classList.remove('green');
+        })
+        buttonElements.item(id - 1).classList.add('green');
     }
 
     function sendCustomNotification() {
@@ -538,6 +556,7 @@
     function loadData() {
         fetch('/app.json').then(response => response.json()).then(data => {
             document.getElementById('currentTheme').textContent = data.theme;
+            markDefaultTheme(data.defaultTheme);
             document.getElementById('tz').value = data.tz;
             document.getElementById('showIP').checked = data.showIP !== false;
             document.getElementById('showSec').checked = data.showSec !== false;

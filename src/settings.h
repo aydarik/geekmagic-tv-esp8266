@@ -7,7 +7,7 @@
 // Firmware model
 #define FIRMWARE_MODEL "aydarik"
 // Firmware version - increment when Settings structure changes
-#define FIRMWARE_VERSION 1
+#define FIRMWARE_VERSION 2
 
 // Semantic version string (replaced by GitHub Action during release builds)
 #ifndef FIRMWARE_VERSION_STRING
@@ -17,6 +17,7 @@
 struct Settings {
     uint16_t version; // Firmware version for compatibility check
     int brightness;
+    int defaultTheme;
     char tz[64];
     bool showIP;
     bool showSec;
@@ -38,8 +39,6 @@ void settingsLoad(Settings &settings);
 void settingsSave(const Settings &settings);
 
 void settingsReset(Settings &settings);
-
-bool settingsValidate(const Settings &settings);
 
 // Power cycle counter functions (user-initiated factory reset)
 uint8_t powerCycleCounterGet();

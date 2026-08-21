@@ -12,10 +12,10 @@
 #define DISPLAY_MSG_BUFFER_SIZE 512
 
 struct DisplayState {
-    int theme; // -1 - AP mode, 1 - clock, 2 - message, 3 - image, 4 - countdown
+    int theme;
     time_t timeout;
-    char ipInfo[DISPLAY_IP_BUFFER_SIZE]; // IP address or network info to show at top
-    char image[DISPLAY_IMG_PATH_BUFFER_SIZE]; // Image path
+    char ipInfo[DISPLAY_IP_BUFFER_SIZE];
+    char image[DISPLAY_IMG_PATH_BUFFER_SIZE];
 };
 
 void displayInit();

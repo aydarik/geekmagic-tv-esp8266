@@ -29,6 +29,7 @@ static File uploadFile;
 static void handleAppJson() {
     JsonDocument doc;
     doc["theme"] = displayState.theme;
+    doc["defaultTheme"] = appSettings.defaultTheme;
     doc["img"] = displayState.image;
     doc["tz"] = appSettings.tz;
     doc["showIP"] = appSettings.showIP;
@@ -155,11 +156,13 @@ static void handleSet() {
             clockState.noteTimeout = time(nullptr) + timeout;
         else clockState.noteTimeout = 0;
         const String force = server.arg("force");
-        if ((displayState.theme == 1 && hadNote != hasNote)
-            || force.equalsIgnoreCase("true")
-            || force.equals("1")
-        )
+        if (displayState.theme == 1
+            && (hadNote != hasNote
+                || force.equalsIgnoreCase("true")
+                || force.equals("1"))
+        ) {
             displayUpdate();
+        }
     } else if (server.hasArg("cnt")) {
         urlDecode(server.arg("sbj").c_str(), countdownState.subject, COUNTDOWN_SBJ_BUFFER_SIZE);
         urlDecode(server.arg("cnt").c_str(), countdownState.datetime, COUNTDOWN_DATETIME_BUFFER_SIZE);
@@ -172,7 +175,12 @@ static void handleSet() {
         displaySetBrightness(appSettings.brightness);
         settingsSave(appSettings);
     } else if (server.hasArg("theme")) {
-        displayUpdate(server.arg("theme").toInt());
+        const int theme = server.arg("theme").toInt();
+        if (server.hasArg("default") && server.arg("default") != "false") {
+            appSettings.defaultTheme = theme;
+            settingsSave(appSettings);
+        }
+        displayUpdate(theme);
     } else if (server.hasArg("img")) {
         urlDecode(server.arg("img").c_str(), displayState.image, DISPLAY_IMG_PATH_BUFFER_SIZE);
         displayUpdate(3);

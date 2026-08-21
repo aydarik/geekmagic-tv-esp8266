@@ -38,9 +38,13 @@
 // Defaults
 #define DEFAULT_TIMEZONE "CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00"
 #define DEFAULT_BRIGHTNESS 50
+#define DEFAULT_THEME 1
 
 // Animation settings
 #define ANIMATION_STEPS 20 // Higher number - smoother animation
 #define ANIMATION_STEP_DELAY 20 // Lower number - faster animation
+
+// Themes
+#define THEME_COUNT 5
 
 #endif
