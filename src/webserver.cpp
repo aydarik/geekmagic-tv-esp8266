@@ -41,11 +41,23 @@ void wsBroadcastState() {
     JsonDocument doc;
     if (displayState.theme != Theme::NONE)
         doc["theme"] = static_cast<int8_t>(displayState.theme);
-    doc["brt"]   = appSettings.brightness;
-    doc["mem_heap"]  = ESP.getFreeHeap();
+
+    doc["brt"] = appSettings.brightness;
+
+    doc["mem_heap"] = ESP.getFreeHeap();
+
     FSInfo fs_info;
     LittleFS.info(fs_info);
-    doc["space_free"]  = fs_info.totalBytes - fs_info.usedBytes;
+    doc["space_free"] = fs_info.totalBytes - fs_info.usedBytes;
+
+    // doc["msg_text"]  = notificationState.message;
+    // doc["msg_sbj"]   = notificationState.subject;
+    // doc["msg_style"] = notificationState.style;
+    //
+    // doc["note_text"] = clockState.note;
+    // if (clockState.noteRotations > 0)
+    //     doc["note_rpm"] = clockState.noteRotations;
+
     wsBroadcast(doc);
 }
 
@@ -161,57 +173,85 @@ static void handleNoteJson(AsyncWebServerRequest *request) {
 
 static void handleSet(AsyncWebServerRequest *request) {
     if (request->hasParam("msg")) {
-        const String msg   = request->getParam("msg")->value();
-        const String sbj   = request->hasParam("sbj")   ? request->getParam("sbj")->value()   : "";
-        const String style = request->hasParam("style") ? request->getParam("style")->value() : "";
+        const AsyncWebParameter *pMsg = request->getParam("msg");
+        strncpy(notificationState.message, pMsg->value().c_str(), NOTIFICATION_MSG_BUFFER_SIZE - 1);
+        notificationState.message[NOTIFICATION_MSG_BUFFER_SIZE - 1] = '\0';
 
-        msg.toCharArray(notificationState.message, NOTIFICATION_MSG_BUFFER_SIZE);
-        sbj.toCharArray(notificationState.subject, NOTIFICATION_SBJ_BUFFER_SIZE);
-        style.toCharArray(notificationState.style, NOTIFICATION_STYLE_BUFFER_SIZE);
-
-        displayUpdate(Theme::NOTIFICATION);
-        if (request->hasParam("timeout")) {
-            const int timeout = request->getParam("timeout")->value().toInt();
-            if (timeout > 0) displayState.timeout = time(nullptr) + timeout;
+        const AsyncWebParameter *pSbj = request->getParam("sbj");
+        if (pSbj) {
+            strncpy(notificationState.subject, pSbj->value().c_str(), NOTIFICATION_SBJ_BUFFER_SIZE - 1);
+            notificationState.subject[NOTIFICATION_SBJ_BUFFER_SIZE - 1] = '\0';
+        } else {
+            notificationState.subject[0] = '\0';
         }
+
+        const AsyncWebParameter *pStyle = request->getParam("style");
+        if (pStyle) {
+            strncpy(notificationState.style, pStyle->value().c_str(), NOTIFICATION_STYLE_BUFFER_SIZE - 1);
+            notificationState.style[NOTIFICATION_STYLE_BUFFER_SIZE - 1] = '\0';
+        } else {
+            notificationState.style[0] = '\0';
+        }
+
+        time_t timeoutAt = 0;
+        const AsyncWebParameter *pTimeout = request->getParam("timeout");
+        if (pTimeout) {
+            const int timeout = pTimeout->value().toInt();
+            if (timeout > 0) timeoutAt = time(nullptr) + timeout;
+        }
+        displayScheduleUpdate(Theme::NOTIFICATION, true, timeoutAt);
 
     } else if (request->hasParam("note")) {
         const bool hadNote = clockState.note[0] != '\0';
-        const String note = request->getParam("note")->value();
-        note.toCharArray(clockState.note, CLOCK_NOTE_SIZE);
+        const AsyncWebParameter *pNote = request->getParam("note");
+        strncpy(clockState.note, pNote->value().c_str(), CLOCK_NOTE_SIZE - 1);
+        clockState.note[CLOCK_NOTE_SIZE - 1] = '\0';
         const bool hasNote = clockState.note[0] != '\0';
 
-        clockState.noteRotations = request->hasParam("rpm") ? request->getParam("rpm")->value().toInt() : 0;
+        const AsyncWebParameter *pRpm = request->getParam("rpm");
+        clockState.noteRotations = pRpm ? pRpm->value().toInt() : 0;
         if (clockState.noteRotations > 60) clockState.noteRotations = 60;
 
-        if (request->hasParam("timeout")) {
-            const int timeout = request->getParam("timeout")->value().toInt();
+        const AsyncWebParameter *pTimeout = request->getParam("timeout");
+        if (pTimeout) {
+            const int timeout = pTimeout->value().toInt();
             clockState.noteTimeout = timeout > 0 ? time(nullptr) + timeout : 0;
         } else {
             clockState.noteTimeout = 0;
         }
 
-        const String force = request->hasParam("force") ? request->getParam("force")->value() : "";
+        const AsyncWebParameter *pForce = request->getParam("force");
+        const String force = pForce ? pForce->value() : "";
         if (displayState.theme == Theme::CLOCK
             && (hadNote != hasNote
                 || force.equalsIgnoreCase("true")
                 || force == "1")) {
-            displayUpdate();
+            displayScheduleUpdate(Theme::NONE, true);
         }
 
     } else if (request->hasParam("cnt")) {
-        const String sbj = request->hasParam("sbj") ? request->getParam("sbj")->value() : "";
-        const String cnt = request->getParam("cnt")->value();
-        sbj.toCharArray(countdownState.subject,  COUNTDOWN_SBJ_BUFFER_SIZE);
-        cnt.toCharArray(countdownState.datetime, COUNTDOWN_DATETIME_BUFFER_SIZE);
-        displayUpdate(Theme::COUNTDOWN);
-        if (request->hasParam("timeout")) {
-            const int timeout = request->getParam("timeout")->value().toInt();
+        const AsyncWebParameter *pSbj = request->getParam("sbj");
+        if (pSbj) {
+            strncpy(countdownState.subject, pSbj->value().c_str(), COUNTDOWN_SBJ_BUFFER_SIZE - 1);
+            countdownState.subject[COUNTDOWN_SBJ_BUFFER_SIZE - 1] = '\0';
+        } else {
+            countdownState.subject[0] = '\0';
+        }
+
+        const AsyncWebParameter *pCnt = request->getParam("cnt");
+        strncpy(countdownState.datetime, pCnt->value().c_str(), COUNTDOWN_DATETIME_BUFFER_SIZE - 1);
+        countdownState.datetime[COUNTDOWN_DATETIME_BUFFER_SIZE - 1] = '\0';
+
+        time_t timeoutAt = 0;
+        const AsyncWebParameter *pTimeout = request->getParam("timeout");
+        if (pTimeout) {
+            const int timeout = pTimeout->value().toInt();
             if (timeout > 0) {
                 const time_t dt = parseDateTime(countdownState.datetime);
-                if (dt > time(nullptr)) displayState.timeout = dt + timeout;
+                if (dt > time(nullptr)) timeoutAt = dt + timeout;
             }
         }
+        displayScheduleUpdate(Theme::COUNTDOWN, true, timeoutAt);
 
     } else if (request->hasParam("brt")) {
         appSettings.brightness = request->getParam("brt")->value().toInt();
@@ -225,46 +265,53 @@ static void handleSet(AsyncWebServerRequest *request) {
             appSettings.defaultTheme = theme;
             settingsSave(appSettings);
         }
-        displayUpdate(theme);
+        displayScheduleUpdate(theme, true);
 
     } else if (request->hasParam("img")) {
-        const String img = request->getParam("img")->value();
-        img.toCharArray(displayState.image, DISPLAY_IMG_PATH_BUFFER_SIZE);
-        displayUpdate(Theme::IMAGE);
-        if (request->hasParam("timeout")) {
-            const int timeout = request->getParam("timeout")->value().toInt();
-            if (timeout > 0) displayState.timeout = time(nullptr) + timeout;
+        const AsyncWebParameter *pImg = request->getParam("img");
+        strncpy(displayState.image, pImg->value().c_str(), DISPLAY_IMG_PATH_BUFFER_SIZE - 1);
+        displayState.image[DISPLAY_IMG_PATH_BUFFER_SIZE - 1] = '\0';
+
+        time_t timeoutAt = 0;
+        const AsyncWebParameter *pTimeout = request->getParam("timeout");
+        if (pTimeout) {
+            const int timeout = pTimeout->value().toInt();
+            if (timeout > 0) timeoutAt = time(nullptr) + timeout;
         }
+        displayScheduleUpdate(Theme::IMAGE, true, timeoutAt);
 
     } else if (request->hasParam("ip")) {
         appSettings.showIP = request->getParam("ip")->value() != "false";
-        if (displayState.theme == Theme::CLOCK) displayUpdate();
+        if (displayState.theme == Theme::CLOCK) displayScheduleUpdate(Theme::NONE, true);
         settingsSave(appSettings);
 
     } else if (request->hasParam("sec")) {
         appSettings.showSec = request->getParam("sec")->value() != "false";
-        if (displayState.theme == Theme::CLOCK || displayState.theme == Theme::BIG_CLOCK) displayUpdate();
+        if (displayState.theme == Theme::CLOCK || displayState.theme == Theme::BIG_CLOCK) displayScheduleUpdate(Theme::NONE, true);
         settingsSave(appSettings);
 
     } else if (request->hasParam("weather")) {
         appSettings.showWeather = request->getParam("weather")->value() != "false";
-        if (displayState.theme == Theme::CLOCK) displayUpdate();
+        if (displayState.theme == Theme::CLOCK) displayScheduleUpdate(Theme::NONE, true);
         settingsSave(appSettings);
 
     } else if (request->hasParam("tz")) {
-        const String tz = request->getParam("tz")->value();
-        tz.toCharArray(appSettings.tz, sizeof(appSettings.tz));
+        const AsyncWebParameter *pTz = request->getParam("tz");
+        strncpy(appSettings.tz, pTz->value().c_str(), sizeof(appSettings.tz) - 1);
+        appSettings.tz[sizeof(appSettings.tz) - 1] = '\0';
         setenv("TZ", appSettings.tz, 1);
         tzset();
-        if (displayState.theme == Theme::CLOCK) displayUpdate();
+        if (displayState.theme == Theme::CLOCK) displayScheduleUpdate(Theme::NONE, true);
         settingsSave(appSettings);
 
     } else if (request->hasParam("owmLoc") && request->hasParam("owmKey")) {
-        const String loc = request->getParam("owmLoc")->value();
-        const String key = request->getParam("owmKey")->value();
-        loc.toCharArray(appSecrets.owmLocation, sizeof(appSecrets.owmLocation));
-        key.toCharArray(appSecrets.owmApiKey,   sizeof(appSecrets.owmApiKey));
-        if (displayState.theme == Theme::CLOCK) displayUpdate();
+        const AsyncWebParameter *pLoc = request->getParam("owmLoc");
+        const AsyncWebParameter *pKey = request->getParam("owmKey");
+        strncpy(appSecrets.owmLocation, pLoc->value().c_str(), sizeof(appSecrets.owmLocation) - 1);
+        appSecrets.owmLocation[sizeof(appSecrets.owmLocation) - 1] = '\0';
+        strncpy(appSecrets.owmApiKey,   pKey->value().c_str(), sizeof(appSecrets.owmApiKey) - 1);
+        appSecrets.owmApiKey[sizeof(appSecrets.owmApiKey) - 1] = '\0';
+        if (displayState.theme == Theme::CLOCK) displayScheduleUpdate(Theme::NONE, true);
         secretsSave(appSecrets);
 
     } else {
@@ -280,7 +327,7 @@ static void handleSet(AsyncWebServerRequest *request) {
 // ---------------------------------------------------------------------------
 
 static void handleTest(AsyncWebServerRequest *request) {
-    displayTest();
+    displayScheduleTest();
     request->send(200, "text/plain", "OK");
 }
 

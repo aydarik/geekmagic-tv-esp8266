@@ -160,3 +160,44 @@ void displayToggleBacklight() {
         backlightOn = true;
     }
 }
+
+struct DisplaySchedule {
+    volatile bool   pending    = false;
+    volatile Theme  theme      = Theme::NONE;
+    volatile bool   forceClear = true;
+    volatile time_t timeout    = 0;
+    volatile bool   runTest    = false;
+};
+
+static DisplaySchedule displaySchedule;
+
+void displayScheduleUpdate(const Theme theme, const bool forceClear, const time_t timeout) {
+    displaySchedule.theme      = theme;
+    displaySchedule.forceClear = forceClear;
+    displaySchedule.timeout    = timeout;
+    displaySchedule.pending    = true;
+}
+
+void displayScheduleTest() {
+    displaySchedule.runTest = true;
+    displaySchedule.pending = true;
+}
+
+bool displayProcessPending() {
+    if (!displaySchedule.pending) return false;
+
+    displaySchedule.pending = false;
+
+    if (displaySchedule.runTest) {
+        displaySchedule.runTest = false;
+        displayTest();
+        return true;
+    }
+
+    displayUpdate(displaySchedule.theme, displaySchedule.forceClear);
+    if (displaySchedule.timeout > 0) {
+        displayState.timeout = displaySchedule.timeout;
+    }
+    return true;
+}
+

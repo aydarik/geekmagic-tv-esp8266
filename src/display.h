@@ -19,6 +19,9 @@ void displayInit();
 void displaySetBrightness(int brightness);
 void displayTest();
 void displayUpdate(Theme theme = Theme::NONE, bool forceClear = true);
+void displayScheduleUpdate(Theme theme = Theme::NONE, bool forceClear = true, time_t timeout = 0);
+void displayScheduleTest();
+bool displayProcessPending();
 void displayCycleNextPage();
 void displayToggleBacklight();
 

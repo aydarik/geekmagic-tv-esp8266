@@ -247,6 +247,10 @@ void loop() {
     ArduinoOTA.handle();
     webserverHandle(); // Cleans up dead WebSocket clients
 
+    if (displayProcessPending()) {
+        lastDisplayUpdate = millis();
+    }
+
     if (now - lastDisplayUpdate > DISPLAY_UPDATE_INTERVAL) {
         lastDisplayUpdate = now;
         displayUpdate(Theme::NONE, false);
