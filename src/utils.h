@@ -3,9 +3,9 @@
 
 #include <cstddef>
 
-#define MAX_LINES 7
-#define MAX_LINE_CHARS 19
-#define LINES_HEIGHT 34
+constexpr int MAX_LINES     = 7;
+constexpr int MAX_LINE_CHARS = 19;
+constexpr int LINES_HEIGHT  = 34;
 
 size_t wrapText(char *text, char *lines[], size_t maxLines);
 
@@ -19,4 +19,4 @@ time_t parseDateTime(const String &s);
 
 void showMessage(const String &msg, int timeout = 0, int offsetY = 0);
 
-#endif
+#endif // UTILS_H

@@ -41,3 +41,13 @@ String logGetAll() {
 
     return result;
 }
+
+void logPrintTo(Print &out) {
+    const int start = logCount < LOG_BUFFER_SIZE ? 0 : logIndex;
+    const int entries = logCount < LOG_BUFFER_SIZE ? logCount : LOG_BUFFER_SIZE;
+
+    for (int i = 0; i < entries; i++) {
+        const int idx = (start + i) % LOG_BUFFER_SIZE;
+        out.println(logBuffer[idx]);
+    }
+}

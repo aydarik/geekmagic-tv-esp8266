@@ -46,11 +46,7 @@ static void drawGauge(const int x, const int y, const int r, const float current
     constexpr int totalAngle = endAngle - startAngle;
     tft.drawArc(x, y, r, r - 12, startAngle, endAngle, TFT_DARKGREY, TFT_BLACK);
 
-    const bool hasSubject = notificationState.subject[0] != '\0';
-    const int subjectOffset = hasSubject ? DISPLAY_CENTER / ANIMATION_STEPS : 0;
-
     const uint32_t gaugeColor = percent < 0.2f || percent > 0.8f ? TFT_RED : TFT_OLIVE;
-
     tft.startWrite();
     for (int i = 1; i <= ANIMATION_STEPS; ++i) {
         const int currentAngle = startAngle + totalAngle * percent * static_cast<float>(i) / ANIMATION_STEPS;

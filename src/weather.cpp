@@ -11,6 +11,7 @@
 #include "fonts/NotoSans_Regular24.h"
 
 extern Settings appSettings;
+extern Secrets  appSecrets;
 
 static int httpCode = 0;
 static float temp = 0.0f;
@@ -62,20 +63,27 @@ const IconMap *getIcon(const char *key) {
 }
 
 bool weatherUpdateTask() {
-    if (!appSettings.showWeather || appSettings.brightness == 0 || displayState.theme != 1) return false;
-    if (appSettings.owmApiKey[0] == '\0' || appSettings.owmLocation[0] == '\0') return false;
+    if (!appSettings.showWeather || appSettings.brightness == 0 || displayState.theme != Theme::CLOCK) return false;
+    if (appSecrets.owmApiKey[0] == '\0' || appSecrets.owmLocation[0] == '\0') return false;
 
     char url[256];
     snprintf(url, sizeof(url),
              "http://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s&units=metric",
-             appSettings.owmLocation, appSettings.owmApiKey);
+             appSecrets.owmLocation, appSecrets.owmApiKey);
 
     WiFiClient client;
     HTTPClient http;
     http.begin(client, url);
     httpCode = http.GET();
     if (httpCode == HTTP_CODE_OK) {
-        if (JsonDocument doc; !deserializeJson(doc, http.getStream())) {
+        JsonDocument filter;
+        filter["main"]["temp"] = true;
+        filter["main"]["humidity"] = true;
+        filter["wind"]["speed"] = true;
+        filter["wind"]["deg"] = true;
+        filter["weather"][0]["icon"] = true;
+
+        if (JsonDocument doc; !deserializeJson(doc, http.getStream(), DeserializationOption::Filter(filter))) {
             temp = doc["main"]["temp"] | temp;
             humidity = doc["main"]["humidity"] | humidity;
             windSpeed = doc["wind"]["speed"] | windSpeed;

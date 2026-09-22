@@ -3,10 +3,9 @@
 
 #include <ctime>
 
-#define COUNTDOWN_GAUGE_OFFSET 60
-
-#define COUNTDOWN_SBJ_BUFFER_SIZE 32
-#define COUNTDOWN_DATETIME_BUFFER_SIZE 32
+constexpr int COUNTDOWN_GAUGE_OFFSET         = 60;
+constexpr int COUNTDOWN_SBJ_BUFFER_SIZE      = 32;
+constexpr int COUNTDOWN_DATETIME_BUFFER_SIZE = 32;
 
 struct CountdownState {
     char subject[COUNTDOWN_SBJ_BUFFER_SIZE];
@@ -15,4 +14,4 @@ struct CountdownState {
 
 void themeRenderCountdown(bool forceClear, const time_t &now);
 
-#endif
+#endif // THEME_COUNTDOWN_H

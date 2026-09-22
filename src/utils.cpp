@@ -168,7 +168,7 @@ time_t parseDateTime(const String &s) {
 }
 
 void showMessage(const String &msg, const int timeout, const int offsetY) {
-    displayState.theme = 0;
+    displayState.theme = Theme::NONE;
     tft.fillScreen(TFT_BLACK);
 
     tft.setTextFont(FONT_DEFAULT);

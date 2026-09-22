@@ -14,4 +14,6 @@ void logPrintf(const char *format, ...);
 
 String logGetAll();
 
+void logPrintTo(Print &out);
+
 #endif

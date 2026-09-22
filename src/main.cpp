@@ -12,14 +12,18 @@
 #include "utils.h"
 #include "weather.h"
 
-#define NTP_SERVER "pool.ntp.org"
+constexpr char NTP_SERVER[] = "pool.ntp.org";
 
 Settings appSettings;
+Secrets  appSecrets;
 
 static unsigned long lastDisplayUpdate = 0;
 static unsigned long lastWeatherUpdate = 0;
+static bool powerCycleCounterCleared  = false;
 
-static bool powerCycleCounterCleared = false; // Track if power cycle counter has been reset
+// ---------------------------------------------------------------------------
+// WiFi connection helpers
+// ---------------------------------------------------------------------------
 
 static bool tryConnectWiFi(const int maxAttempts) {
     Serial.printf("Attempting WiFi connection (max %d attempts)...\n", maxAttempts);
@@ -35,13 +39,10 @@ static bool tryConnectWiFi(const int maxAttempts) {
             yield();
         }
 
-        // Wait for IP address to be assigned after WiFi connection
         if (WiFi.status() == WL_CONNECTED) {
             Serial.println(F("WiFi associated, waiting for IP..."));
             const unsigned long ipWaitStart = millis();
-            while (WiFi.localIP() == IPAddress(0, 0, 0, 0) &&
-                   millis() - ipWaitStart < 10000) {
-                // Wait up to 10 seconds for IP
+            while (WiFi.localIP() == IPAddress(0, 0, 0, 0) && millis() - ipWaitStart < 10000) {
                 delay(1000);
                 yield();
             }
@@ -54,10 +55,9 @@ static bool tryConnectWiFi(const int maxAttempts) {
             return true;
         }
 
-        // Exponential backoff between retries (except on last attempt)
         if (attempt < maxAttempts) {
-            int delayMs = WIFI_RETRY_DELAY_MS * (1 << (attempt - 1)); // 2s, 4s, 8s, 16s...
-            delayMs = min(delayMs, 30000); // Cap at 30 seconds
+            int delayMs = WIFI_RETRY_DELAY_MS * (1 << (attempt - 1)); // exponential back-off
+            delayMs = min(delayMs, 30000);
             Serial.printf("Retry in %d ms...\n", delayMs);
             delay(delayMs);
         }
@@ -74,28 +74,28 @@ static void startAPMode() {
     WiFi.softAP(WIFI_AP_NAME, WIFI_AP_PASSWORD);
 
     strncpy(displayState.ipInfo, WiFi.softAPIP().toString().c_str(), sizeof(displayState.ipInfo));
-    displayState.ipInfo[sizeof(displayState.ipInfo) - 1] = '\0'; // Ensure null-termination
-    displayUpdate(-1);
+    displayState.ipInfo[sizeof(displayState.ipInfo) - 1] = '\0';
+    displayUpdate(Theme::SERVICE_AP);
 }
 
 static void setupWiFi() {
     Serial.println(F("Starting WiFi Setup..."));
-    // Check if WiFi credentials are saved BEFORE attempting connection
-    if (const String ssid = WiFi.SSID(); ssid.isEmpty() || ssid.length() == 0) {
-        Serial.println(F("No saved WiFi credentials - going directly to failsafe AP"));
+    const String ssid = WiFi.SSID();
+    if (ssid.isEmpty()) {
+        Serial.println(F("No saved credentials — starting AP mode"));
         startAPMode();
     } else {
-        // Try to connect to saved WiFi credentials with retry
-        Serial.println(F("Attempting to connect with saved credentials..."));
-        if (tryConnectWiFi(WIFI_RETRY_ATTEMPTS)) {
-            Serial.println(F("Connected successfully!"));
-        } else {
-            Serial.println(F("No saved WiFi credentials - going directly to failsafe AP"));
+        if (!tryConnectWiFi(WIFI_RETRY_ATTEMPTS)) {
+            Serial.println(F("Connection failed — starting AP mode"));
             startAPMode();
         }
     }
     Serial.println(F("WiFi setup completed"));
 }
+
+// ---------------------------------------------------------------------------
+// OTA setup
+// ---------------------------------------------------------------------------
 
 static void setupOTA() {
     ArduinoOTA.setHostname(OTA_HOSTNAME);
@@ -119,14 +119,13 @@ static void setupOTA() {
         const int percent = progress * 100 / total;
         static int lastPercent = -1;
         if (percent != lastPercent) {
-            const int offset = percent * 196 / 100;
-            tft.fillRect(22, 122, offset, 16, TFT_BLUE);
+            tft.fillRect(22, 122, percent * 196 / 100, 16, TFT_BLUE);
             lastPercent = percent;
         }
     });
 
     ArduinoOTA.onError([](const ota_error_t error) {
-        Serial.printf("OTA Error[%u]: ", error);
+        Serial.printf("OTA Error[%u]\n", error);
         showMessage(F("OTA Failed!"));
     });
 
@@ -134,29 +133,36 @@ static void setupOTA() {
     Serial.println(F("OTA ready"));
 }
 
+// ---------------------------------------------------------------------------
+// Filesystem setup
+// ---------------------------------------------------------------------------
+
 static void setupFilesystem() {
     if (!LittleFS.begin()) {
-        Serial.println(F("LittleFS mount failed. Formatting LittleFS..."));
+        Serial.println(F("LittleFS mount failed — formatting..."));
         showMessage(F("Formatting FS..."));
-        LittleFS.format(); // Format LittleFS if mounting fails
-        Serial.println(F("LittleFS formatted. Restarting..."));
+        LittleFS.format();
+        Serial.println(F("Formatted. Restarting..."));
         delay(2000);
-        ESP.restart(); // Restart after formatting
+        ESP.restart();
     }
-
     Serial.println(F("LittleFS ready"));
 }
+
+// ---------------------------------------------------------------------------
+// Factory reset
+// ---------------------------------------------------------------------------
 
 void factoryReset() {
     showMessage(F("Performing\nfactory reset..."));
 
     WiFi.disconnect(true);
     yield();
-
     ESP.eraseConfig();
     yield();
 
     settingsReset(appSettings);
+    secretsReset(appSecrets);
     powerCycleCounterReset();
 
     LittleFS.format();
@@ -168,6 +174,10 @@ void factoryReset() {
     ESP.restart();
 }
 
+// ---------------------------------------------------------------------------
+// setup / loop
+// ---------------------------------------------------------------------------
+
 void setup() {
     Serial.begin(115200);
     delay(100);
@@ -176,29 +186,28 @@ void setup() {
     logPrint("Starting...");
     logPrintf("Firmware Version: %d", FIRMWARE_VERSION);
 
-    // Initialize EEPROM and boot counter
     settingsInit();
-    powerCycleCounterIncrement(); // Increment power cycle counter
+    powerCycleCounterIncrement();
 
     displayInit();
     displaySetBrightness(DEFAULT_BRIGHTNESS);
     showMessage(F("Starting..."));
 
-    // Load and validate settings
-    settingsLoad(appSettings);
+    setupFilesystem();       // Must come before settingsLoad (uses LittleFS)
 
-    // Check for user-initiated factory reset (5 quick power cycles)
+    settingsLoad(appSettings);
+    secretsLoad(appSecrets);
+
+    // Factory reset via 5 quick power cycles
     if (powerCycleCounterCheckReset()) {
         Serial.println(F("USER RESET: 5 quick power cycles detected!"));
         factoryReset();
         return;
     }
 
-    buttonInit(); // Initialize GPIO button
+    buttonInit();
+    displaySetBrightness(appSettings.brightness);
 
-    displaySetBrightness(appSettings.brightness); // Restore saved brightness
-
-    setupFilesystem();
     setupWiFi();
     webserverInit();
     setupOTA();
@@ -206,11 +215,10 @@ void setup() {
     strncpy(displayState.ipInfo, WiFi.localIP().toString().c_str(), sizeof(displayState.ipInfo));
     displayState.ipInfo[sizeof(displayState.ipInfo) - 1] = '\0';
 
-    // Stop setup if in service mode
-    if (displayState.theme < 0) return;
+    // Stop here if in service (AP) mode
+    if (displayState.theme == Theme::SERVICE_AP) return;
 
-    // NTP initialization
-    configTzTime(appSettings.tz, NTP_SERVER); // Set timezone and NTP server for system time
+    configTzTime(appSettings.tz, NTP_SERVER);
 
     delay(2000);
     displayUpdate(appSettings.defaultTheme);
@@ -220,43 +228,34 @@ void setup() {
 }
 
 void loop() {
-    // Reset power cycle counter after 10 seconds of successful uptime
-    // This prevents accidental factory reset from normal reboots
+    // Clear power cycle counter after 10 s of stable uptime
     if (!powerCycleCounterCleared && millis() > 10000) {
         powerCycleCounterReset();
         powerCycleCounterCleared = true;
         Serial.println(F("Power cycle counter cleared after successful boot"));
     }
 
-    // Cycle pages only if not in service mode
-    if (displayState.theme >= 0) {
-        // Handle button presses
-        const ButtonPress buttonPress = buttonUpdate();
-        if (buttonPress == BUTTON_SHORT) {
-            displayCycleNextPage();
-            return;
-        }
-        if (buttonPress == BUTTON_LONG) {
-            displayToggleBacklight();
-            return;
-        }
+    // Button handling (skip in AP service mode)
+    if (displayState.theme != Theme::SERVICE_AP) {
+        const ButtonPress bp = buttonUpdate();
+        if (bp == BUTTON_SHORT) { displayCycleNextPage(); return; }
+        if (bp == BUTTON_LONG)  { displayToggleBacklight(); return; }
     }
 
     const unsigned long now = millis();
 
     ArduinoOTA.handle();
-    webserverHandle();
+    webserverHandle(); // Cleans up dead WebSocket clients
 
-    // Updates
     if (now - lastDisplayUpdate > DISPLAY_UPDATE_INTERVAL) {
         lastDisplayUpdate = now;
-        displayUpdate(0, false);
+        displayUpdate(Theme::NONE, false);
 
         if (lastWeatherUpdate == 0 || now - lastWeatherUpdate > WEATHER_UPDATE_INTERVAL) {
-            if (weatherUpdateTask()) {
-                lastWeatherUpdate = now;
-            }
+            if (weatherUpdateTask()) lastWeatherUpdate = now;
         }
+
+        wsBroadcastState();
     }
 
     yield();
