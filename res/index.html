@@ -946,13 +946,13 @@
           <button class="btn btn-secondary btn-sm"
             onclick="fetch('/test').then(()=>toast('Display test started','success'))">🎨 Display Test</button>
           <button class="btn btn-secondary btn-sm"
-            onclick="fetch('/log').then(r=>r.text()).then(t=>{document.getElementById('log-pre').textContent=t;document.getElementById('log-box').style.display='block'})">📋
+            onclick="fetch('/log').then(r=>r.text()).then(t=>{document.getElementById('log-pre').textContent=t;document.getElementById('log-box').style.display='grid'})">📋
             View Logs</button>
           <button class="btn btn-danger btn-sm" onclick="confirmFactoryReset()">🗑️ Factory Reset</button>
         </div>
-        <pre id="log-pre"
-          style="display:none;font-size:11px;background:var(--surface2);padding:12px;border-radius:var(--radius-sm);overflow-x:auto;color:var(--muted);max-height:200px;overflow-y:auto"></pre>
-        <div id="log-box" style="display:none">
+        <div id="log-box" style="display:none;gap:14px">
+          <pre id="log-pre"
+            style="font-size:11px;background:var(--surface2);padding:12px;border-radius:var(--radius-sm);overflow-x:auto;color:var(--muted);max-height:200px;overflow-y:auto"></pre>
           <button class="btn btn-secondary btn-sm"
             onclick="document.getElementById('log-box').style.display='none'">Close log</button>
         </div>
