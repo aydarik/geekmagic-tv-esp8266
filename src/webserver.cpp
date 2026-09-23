@@ -541,28 +541,10 @@ static void handleStatic(AsyncWebServerRequest *request) {
 }
 
 // ---------------------------------------------------------------------------
-// WebSocket event handler
-// ---------------------------------------------------------------------------
-
-static void onWsEvent(AsyncWebSocket *srv, AsyncWebSocketClient *client,
-                      AwsEventType type, void *arg, uint8_t *data, size_t len) {
-    (void)srv; (void)arg; (void)data; (void)len;
-    if (type == WS_EVT_CONNECT) {
-        JsonDocument doc;
-        doc["theme"] = static_cast<int8_t>(displayState.theme);
-        doc["brt"]   = appSettings.brightness;
-        char buf[128];
-        const size_t len = serializeJson(doc, buf, sizeof(buf));
-        client->text(buf, len);
-    }
-}
-
-// ---------------------------------------------------------------------------
 // webserverInit
 // ---------------------------------------------------------------------------
 
 void webserverInit() {
-    ws.onEvent(onWsEvent);
     server.addHandler(&ws);
 
     // Root page (gzip compressed)
