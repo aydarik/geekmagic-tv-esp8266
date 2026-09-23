@@ -8,6 +8,7 @@
 #include "main.h"
 #include "logger.h"
 #include "utils.h"
+#include "ota.h"
 #include <LittleFS.h>
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
@@ -498,35 +499,6 @@ static void handleFileUpload(AsyncWebServerRequest *request, const String &filen
 }
 
 // ---------------------------------------------------------------------------
-// OTA update handlers
-// ---------------------------------------------------------------------------
-
-static void handleOTAUpload(AsyncWebServerRequest *request, const String &filename,
-                              size_t index, uint8_t *data, size_t len, bool final) {
-    if (index == 0) {
-        showMessage(F("OTA Update..."));
-        const uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
-        if (!Update.begin(maxSketchSpace)) Update.printError(Serial);
-    }
-    if (len > 0 && Update.write(data, len) != len) {
-        Update.printError(Serial);
-    }
-    if (final) {
-        if (!Update.end(true)) {
-            Update.printError(Serial);
-            showMessage(F("OTA Failed!"));
-        }
-        const bool ok = !Update.hasError();
-        request->send(200, "text/plain", ok ? F("OK - Rebooting...") : F("FAIL"));
-        if (ok) {
-            showMessage(F("Success!\nRebooting..."));
-            delay(2000);
-            ESP.restart();
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Serve static files from LittleFS (images etc.)
 // ---------------------------------------------------------------------------
 
@@ -594,9 +566,7 @@ void webserverInit() {
         handleFileUpload);
 
     // OTA upload
-    server.on("/update", HTTP_POST,
-        [](AsyncWebServerRequest *request) { /* handled in upload callback */ },
-        handleOTAUpload);
+    server.on("/update", HTTP_POST, otaHandleWebRequest, otaHandleWebUpload);
 
     // Fallback: serve files from LittleFS
     server.onNotFound(handleStatic);

@@ -1,11 +1,11 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
-#include <ArduinoOTA.h>
 #include <LittleFS.h>
 #include "main.h"
 #include "config.h"
 #include "display.h"
 #include "webserver.h"
+#include "ota.h"
 #include "settings.h"
 #include "logger.h"
 #include "button.h"
@@ -90,46 +90,6 @@ static void setupWiFi() {
         }
     }
     Serial.println(F("WiFi setup completed"));
-}
-
-// ---------------------------------------------------------------------------
-// OTA setup
-// ---------------------------------------------------------------------------
-
-static void setupOTA() {
-    ArduinoOTA.setHostname(OTA_HOSTNAME);
-    ArduinoOTA.setPassword(OTA_PASSWORD);
-
-    ArduinoOTA.onStart([] {
-        const String type = ArduinoOTA.getCommand() == U_FLASH ? F("firmware") : F("filesystem");
-        Serial.println("OTA Start: " + type);
-        showMessage(F("OTA Update..."), 0, -15);
-        tft.drawRect(20, 120, 200, 20, TFT_WHITE);
-        tft.fillRect(22, 122, 196, 16, TFT_BLACK);
-    });
-
-    ArduinoOTA.onEnd([] {
-        Serial.println(F("OTA Complete"));
-        showMessage(F("Success!\nRebooting..."));
-        delay(2000);
-    });
-
-    ArduinoOTA.onProgress([](const unsigned int progress, const unsigned int total) {
-        const int percent = progress * 100 / total;
-        static int lastPercent = -1;
-        if (percent != lastPercent) {
-            tft.fillRect(22, 122, percent * 196 / 100, 16, TFT_BLUE);
-            lastPercent = percent;
-        }
-    });
-
-    ArduinoOTA.onError([](const ota_error_t error) {
-        Serial.printf("OTA Error[%u]\n", error);
-        showMessage(F("OTA Failed!"));
-    });
-
-    ArduinoOTA.begin();
-    Serial.println(F("OTA ready"));
 }
 
 // ---------------------------------------------------------------------------
@@ -220,7 +180,7 @@ void setup() {
 
     setupWiFi();
     webserverInit();
-    setupOTA();
+    otaInit();
 
     strncpy(displayState.ipInfo, WiFi.localIP().toString().c_str(), sizeof(displayState.ipInfo));
     displayState.ipInfo[sizeof(displayState.ipInfo) - 1] = '\0';
@@ -245,8 +205,8 @@ void loop() {
         Serial.println(F("Power cycle counter cleared after successful boot"));
     }
 
-    // Button handling (skip in AP service mode)
-    if (displayState.theme != Theme::SERVICE_AP) {
+    // Button handling (skip in AP service mode or during OTA)
+    if (displayState.theme != Theme::SERVICE_AP && !otaIsInProgress()) {
         const ButtonPress bp = buttonUpdate();
         if (bp == BUTTON_SHORT) { displayCycleNextPage(); return; }
         if (bp == BUTTON_LONG)  { displayToggleBacklight(); return; }
@@ -254,8 +214,13 @@ void loop() {
 
     const unsigned long now = millis();
 
-    ArduinoOTA.handle();
+    otaHandle();
     webserverHandle(); // Cleans up dead WebSocket clients
+
+    if (otaIsInProgress()) {
+        yield();
+        return;
+    }
 
     if (displayProcessPending()) {
         lastDisplayUpdate = millis();
