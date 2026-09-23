@@ -1,40 +1,48 @@
 #include "settings.h"
 #include "logger.h"
-#include <LittleFS.h>
-#include <ArduinoJson.h>
+#include <EEPROM.h>
 
 // ---------------------------------------------------------------------------
-// Internal helpers
+// EEPROM layout
+//   [0x0000] uint16_t  SETTINGS_MAGIC
+//   [0x0002] Settings  (struct)
+//   [POWER_CYCLE_COUNTER_ADDR] PowerCycleCounter (struct)
 // ---------------------------------------------------------------------------
 
-static bool loadJson(const char *path, JsonDocument &doc) {
-    if (!LittleFS.exists(path)) return false;
-    File f = LittleFS.open(path, "r");
-    if (!f) return false;
-    const DeserializationError err = deserializeJson(doc, f);
-    f.close();
-    return err == DeserializationError::Ok;
-}
-
-static bool saveJson(const char *path, const JsonDocument &doc) {
-    File f = LittleFS.open(path, "w");
-    if (!f) return false;
-    serializeJson(doc, f);
-    f.close();
-    return true;
-}
+#define EEPROM_SIZE               512
+#define SETTINGS_MAGIC            0xCAFE
+#define SETTINGS_ADDR             0
+#define POWER_CYCLE_COUNTER_MAGIC 0x5C01   // "Power Cycle"
+#define POWER_CYCLE_COUNTER_ADDR  (SETTINGS_ADDR + 2 + sizeof(Settings))
 
 // ---------------------------------------------------------------------------
 // Init
 // ---------------------------------------------------------------------------
 
 void settingsInit() {
-    // LittleFS must already be mounted by the time this is called (main.cpp)
+    EEPROM.begin(EEPROM_SIZE);
 }
 
 // ---------------------------------------------------------------------------
-// Settings (non-sensitive) — /config.json
+// Settings — EEPROM
 // ---------------------------------------------------------------------------
+
+static bool settingsValidate(Settings &s) {
+    if (s.version != FIRMWARE_VERSION) return false;
+
+    bool needFix = false;
+    if (s.brightness < 0 || s.brightness > 100) {
+        s.brightness = DEFAULT_BRIGHTNESS;
+        needFix = true;
+    }
+    const int themeId = static_cast<int>(s.defaultTheme);
+    if (themeId < 1 || themeId > THEME_COUNT) {
+        s.defaultTheme = DEFAULT_THEME;
+        needFix = true;
+    }
+    if (needFix) settingsSave(s);
+    return true;
+}
 
 void settingsReset(Settings &s) {
     logPrint("Resetting settings to defaults");
@@ -46,96 +54,69 @@ void settingsReset(Settings &s) {
     s.showIP      = true;
     s.showSec     = true;
     s.showWeather = false;
+    s.owmApiKey[0]   = '\0';
+    s.owmLocation[0] = '\0';
     settingsSave(s);
 }
 
 void settingsLoad(Settings &s) {
-    JsonDocument doc;
-    if (loadJson(SETTINGS_PATH, doc) && doc["version"].as<int>() == FIRMWARE_VERSION) {
-        s.version      = doc["version"]  | FIRMWARE_VERSION;
-        s.brightness   = doc["brt"]      | DEFAULT_BRIGHTNESS;
-        s.defaultTheme = static_cast<Theme>(doc["theme"].as<int8_t>());
-        const char *tz = doc["tz"] | DEFAULT_TIMEZONE;
-        strncpy(s.tz, tz, sizeof(s.tz));
-        s.tz[sizeof(s.tz) - 1] = '\0';
-        s.showIP      = doc["showIP"]      | true;
-        s.showSec     = doc["showSec"]     | true;
-        s.showWeather = doc["showWeather"] | false;
-        logPrint("Settings loaded from /config.json");
+    uint16_t magic;
+    EEPROM.get(SETTINGS_ADDR, magic);
+    if (magic == SETTINGS_MAGIC) {
+        EEPROM.get(SETTINGS_ADDR + 2, s);
+        if (!settingsValidate(s)) settingsReset(s);
+        else logPrint("Settings loaded from EEPROM");
     } else {
         settingsReset(s);
     }
 }
 
 void settingsSave(const Settings &s) {
-    JsonDocument doc;
-    doc["version"]     = s.version;
-    doc["brt"]         = s.brightness;
-    doc["theme"]       = static_cast<int8_t>(s.defaultTheme);
-    doc["tz"]          = s.tz;
-    doc["showIP"]      = s.showIP;
-    doc["showSec"]     = s.showSec;
-    doc["showWeather"] = s.showWeather;
-    saveJson(SETTINGS_PATH, doc);
+    constexpr uint16_t magic = SETTINGS_MAGIC;
+    EEPROM.put(SETTINGS_ADDR, magic);
+    EEPROM.put(SETTINGS_ADDR + 2, s);
+    EEPROM.commit();
 }
 
 // ---------------------------------------------------------------------------
-// Secrets (sensitive) — /secrets.json
-// ---------------------------------------------------------------------------
-
-void secretsReset(Secrets &sec) {
-    sec.owmApiKey[0]   = '\0';
-    sec.owmLocation[0] = '\0';
-    secretsSave(sec);
-}
-
-void secretsLoad(Secrets &sec) {
-    JsonDocument doc;
-    if (loadJson(SECRETS_PATH, doc)) {
-        const char *key = doc["owmKey"] | "";
-        const char *loc = doc["owmLoc"] | "";
-        strncpy(sec.owmApiKey,   key, sizeof(sec.owmApiKey));
-        strncpy(sec.owmLocation, loc, sizeof(sec.owmLocation));
-        sec.owmApiKey[sizeof(sec.owmApiKey) - 1]     = '\0';
-        sec.owmLocation[sizeof(sec.owmLocation) - 1] = '\0';
-        logPrint("Secrets loaded from /secrets.json");
-    } else {
-        secretsReset(sec);
-    }
-}
-
-void secretsSave(const Secrets &sec) {
-    JsonDocument doc;
-    doc["owmKey"] = sec.owmApiKey;
-    doc["owmLoc"] = sec.owmLocation;
-    saveJson(SECRETS_PATH, doc);
-}
-
-// ---------------------------------------------------------------------------
-// Power cycle counter — /boot_count.json
+// Power cycle counter — EEPROM
 // ---------------------------------------------------------------------------
 
 uint8_t powerCycleCounterGet() {
-    JsonDocument doc;
-    if (loadJson(BOOT_COUNT_PATH, doc)) {
-        return doc["count"] | 0;
+    uint16_t magic;
+    EEPROM.get(POWER_CYCLE_COUNTER_ADDR, magic);
+    if (magic == POWER_CYCLE_COUNTER_MAGIC) {
+        PowerCycleCounter counter;
+        EEPROM.get(POWER_CYCLE_COUNTER_ADDR, counter);
+        return counter.cycleCount;
     }
     return 0;
 }
 
 void powerCycleCounterIncrement() {
-    const uint8_t count = powerCycleCounterGet() + 1;
-    JsonDocument doc;
-    doc["count"] = count;
-    saveJson(BOOT_COUNT_PATH, doc);
+    PowerCycleCounter counter;
+    uint16_t magic;
+    EEPROM.get(POWER_CYCLE_COUNTER_ADDR, magic);
+    if (magic == POWER_CYCLE_COUNTER_MAGIC) {
+        EEPROM.get(POWER_CYCLE_COUNTER_ADDR, counter);
+        counter.cycleCount++;
+    } else {
+        counter.magic      = POWER_CYCLE_COUNTER_MAGIC;
+        counter.cycleCount = 1;
+    }
+    EEPROM.put(POWER_CYCLE_COUNTER_ADDR, counter);
+    EEPROM.commit();
 }
 
 void powerCycleCounterReset() {
-    JsonDocument doc;
-    doc["count"] = 0;
-    saveJson(BOOT_COUNT_PATH, doc);
+    PowerCycleCounter counter;
+    counter.magic      = POWER_CYCLE_COUNTER_MAGIC;
+    counter.cycleCount = 0;
+    EEPROM.put(POWER_CYCLE_COUNTER_ADDR, counter);
+    EEPROM.commit();
 }
 
 bool powerCycleCounterCheckReset() {
     return powerCycleCounterGet() >= POWER_CYCLE_THRESHOLD;
 }
+

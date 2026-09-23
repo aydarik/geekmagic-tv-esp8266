@@ -11,7 +11,6 @@
 #include "generated/NotoSans_Regular24.h"
 
 extern Settings appSettings;
-extern Secrets  appSecrets;
 
 static int httpCode = 0;
 static float temp = 0.0f;
@@ -64,12 +63,12 @@ const IconMap *getIcon(const char *key) {
 
 bool weatherUpdateTask() {
     if (!appSettings.showWeather || appSettings.brightness == 0 || displayState.theme != Theme::CLOCK) return false;
-    if (appSecrets.owmApiKey[0] == '\0' || appSecrets.owmLocation[0] == '\0') return false;
+    if (appSettings.owmApiKey[0] == '\0' || appSettings.owmLocation[0] == '\0') return false;
 
     char url[256];
     snprintf(url, sizeof(url),
              "http://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s&units=metric",
-             appSecrets.owmLocation, appSecrets.owmApiKey);
+             appSettings.owmLocation, appSettings.owmApiKey);
 
     WiFiClient client;
     HTTPClient http;

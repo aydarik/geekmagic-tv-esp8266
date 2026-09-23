@@ -1,857 +1,1294 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SmallTV • Control Panel</title>
-<link rel="icon" type="image/png" sizes="16x16" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAALGPC/xhBQAAAAFzUkdCAdnJLH8AAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAs9JREFUOE9tkUtMnFUYhp9z5v9nBpgbDLVVpJraIqEp6EbbGEkrrdG91cSu1EStYVm3LnRhjUnTjS4MLo3pRncmBomJ1KiLZkK1QkqFjgPaDnNh7pd/5n9dcBGJ7+bbvE++5zsH9kXSqKSPJKUkdSX5khYkXZV0fH/f7AFDwAelUundRnUD4zfwpd2asQGC4RiVauurDy9/fGXm85lb3U530wB8/eWVxx5/pOeXSmE5mYgU6elxMDaEE4rR6XSQ7wGiJxQgHipB6y8Wf78/P/HKjUkH4MSJiU8DmTeSNxfDIA/XgUTM0htqYmkjDA890KZhhwj6S3SaBq/52hjcwJE0mk3/+PwPtxyufj++9ypARP0yR5Mek+OrnBy7TbtjAeH0HkhKetoCr3v1PB317YG3ZrNeYyxZ4f3zLoloFIhitl5kZ8ObDnDONRXS90KcfvYUQ8PDLM5doz9YJR6qsVAe4dK1Am+9WKTr+choRw7grAXGvUqGWivEoQcPUSmXeeGZEU4e9Thy0JIrtzCDIwRMG/nVbYMdnsMWwDF5FtIuf6Yz/L2+xm9LK1QaPtYNcWdllfn56wwkhPyDO+q7RzjAr+3qzxOrxT5qCzdJ311Bvr9bHEz2k8sXCbtZamUH3C1022DNFgqFn7Bxjh0Y4NHeQU6dfYnhh4eYmnqORDzGqxcucOb0JOFwFJ+BvTDAnDM7Ozs3NVx+2+ne57vUbUiBDQTIrK0DkF5doVwsEu9rkm0Lev/z0TNOPfdtKTFa54v3UoBFWFrtKKXKJhJ4/h80nrRgXKCJMHS6wms2Nowx1518ZrmxeiejZCxsDE2coCEQKNHfZ3CDwtgcEmRzEWKRGIVClWr/5Vxq/d452LZxXce9ePGdJ6anpy/FIuGXG8UsIIxXo76ZxVrIb2SJhF0So2e+OXzk2HljTJ3/i6Tjkj6RtKR/syzpM0lP7e//AxhlWAssfNCaAAAAAElFTkSuQmCC"/>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<style>
-  :root {
-    color-scheme: dark;
-    --bg:        #0d0f14;
-    --surface:   rgba(255,255,255,0.05);
-    --surface2:  rgba(255,255,255,0.09);
-    --border:    rgba(255,255,255,0.10);
-    --accent:    #6c8cff;
-    --accent2:   #a78bfa;
-    --success:   #34d399;
-    --warn:      #fbbf24;
-    --danger:    #f87171;
-    --text:      #e2e8f0;
-    --muted:     #64748b;
-    --radius:    14px;
-    --radius-sm: 8px;
-    --shadow:    0 8px 32px rgba(0,0,0,.45);
-    --glow:      0 0 24px rgba(108,140,255,0.18);
-  }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-  body {
-    font-family: 'Inter', system-ui, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    padding: 0 0 60px;
-  }
-
-  /* ── Header ── */
-  header {
-    position: sticky; top: 0; z-index: 100;
-    backdrop-filter: blur(20px);
-    background: rgba(13,15,20,0.85);
-    border-bottom: 1px solid var(--border);
-    padding: 14px 24px;
-    display: flex; align-items: center; gap: 14px;
-    min-height: 60px;
-  }
-  header h1 { font-size: 17px; font-weight: 600; letter-spacing: -.3px; }
-  header h1 span { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 8px; }
-  .status-dot {
-    margin-left: auto;
-    display: flex; align-items: center; gap: 7px;
-    font-size: 12px; color: var(--muted);
-  }
-  .status-dot::before {
-    content: ''; width: 8px; height: 8px;
-    border-radius: 50%; background: var(--muted);
-    transition: background .3s;
-  }
-  .status-dot.connected::before { background: var(--success); box-shadow: 0 0 8px var(--success); }
-  .status-dot.connecting::before { background: var(--warn); animation: pulse 1s infinite; }
-
-  @keyframes pulse {
-    0%,100% { opacity: 1; } 50% { opacity: .35; }
-  }
-
-  /* ── Layout ── */
-  main { max-width: 820px; margin: 0 auto; padding: 28px 20px; display: grid; gap: 20px; }
-
-  /* ── Cards ── */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-    backdrop-filter: blur(12px);
-    box-shadow: var(--shadow);
-    transition: border-color .2s;
-  }
-  .card:hover { border-color: rgba(255,255,255,.16); }
-  .card-header {
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; gap: 10px;
-  }
-  .card-header .icon {
-    width: 32px; height: 32px;
-    background: var(--surface2);
-    border-radius: var(--radius-sm);
-    display: grid; place-items: center;
-    font-size: 16px;
-  }
-  .card-header h2 { font-size: 14px; font-weight: 600; }
-  .card-body { padding: 18px 20px; display: grid; gap: 14px; }
-
-  /* ── Live readout bar ── */
-  .live-bar {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px 20px;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 12px;
-  }
-  .stat { display: flex; flex-direction: column; gap: 3px; }
-  .stat label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
-  .stat value { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .stat value.accent { color: var(--accent); }
-
-  /* ── Form elements ── */
-  label.field-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; display: block; }
-  input[type=text], input[type=password], input[type=number], input[type=range], input[type=datetime-local], select, textarea {
-    width: 100%; padding: 9px 12px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    color: var(--text); font-family: inherit; font-size: 14px;
-    outline: none; transition: border-color .2s, box-shadow .2s;
-  }
-  input:focus, select:focus, textarea:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(108,140,255,.18);
-  }
-  select {
-    appearance: none;
-    background-color: #171a22;
-    cursor: pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    padding-right: 32px;
-  }
-  select option, select optgroup {
-    background-color: #141720;
-    color: var(--text);
-  }
-  textarea { resize: vertical; min-height: 72px; }
-
-  /* ── Buttons ── */
-  .btn {
-    padding: 9px 18px;
-    border-radius: var(--radius-sm);
-    font-family: inherit; font-size: 13px; font-weight: 500;
-    cursor: pointer; border: none; outline: none;
-    transition: all .15s; user-select: none;
-  }
-  .btn-primary {
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    color: #fff;
-    box-shadow: 0 2px 12px rgba(108,140,255,.35);
-  }
-  .btn-primary:hover { filter: brightness(1.12); transform: translateY(-1px); }
-  .btn-secondary {
-    background: var(--surface2); color: var(--text);
-    border: 1px solid var(--border);
-  }
-  .btn-secondary:hover { background: rgba(255,255,255,.12); }
-  .btn-danger { background: rgba(248,113,113,.15); color: var(--danger); border: 1px solid rgba(248,113,113,.3); }
-  .btn-danger:hover { background: rgba(248,113,113,.25); }
-  .btn:active { transform: scale(.97); }
-  .btn-sm { padding: 6px 13px; font-size: 12px; }
-
-  /* ── Row helpers ── */
-  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .row-3 { grid-template-columns: 1fr 1fr 1fr; }
-  @media (max-width: 520px) { .row, .row-3 { grid-template-columns: 1fr; } }
-
-  /* ── Toggle switch ── */
-  .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  .toggle-row span { font-size: 13px; }
-  .switch { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
-  .switch input { opacity: 0; width: 0; height: 0; }
-  .switch .slider {
-    position: absolute; inset: 0;
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 99px; cursor: pointer;
-    transition: background .2s;
-  }
-  .switch .slider::before {
-    content: ''; position: absolute;
-    width: 16px; height: 16px; border-radius: 50%;
-    background: var(--muted); top: 3px; left: 3px;
-    transition: transform .2s, background .2s;
-  }
-  .switch input:checked + .slider { background: rgba(108,140,255,.3); border-color: var(--accent); }
-  .switch input:checked + .slider::before { transform: translateX(18px); background: var(--accent); }
-
-  /* ── Brightness slider ── */
-  .range-wrap { display: flex; align-items: center; gap: 12px; }
-  .range-wrap input[type=range] {
-    flex: 1; height: 6px;
-    background: var(--surface2); border-radius: 99px;
-    cursor: pointer; appearance: none;
-    border: none; padding: 0;
-  }
-  .range-wrap input[type=range]::-webkit-slider-thumb {
-    appearance: none; width: 18px; height: 18px;
-    border-radius: 50%; background: var(--accent);
-    box-shadow: 0 0 8px rgba(108,140,255,.5); cursor: pointer;
-  }
-  .range-val { font-size: 13px; font-weight: 600; width: 36px; text-align: right; color: var(--accent); }
-
-  /* ── Theme grid ── */
-  .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
-  .theme-btn {
-    padding: 14px 8px;
-    border-radius: var(--radius-sm);
-    border: 1.5px solid var(--border);
-    background: var(--surface2);
-    cursor: pointer; text-align: center;
-    font-size: 13px; font-weight: 500;
-    display: flex; flex-direction: column; gap: 6px; align-items: center;
-    transition: all .18s; color: var(--text);
-  }
-  .theme-btn span.icon { font-size: 22px; }
-  .theme-btn:hover { border-color: var(--accent); background: rgba(108,140,255,.1); }
-  .theme-btn.active { border-color: var(--accent); background: rgba(108,140,255,.15); color: var(--accent); }
-
-  /* ── WiFi list ── */
-  .wifi-list { display: grid; gap: 6px; }
-  .wifi-item {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 14px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-    background: var(--surface2);
-    cursor: pointer; transition: border-color .15s, background .15s;
-    gap: 10px;
-  }
-  .wifi-item:hover { border-color: var(--accent); background: rgba(108,140,255,.1); }
-  .wifi-ssid { font-size: 13px; font-weight: 500; }
-  .wifi-rssi { font-size: 11px; color: var(--muted); }
-
-  /* ── File list ── */
-  #file-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  #file-table th { text-align: left; color: var(--muted); font-weight: 500; padding: 0 0 10px; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
-  #file-table td { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.04); vertical-align: middle; }
-  #file-table a { color: var(--accent); text-decoration: none; font-size: 12px; word-break: break-all; }
-  #file-table a:hover { text-decoration: underline; }
-  .file-actions { display: flex; gap: 6px; }
-
-  /* ── Upload zone ── */
-  .dropzone {
-    border: 2px dashed var(--border);
-    border-radius: var(--radius);
-    padding: 28px;
-    text-align: center; color: var(--muted); font-size: 13px;
-    cursor: pointer; transition: all .18s;
-  }
-  .dropzone:hover, .dropzone.drag-over { border-color: var(--accent); color: var(--accent); background: rgba(108,140,255,.06); }
-  .dropzone .dz-icon { font-size: 28px; margin-bottom: 8px; }
-
-  /* ── Update banner ── */
-  #newVersion {
-    display: none;
-    position: sticky; top: 60px; z-index: 99;
-    background: linear-gradient(90deg, rgba(251,191,36,.15), rgba(251,191,36,.08));
-    border-bottom: 1px solid rgba(251,191,36,.35);
-    padding: 10px 24px;
-    font-size: 13px; color: var(--warn);
-    text-align: center;
-  }
-  #newVersion a {
-    color: var(--warn); font-weight: 600;
-    text-decoration: underline; margin-left: 6px;
-  }
-
-  /* ── Toast notifications ── */
-  #toast-container { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 10px; z-index: 9999; }
-  .toast {
-    padding: 12px 18px;
-    border-radius: var(--radius-sm);
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    backdrop-filter: blur(16px);
-    font-size: 13px;
-    box-shadow: var(--shadow);
-    animation: slide-in .25s ease;
-    max-width: 280px;
-  }
-  .toast.success { border-color: var(--success); color: var(--success); }
-  .toast.error   { border-color: var(--danger);  color: var(--danger); }
-  @keyframes slide-in { from { transform: translateX(30px); opacity: 0; } to { transform: none; opacity: 1; } }
-
-  /* ── Progress bar ── */
-  .progress-wrap { display: none; height: 6px; background: var(--surface2); border-radius: 99px; overflow: hidden; }
-  .progress-bar  { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); width: 0; transition: width .2s; }
-  .progress-wrap.visible { display: block; }
-
-  /* ── Textarea char counter ── */
-  .field-wrap { position: relative; }
-  .char-counter { position: absolute; bottom: 8px; right: 10px; font-size: 10px; color: var(--muted); }
-</style>
-</head>
-<body>
-
-<header>
-  <h1>SmallTV <span id="header-ip">—</span></h1>
-  <div class="status-dot connecting" id="ws-status">connecting</div>
-</header>
-
-<div id="newVersion">🆕 A new firmware version is available!<a href="https://github.com/aydarik/geekmagic-tv-esp8266/releases/latest" target="_blank">Download</a></div>
-
-<main>
-
-  <!-- Live stats -->
-  <div class="live-bar">
-    <div class="stat"><label>Theme</label><value id="stat-theme" class="accent">—</value></div>
-    <div class="stat"><label>Free Heap</label><value id="stat-heap">—</value></div>
-    <div class="stat"><label>FS Free</label><value id="stat-fs">—</value></div>
-    <div class="stat"><label>Brightness</label><value id="stat-brt">—</value></div>
-    <div class="stat"><label>Version</label><value id="stat-ver">—</value></div>
-  </div>
-
-  <!-- Display themes -->
-  <div class="card">
-    <div class="card-header"><div class="icon">🖥️</div><h2>Display Theme</h2></div>
-    <div class="card-body">
-      <div class="theme-grid">
-        <button class="theme-btn" data-theme="1" onclick="setTheme(1)"><span class="icon">🕐</span>Clock</button>
-        <button class="theme-btn" data-theme="5" onclick="setTheme(5)"><span class="icon">🔢</span>Big Clock</button>
-        <button class="theme-btn" data-theme="2" onclick="setTheme(2)"><span class="icon">📨</span>Message</button>
-        <button class="theme-btn" data-theme="4" onclick="setTheme(4)"><span class="icon">⏳</span>Countdown</button>
-        <button class="theme-btn" data-theme="3" onclick="setTheme(3)"><span class="icon">🖼️</span>Image</button>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <input type="checkbox" id="chk-default" style="width:auto">
-        <label for="chk-default" style="font-size:13px;color:var(--muted)">Set as default theme</label>
-      </div>
-    </div>
-  </div>
-
-  <!-- Brightness -->
-  <div class="card">
-    <div class="card-header"><div class="icon">💡</div><h2>Brightness</h2></div>
-    <div class="card-body">
-      <div class="range-wrap">
-        <input type="range" id="brt-slider" min="0" max="100" value="50" oninput="onBrtInput(this.value)">
-        <span class="range-val" id="brt-val">50</span>
-      </div>
-      <button class="btn btn-primary btn-sm" onclick="saveBrightness()">Apply</button>
-    </div>
-  </div>
-
-  <!-- Clock toggles -->
-  <div class="card">
-    <div class="card-header"><div class="icon">⚙️</div><h2>Clock Options</h2></div>
-    <div class="card-body">
-      <div class="toggle-row">
-        <span>Show IP address</span>
-        <label class="switch"><input type="checkbox" id="chk-ip" onchange="set('ip', this.checked)"><span class="slider"></span></label>
-      </div>
-      <div class="toggle-row">
-        <span>Show seconds</span>
-        <label class="switch"><input type="checkbox" id="chk-sec" onchange="set('sec', this.checked)"><span class="slider"></span></label>
-      </div>
-      <div class="toggle-row">
-        <span>Show weather</span>
-        <label class="switch"><input type="checkbox" id="chk-weather" onchange="set('weather', this.checked)"><span class="slider"></span></label>
-      </div>
-    </div>
-  </div>
-
-  <!-- Notification / Message -->
-  <div class="card">
-    <div class="card-header"><div class="icon">📨</div><h2>Send Notification</h2></div>
-    <div class="card-body">
-      <div>
-        <label class="field-label">Subject (optional)</label>
-        <input type="text" id="msg-sbj" placeholder="e.g. Doorbell">
-      </div>
-      <div class="field-wrap">
-        <label class="field-label">Message</label>
-        <textarea id="msg-body" placeholder="Your message…" maxlength="255" oninput="updateCounter(this,'msg-counter')"></textarea>
-        <span class="char-counter" id="msg-counter">0/255</span>
-      </div>
-      <div class="row">
-        <div>
-          <label class="field-label">Style</label>
-          <select id="msg-style">
-            <option value="">Default (left)</option>
-            <option value="center">Centered</option>
-            <option value="big_num">Big Number / Gauge</option>
-          </select>
-        </div>
-        <div>
-          <label class="field-label">Timeout (seconds, 0 = sticky)</label>
-          <input type="number" id="msg-timeout" value="30" min="0">
-        </div>
-      </div>
-      <button class="btn btn-primary" onclick="sendMessage()">Send</button>
-    </div>
-  </div>
-
-  <!-- Sticky note -->
-  <div class="card">
-    <div class="card-header"><div class="icon">📌</div><h2>Sticky Note (Clock Screen)</h2></div>
-    <div class="card-body">
-      <div class="field-wrap">
-        <label class="field-label">Note text (newlines = multiple lines, rotated)</label>
-        <textarea id="note-body" placeholder="Line 1&#10;Line 2&#10;Line 3" maxlength="127" oninput="updateCounter(this,'note-counter')"></textarea>
-        <span class="char-counter" id="note-counter">0/127</span>
-      </div>
-      <div class="row">
-        <div>
-          <label class="field-label">Rotations per minute (0 = fixed)</label>
-          <input type="number" id="note-rpm" value="6" min="0" max="60">
-        </div>
-        <div>
-          <label class="field-label">Timeout (seconds, 0 = sticky)</label>
-          <input type="number" id="note-timeout" value="3600" min="0">
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-primary" onclick="sendNote()">Set Note</button>
-        <button class="btn btn-secondary" onclick="clearNote()">Clear</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Countdown -->
-  <div class="card">
-    <div class="card-header"><div class="icon">⏳</div><h2>Countdown</h2></div>
-    <div class="card-body">
-      <div class="row">
-        <div>
-          <label class="field-label">Subject</label>
-          <input type="text" id="cnt-sbj" placeholder="e.g. Meeting">
-        </div>
-        <div>
-          <label class="field-label">Target date &amp; time</label>
-          <input type="datetime-local" id="cnt-dt" style="color-scheme:dark">
-        </div>
-      </div>
-      <button class="btn btn-primary" onclick="sendCountdown()">Start Countdown</button>
-    </div>
-  </div>
-
-  <!-- Settings -->
-  <div class="card">
-    <div class="card-header"><div class="icon">🌍</div><h2>Settings</h2></div>
-    <div class="card-body">
-      <div>
-        <label class="field-label">Timezone (POSIX TZ string)</label>
-        <select id="tz-sel" onchange="document.getElementById('tz-custom').value=this.value">
-          <option value="">— select common zone —</option>
-          <option value="UTC0">UTC</option>
-          <option value="CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00">Europe/Amsterdam, Berlin, Paris (CET)</option>
-          <option value="GMT0BST-1,M3.5.0/1,M10.5.0">Europe/London (GMT/BST)</option>
-          <option value="EET-2EEST-3,M3.5.0/3,M10.5.0/4">Europe/Kyiv, Helsinki (EET)</option>
-          <option value="MSK-3">Europe/Moscow (MSK)</option>
-          <option value="EST5EDT,M3.2.0,M11.1.0">US Eastern (EST/EDT)</option>
-          <option value="CST6CDT,M3.2.0,M11.1.0">US Central (CST/CDT)</option>
-          <option value="MST7MDT,M3.2.0,M11.1.0">US Mountain (MST/MDT)</option>
-          <option value="PST8PDT,M3.2.0,M11.1.0">US Pacific (PST/PDT)</option>
-          <option value="JST-9">Japan (JST)</option>
-          <option value="AEST-10AEDT-11,M10.1.0,M4.1.0">Australia/Sydney (AEST)</option>
-        </select>
-        <input type="text" id="tz-custom" placeholder="or type POSIX string directly" style="margin-top:8px">
-      </div>
-      <button class="btn btn-primary btn-sm" onclick="saveTz()">Save Timezone</button>
-
-      <hr style="border-color:var(--border);margin:6px 0">
-
-      <div>
-        <label class="field-label">OpenWeatherMap Location</label>
-        <input type="text" id="owm-loc" placeholder="e.g. Amsterdam,NL">
-      </div>
-      <div>
-        <label class="field-label">OpenWeatherMap API Key</label>
-        <input type="password" id="owm-key" placeholder="••••••••••••••••" autocomplete="off">
-      </div>
-      <button class="btn btn-primary btn-sm" onclick="saveOWM()">Save Weather Settings</button>
-    </div>
-  </div>
-
-  <!-- WiFi -->
-  <div class="card">
-    <div class="card-header"><div class="icon">📶</div><h2>WiFi</h2></div>
-    <div class="card-body">
-      <button class="btn btn-secondary btn-sm" onclick="scanWifi()">🔍 Scan Networks</button>
-      <div class="wifi-list" id="wifi-list"></div>
-      <div id="wifi-connect-form" style="display:none;gap:10px;" class="grid">
-        <div>
-          <label class="field-label">SSID</label>
-          <input type="text" id="wifi-ssid" readonly>
-        </div>
-        <div>
-          <label class="field-label">Password</label>
-          <input type="password" id="wifi-pass" placeholder="WiFi password">
-        </div>
-        <button class="btn btn-primary" onclick="connectWifi()">Connect</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Image Manager -->
-  <div class="card">
-    <div class="card-header"><div class="icon">🖼️</div><h2>Image Manager</h2></div>
-    <div class="card-body">
-      <div class="dropzone" id="drop-zone" onclick="document.getElementById('file-input').click()">
-        <div class="dz-icon">📂</div>
-        <div>Click or drag JPEG files to upload</div>
-        <input type="file" id="file-input" accept=".jpg,.jpeg" style="display:none" multiple onchange="uploadFiles(this.files)">
-      </div>
-      <div class="progress-wrap" id="upload-progress"><div class="progress-bar" id="upload-bar"></div></div>
-      <table id="file-table">
-        <thead><tr><th>File</th><th>Size</th><th></th></tr></thead>
-        <tbody id="file-tbody"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- System -->
-  <div class="card">
-    <div class="card-header"><div class="icon">🔧</div><h2>System</h2></div>
-    <div class="card-body">
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <a href="/update" class="btn btn-secondary">⬆️ OTA Firmware Update</a>
-        <button class="btn btn-secondary btn-sm" onclick="fetch('/test').then(()=>toast('Display test started','success'))">🎨 Display Test</button>
-        <button class="btn btn-secondary btn-sm" onclick="fetch('/log').then(r=>r.text()).then(t=>{document.getElementById('log-pre').textContent=t;document.getElementById('log-box').style.display='block'})">📋 View Logs</button>
-        <button class="btn btn-danger btn-sm" onclick="confirmFactoryReset()">🗑️ Factory Reset</button>
-      </div>
-      <pre id="log-pre" style="display:none;font-size:11px;background:var(--surface2);padding:12px;border-radius:var(--radius-sm);overflow-x:auto;color:var(--muted);max-height:200px;overflow-y:auto"></pre>
-      <div id="log-box" style="display:none">
-        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('log-box').style.display='none'">Close log</button>
-      </div>
-    </div>
-  </div>
-
-</main>
-
-<div id="toast-container"></div>
-
-<script>
-// ── State ────────────────────────────────────────────────────────────────────
-let appState = {};
-let ws = null;
-let wsReconnectTimer = null;
-const THEME_NAMES = {1:'Clock',2:'Message',3:'Image',4:'Countdown',5:'Big Clock'};
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-const $ = id => document.getElementById(id);
-const enc = s => encodeURIComponent(s);
-
-function toast(msg, type = 'success', duration = 3000) {
-  const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  el.textContent = msg;
-  $('toast-container').appendChild(el);
-  setTimeout(() => el.remove(), duration);
-}
-
-function set(param, value) {
-  fetch(`/set?${param}=${enc(value)}`)
-    .then(r => r.ok ? toast(`${param} updated`) : toast(`Error updating ${param}`, 'error'));
-}
-
-function updateCounter(el, counterId) {
-  $(counterId).textContent = `${el.value.length}/${el.maxLength}`;
-}
-
-// ── WebSocket ─────────────────────────────────────────────────────────────────
-function connectWS() {
-  if (ws) { try { ws.close(); } catch(e) {} }
-  ws = new WebSocket(`ws://${location.host}/ws`);
-
-  ws.onopen = () => {
-    const s = $('ws-status');
-    s.className = 'status-dot connected';
-    s.textContent = 'live';
-    clearTimeout(wsReconnectTimer);
-    loadAll();
-  };
-
-  ws.onmessage = e => {
-    // console.log(e.data);
-    try {
-      const d = JSON.parse(e.data);
-      if (d.theme       !== undefined) setActivThemBtn(d.theme);
-      if (d.brt         !== undefined) { $('stat-brt').textContent  = d.brt+'%'; }
-      if (d.mem_heap    !== undefined) { $('stat-heap').textContent = Math.round(d.mem_heap/1024)+'KB'; }
-      if (d.space_free  !== undefined) { $('stat-fs').textContent   = Math.round(d.space_free/1024)+'KB'; }
-      // if (d.msg_text    !== undefined) { $('msg-body').value        = d.msg_text; }
-      // if (d.msg_sbj     !== undefined) { $('msg-sbj').value         = d.msg_text; }
-      // if (d.msg_style   !== undefined) { $('msg-style').value       = d.msg_text; }
-      // if (d.note_body   !== undefined) { $('note-body').value       = d.msg_text; }
-      // if (d.note_rpm    !== undefined) { $('note-rpm').value        = d.msg_text; }
-    } catch(_) {}
-  };
-
-  ws.onclose = ws.onerror = () => {
-    const s = $('ws-status');
-    s.className = 'status-dot connecting';
-    s.textContent = 'connecting';
-    wsReconnectTimer = setTimeout(connectWS, 3000);
-  };
-}
-
-// ── Data loading ──────────────────────────────────────────────────────────────
-async function loadAll() {
-  try {
-    const [app, mem, fs, ver, msg, note] = await Promise.all([
-      fetch('/app.json').then(r=>r.json()),
-      fetch('/memory.json').then(r=>r.json()),
-      fetch('/space.json').then(r=>r.json()),
-      fetch('/v.json').then(r=>r.json()),
-      fetch('/message.json').then(r=>r.json()),
-      fetch('/note.json').then(r=>r.json()),
-    ]);
-
-    appState = app;
-    $('header-ip').textContent  = app.ip || location.hostname;
-    $('stat-heap').textContent  = Math.round(mem.heap/1024)+'KB';
-    $('stat-fs').textContent    = Math.round(fs.free/1024)+'KB';
-    $('stat-brt').textContent   = app.brt !== undefined ? app.brt+'%' : '—';
-    $('stat-ver').textContent   = ver.v || '—';
-    $('stat-theme').textContent = THEME_NAMES[app.theme] || app.theme;
-
-    // Check for firmware update
-    if (ver.v) checkForUpdate(ver.v);
-    $('msg-body').value         = msg.msg || '';
-    $('msg-sbj').value          = msg.sbj || '';
-    $('msg-style').value        = msg.style || '';
-    $('note-body').value        = note.note || '';
-    $('note-rpm').value         = note.rpm || '';
-
-    // Brightness slider
-    if (app.brt !== undefined) {
-      $('brt-slider').value = app.brt;
-      $('brt-val').textContent = app.brt;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmallTV • Control Panel</title>
+  <link rel="icon" type="image/png" sizes="16x16"
+    href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAALGPC/xhBQAAAAFzUkdCAdnJLH8AAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAs9JREFUOE9tkUtMnFUYhp9z5v9nBpgbDLVVpJraIqEp6EbbGEkrrdG91cSu1EStYVm3LnRhjUnTjS4MLo3pRncmBomJ1KiLZkK1QkqFjgPaDnNh7pd/5n9dcBGJ7+bbvE++5zsH9kXSqKSPJKUkdSX5khYkXZV0fH/f7AFDwAelUundRnUD4zfwpd2asQGC4RiVauurDy9/fGXm85lb3U530wB8/eWVxx5/pOeXSmE5mYgU6elxMDaEE4rR6XSQ7wGiJxQgHipB6y8Wf78/P/HKjUkH4MSJiU8DmTeSNxfDIA/XgUTM0htqYmkjDA890KZhhwj6S3SaBq/52hjcwJE0mk3/+PwPtxyufj++9ypARP0yR5Mek+OrnBy7TbtjAeH0HkhKetoCr3v1PB317YG3ZrNeYyxZ4f3zLoloFIhitl5kZ8ObDnDONRXS90KcfvYUQ8PDLM5doz9YJR6qsVAe4dK1Am+9WKTr+choRw7grAXGvUqGWivEoQcPUSmXeeGZEU4e9Thy0JIrtzCDIwRMG/nVbYMdnsMWwDF5FtIuf6Yz/L2+xm9LK1QaPtYNcWdllfn56wwkhPyDO+q7RzjAr+3qzxOrxT5qCzdJ311Bvr9bHEz2k8sXCbtZamUH3C1022DNFgqFn7Bxjh0Y4NHeQU6dfYnhh4eYmnqORDzGqxcucOb0JOFwFJ+BvTDAnDM7Ozs3NVx+2+ne57vUbUiBDQTIrK0DkF5doVwsEu9rkm0Lev/z0TNOPfdtKTFa54v3UoBFWFrtKKXKJhJ4/h80nrRgXKCJMHS6wms2Nowx1518ZrmxeiejZCxsDE2coCEQKNHfZ3CDwtgcEmRzEWKRGIVClWr/5Vxq/d452LZxXce9ePGdJ6anpy/FIuGXG8UsIIxXo76ZxVrIb2SJhF0So2e+OXzk2HljTJ3/i6Tjkj6RtKR/syzpM0lP7e//AxhlWAssfNCaAAAAAElFTkSuQmCC" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0d0f14;
+      --surface: rgba(255, 255, 255, 0.05);
+      --surface2: rgba(255, 255, 255, 0.09);
+      --border: rgba(255, 255, 255, 0.10);
+      --accent: #6c8cff;
+      --accent2: #a78bfa;
+      --success: #34d399;
+      --warn: #fbbf24;
+      --danger: #f87171;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --radius: 14px;
+      --radius-sm: 8px;
+      --shadow: 0 8px 32px rgba(0, 0, 0, .45);
+      --glow: 0 0 24px rgba(108, 140, 255, 0.18);
     }
 
-    // Toggles
-    $('chk-ip').checked      = !!app.showIP;
-    $('chk-sec').checked     = !!app.showSec;
-    $('chk-weather').checked = !!app.showWeather;
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-    // TZ
-    if (app.tz) $('tz-custom').value = app.tz;
+    html {
+      scroll-behavior: smooth;
+    }
 
-    // OWM
-    if (app.owmLoc) $('owm-loc').value = app.owmLoc;
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0 0 60px;
+    }
 
-    // Active theme
-    setActivThemBtn(app.theme);
+    /* ── Header ── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(20px);
+      background: rgba(13, 15, 20, 0.85);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-height: 60px;
+    }
 
-    // Default theme checkbox
-    $('chk-default').checked = false;
+    header h1 {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -.3px;
+    }
 
-    // Load file list
-    loadFiles();
+    header h1 span {
+      color: var(--muted);
+      font-weight: 400;
+      font-size: 13px;
+      margin-left: 8px;
+    }
 
-  } catch(e) { toast('Failed to load device state', 'error'); }
-}
+    .status-dot {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      color: var(--muted);
+    }
 
-function setActivThemBtn(theme) {
-  document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', +b.dataset.theme === +theme));
-  $('stat-theme').textContent = THEME_NAMES[theme] || theme;
-}
+    .status-dot::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background .3s;
+    }
 
-// ── Actions ───────────────────────────────────────────────────────────────────
-function setTheme(id) {
-  const def = $('chk-default').checked;
-  fetch(`/set?theme=${id}${def?'&default=true':''}`)
-    .then(()=>{ setActivThemBtn(id); toast(`Theme: ${THEME_NAMES[id]}`); });
-}
+    .status-dot.connected::before {
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
 
-function onBrtInput(v) { $('brt-val').textContent = v; }
-function saveBrightness() { set('brt', $('brt-slider').value); }
+    .status-dot.connecting::before {
+      background: var(--warn);
+      animation: pulse 1s infinite;
+    }
 
-function saveTz() {
-  const tz = $('tz-custom').value.trim();
-  if (!tz) { toast('Please enter a timezone', 'error'); return; }
-  set('tz', tz);
-}
+    @keyframes pulse {
 
-function saveOWM() {
-  const loc = $('owm-loc').value.trim();
-  const key = $('owm-key').value.trim();
-  if (!loc || !key) { toast('Both location and API key are required', 'error'); return; }
-  fetch(`/set?owmLoc=${enc(loc)}&owmKey=${enc(key)}`)
-    .then(r => r.ok ? toast('Weather settings saved') : toast('Error saving weather settings', 'error'));
-}
+      0%,
+      100% {
+        opacity: 1;
+      }
 
-function sendMessage() {
-  const msg     = $('msg-body').value.trim();
-  const sbj     = $('msg-sbj').value.trim();
-  const style   = $('msg-style').value;
-  const timeout = $('msg-timeout').value || 0;
-  if (!msg) { toast('Message cannot be empty', 'error'); return; }
-  let url = `/set?msg=${enc(msg)}&timeout=${timeout}`;
-  if (sbj)   url += `&sbj=${enc(sbj)}`;
-  if (style) url += `&style=${enc(style)}`;
-  fetch(url).then(r => r.ok ? toast('Message sent!') : toast('Error sending message', 'error'));
-}
+      50% {
+        opacity: .35;
+      }
+    }
 
-function sendNote() {
-  const note    = $('note-body').value;
-  const rpm     = $('note-rpm').value || 0;
-  const timeout = $('note-timeout').value || 0;
-  fetch(`/set?note=${enc(note)}&rpm=${rpm}&timeout=${timeout}&force=true`)
-    .then(r => r.ok ? toast('Note set!') : toast('Error setting note', 'error'));
-}
-function clearNote() {
-  fetch('/set?note=&force=true').then(() => { $('note-body').value = ''; toast('Note cleared'); });
-}
+    /* ── Layout ── */
+    main {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 28px 20px;
+      display: grid;
+      gap: 20px;
+    }
 
-function sendCountdown() {
-  const sbj = $('cnt-sbj').value.trim();
-  const dt  = $('cnt-dt').value;
-  if (!dt) { toast('Please select a date and time', 'error'); return; }
-  const iso = dt.replace('T', 'T'); // already ISO-ish
-  let url = `/set?cnt=${enc(iso)}&timeout=5`;
-  if (sbj) url += `&sbj=${enc(sbj)}`;
-  fetch(url).then(r => r.ok ? toast('Countdown started!') : toast('Error starting countdown', 'error'));
-}
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+      transition: border-color .2s;
+    }
 
-// ── WiFi ──────────────────────────────────────────────────────────────────────
-async function scanWifi() {
-  toast('Scanning…');
-  const nets = await fetch('/scan').then(r=>r.json()).catch(()=>[]);
-  const list = $('wifi-list');
-  list.innerHTML = '';
-  nets.sort((a,b)=>b.rssi-a.rssi).forEach(n => {
-    const item = document.createElement('div');
-    item.className = 'wifi-item';
-    item.innerHTML = `<span class="wifi-ssid">${n.ssid}</span><span class="wifi-rssi">${n.rssi} dBm</span>`;
-    item.onclick = () => {
-      $('wifi-ssid').value = n.ssid;
-      $('wifi-pass').value = '';
-      $('wifi-connect-form').style.display = 'grid';
-    };
-    list.appendChild(item);
-  });
-  if (!nets.length) toast('No networks found', 'error');
-}
+    .card:hover {
+      border-color: rgba(255, 255, 255, .16);
+    }
 
-function connectWifi() {
-  const ssid = $('wifi-ssid').value;
-  const pass = $('wifi-pass').value;
-  if (!ssid) { toast('No SSID selected', 'error'); return; }
-  toast('Connecting to ' + ssid + '…');
-  fetch(`/connect?ssid=${enc(ssid)}&password=${enc(pass)}`);
-}
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
-// ── File Manager ──────────────────────────────────────────────────────────────
-async function loadFiles() {
-  const resp = await fetch('/filelist?dir=/image').catch(()=>null);
-  const tbody = $('file-tbody');
-  tbody.innerHTML = '';
-  if (!resp || !resp.ok) return;
-  const html = await resp.text();
-  // Parse the HTML table rows returned by the firmware
-  const tmp = document.createElement('tbody');
-  tmp.innerHTML = html.replace(/<table[^>]*>|<\/table>|<thead>.*?<\/thead>|<tbody>|<\/tbody>/gs,'');
-  // Re-render rows in our style
-  tmp.querySelectorAll('tr').forEach(row => {
-    const cells = row.querySelectorAll('td');
-    if (cells.length < 2) return;
-    const linkEl = cells[0].querySelector('a');
-    const href   = linkEl?.href || '';
-    const name   = linkEl?.textContent || '';
-    const size   = cells[1]?.textContent || '';
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
+    .card-header .icon {
+      width: 32px;
+      height: 32px;
+      background: var(--surface2);
+      border-radius: var(--radius-sm);
+      display: grid;
+      place-items: center;
+      font-size: 16px;
+    }
+
+    .card-header h2 {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .card-body {
+      padding: 18px 20px;
+      display: grid;
+      gap: 14px;
+    }
+
+    /* ── Live readout bar ── */
+    .live-bar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 12px;
+    }
+
+    .stat {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .stat label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+    }
+
+    .stat value {
+      font-size: 17px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat value.accent {
+      color: var(--accent);
+    }
+
+    /* ── Form elements ── */
+    label.field-label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    input[type=text],
+    input[type=password],
+    input[type=number],
+    input[type=range],
+    input[type=datetime-local],
+    select,
+    textarea {
+      width: 100%;
+      padding: 9px 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(108, 140, 255, .18);
+    }
+
+    select {
+      appearance: none;
+      background-color: #171a22;
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+
+    select option,
+    select optgroup {
+      background-color: #141720;
+      color: var(--text);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 72px;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      padding: 9px 18px;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      outline: none;
+      transition: all .15s;
+      user-select: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      box-shadow: 0 2px 12px rgba(108, 140, 255, .35);
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.12);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, .12);
+    }
+
+    .btn-danger {
+      background: rgba(248, 113, 113, .15);
+      color: var(--danger);
+      border: 1px solid rgba(248, 113, 113, .3);
+    }
+
+    .btn-danger:hover {
+      background: rgba(248, 113, 113, .25);
+    }
+
+    .btn:active {
+      transform: scale(.97);
+    }
+
+    .btn-sm {
+      padding: 6px 13px;
+      font-size: 12px;
+    }
+
+    /* ── Row helpers ── */
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .row-3 {
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    @media (max-width: 520px) {
+
+      .row,
+      .row-3 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ── Toggle switch ── */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .toggle-row span {
+      font-size: 13px;
+    }
+
+    .switch {
+      position: relative;
+      width: 42px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .switch .slider {
+      position: absolute;
+      inset: 0;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      cursor: pointer;
+      transition: background .2s;
+    }
+
+    .switch .slider::before {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--muted);
+      top: 3px;
+      left: 3px;
+      transition: transform .2s, background .2s;
+    }
+
+    .switch input:checked+.slider {
+      background: rgba(108, 140, 255, .3);
+      border-color: var(--accent);
+    }
+
+    .switch input:checked+.slider::before {
+      transform: translateX(18px);
+      background: var(--accent);
+    }
+
+    /* ── Brightness slider ── */
+    .range-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .range-wrap input[type=range] {
+      flex: 1;
+      height: 6px;
+      background: var(--surface2);
+      border-radius: 99px;
+      cursor: pointer;
+      appearance: none;
+      border: none;
+      padding: 0;
+    }
+
+    .range-wrap input[type=range]::-webkit-slider-thumb {
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px rgba(108, 140, 255, .5);
+      cursor: pointer;
+    }
+
+    .range-val {
+      font-size: 13px;
+      font-weight: 600;
+      width: 36px;
+      text-align: right;
+      color: var(--accent);
+    }
+
+    /* ── Theme grid ── */
+    .theme-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 10px;
+    }
+
+    .theme-btn {
+      padding: 14px 8px;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border);
+      background: var(--surface2);
+      cursor: pointer;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+      transition: all .18s;
+      color: var(--text);
+    }
+
+    .theme-btn span.icon {
+      font-size: 22px;
+    }
+
+    .theme-btn:hover {
+      border-color: var(--accent);
+      background: rgba(108, 140, 255, .1);
+    }
+
+    .theme-btn.active {
+      border-color: var(--accent);
+      background: rgba(108, 140, 255, .15);
+      color: var(--accent);
+    }
+
+    /* ── WiFi list ── */
+    .wifi-list {
+      display: grid;
+      gap: 6px;
+    }
+
+    .wifi-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+      gap: 10px;
+    }
+
+    .wifi-item:hover {
+      border-color: var(--accent);
+      background: rgba(108, 140, 255, .1);
+    }
+
+    .wifi-ssid {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .wifi-rssi {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* ── File list ── */
+    #file-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    #file-table th {
+      text-align: left;
+      color: var(--muted);
+      font-weight: 500;
+      padding: 0 0 10px;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    #file-table td {
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, .04);
+      vertical-align: middle;
+    }
+
+    #file-table a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 12px;
+      word-break: break-all;
+    }
+
+    #file-table a:hover {
+      text-decoration: underline;
+    }
+
+    .file-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    /* ── Upload zone ── */
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all .18s;
+    }
+
+    .dropzone:hover,
+    .dropzone.drag-over {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(108, 140, 255, .06);
+    }
+
+    .dropzone .dz-icon {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    /* ── Update banner ── */
+    #newVersion {
+      display: none;
+      position: sticky;
+      top: 60px;
+      z-index: 99;
+      background: linear-gradient(90deg, rgba(251, 191, 36, .15), rgba(251, 191, 36, .08));
+      border-bottom: 1px solid rgba(251, 191, 36, .35);
+      padding: 10px 24px;
+      font-size: 13px;
+      color: var(--warn);
+      text-align: center;
+    }
+
+    #newVersion a {
+      color: var(--warn);
+      font-weight: 600;
+      text-decoration: underline;
+      margin-left: 6px;
+    }
+
+    /* ── Toast notifications ── */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 9999;
+    }
+
+    .toast {
+      padding: 12px 18px;
+      border-radius: var(--radius-sm);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(16px);
+      font-size: 13px;
+      box-shadow: var(--shadow);
+      animation: slide-in .25s ease;
+      max-width: 280px;
+    }
+
+    .toast.success {
+      border-color: var(--success);
+      color: var(--success);
+    }
+
+    .toast.error {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    @keyframes slide-in {
+      from {
+        transform: translateX(30px);
+        opacity: 0;
+      }
+
+      to {
+        transform: none;
+        opacity: 1;
+      }
+    }
+
+    /* ── Progress bar ── */
+    .progress-wrap {
+      display: none;
+      height: 6px;
+      background: var(--surface2);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      width: 0;
+      transition: width .2s;
+    }
+
+    .progress-wrap.visible {
+      display: block;
+    }
+
+    /* ── Textarea char counter ── */
+    .field-wrap {
+      position: relative;
+    }
+
+    .char-counter {
+      position: absolute;
+      bottom: 8px;
+      right: 10px;
+      font-size: 10px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>SmallTV <span id="header-ip">—</span></h1>
+    <div class="status-dot connecting" id="ws-status">connecting</div>
+  </header>
+
+  <div id="newVersion">🆕 A new firmware version is available!<a
+      href="https://github.com/aydarik/geekmagic-tv-esp8266/releases/latest" target="_blank">Download</a></div>
+
+  <main>
+
+    <!-- Live stats -->
+    <div class="live-bar">
+      <div class="stat"><label>Theme</label>
+        <value id="stat-theme" class="accent">—</value>
+      </div>
+      <div class="stat"><label>Free Heap</label>
+        <value id="stat-heap">—</value>
+      </div>
+      <div class="stat"><label>FS Free</label>
+        <value id="stat-fs">—</value>
+      </div>
+      <div class="stat"><label>Brightness</label>
+        <value id="stat-brt">—</value>
+      </div>
+      <div class="stat"><label>Version</label>
+        <value id="stat-ver">—</value>
+      </div>
+    </div>
+
+    <!-- Display themes -->
+    <div class="card">
+      <div class="card-header">
+        <div class="icon">🖥️</div>
+        <h2>Display Theme</h2>
+      </div>
+      <div class="card-body">
+        <div class="theme-grid">
+          <button class="theme-btn" data-theme="1" onclick="setTheme(1)"><span class="icon">🕐</span>Clock</button>
+          <button class="theme-btn" data-theme="5" onclick="setTheme(5)"><span class="icon">🔢</span>Big Clock</button>
+          <button class="theme-btn" data-theme="2" onclick="setTheme(2)"><span class="icon">📨</span>Message</button>
+          <button class="theme-btn" data-theme="4" onclick="setTheme(4)"><span class="icon">⏳</span>Countdown</button>
+          <button class="theme-btn" data-theme="3" onclick="setTheme(3)"><span class="icon">🖼️</span>Image</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <input type="checkbox" id="chk-default" style="width:auto">
+          <label for="chk-default" style="font-size:13px;color:var(--muted)">Set as default theme</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Brightness -->
+    <div class="card">
+      <div class="card-header">
+        <div class="icon">💡</div>
+        <h2>Brightness</h2>
+      </div>
+      <div class="card-body">
+        <div class="range-wrap">
+          <input type="range" id="brt-slider" min="0" max="100" value="50" oninput="onBrtInput(this.value)">
+          <span class="range-val" id="brt-val">50</span>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="saveBrightness()">Apply</button>
+      </div>
+    </div>
+
+    <!-- Clock toggles -->
+    <div class="card">
+      <div class="card-header">
+        <div class="icon">⚙️</div>
+        <h2>Clock Options</h2>
+      </div>
+      <div class="card-body">
+        <div class="toggle-row">
+          <span>Show IP address</span>
+          <label class="switch"><input type="checkbox" id="chk-ip" onchange="set('ip', this.checked)"><span
+              class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <span>Show seconds</span>
+          <label class="switch"><input type="checkbox" id="chk-sec" onchange="set('sec', this.checked)"><span
+              class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <span>Show weather</span>
+          <label class="switch"><input type="checkbox" id="chk-weather" onchange="set('weather', this.checked)"><span
+              class="slider"></span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notification / Message -->
+    <div class="card">
+      <div class="card-header">
+        <div class="icon">📨</div>
+        <h2>Send Notification</h2>
+      </div>
+      <div class="card-body">
+        <div>
+          <label class="field-label">Subject (optional)</label>
+          <input type="text" id="msg-sbj" placeholder="e.g. Doorbell">
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Message</label>
+          <textarea id="msg-body" placeholder="Your message…" maxlength="255"
+            oninput="updateCounter(this,'msg-counter')"></textarea>
+          <span class="char-counter" id="msg-counter">0/255</span>
+        </div>
+        <div class="row">
+          <div>
+            <label class="field-label">Style</label>
+            <select id="msg-style">
+              <option value="">Default (left)</option>
+              <option value="center">Centered</option>
+              <option value="big_num">Big Number / Gauge</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Timeout (seconds, 0 = sticky)</label>
+            <input type="number" id="msg-timeout" value="30" min="0">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+
+    <!-- Sticky note -->
+    <div class="card">
+      <div class="card-header">
+        <div class="icon">📌</div>
+        <h2>Sticky Note (Clock Screen)</h2>
+      </div>
+      <div class="card-body">
+        <div class="field-wrap">
+          <label class="field-label">Note text (newlines = multiple lines, rotated)</label>
+          <textarea id="note-body" placeholder="Line 1&#10;Line 2&#10;Line 3" maxlength="127"
+            oninput="updateCounter(this,'note-counter')"></textarea>
+          <span class="char-counter" id="note-counter">0/127</span>
+        </div>
+        <div class="row">
+          <div>
+            <label class="field-label">Rotations per minute (0 = fixed)</label>
+            <input type="number" id="note-rpm" value="6" min="0" max="60">
+          </div>
+          <div>
+            <label class="field-label">Timeout (seconds, 0 = sticky)</label>
+            <input type="number" id="note-timeout" value="3600" min="0">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary" onclick="sendNote()">Set Note</button>
+          <button class="btn btn-secondary" onclick="clearNote()">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Countdown -->
+    <div class="card">
+      <div class="card-header">
+        <div class="icon">⏳</div>
+        <h2>Countdown</h2>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div>
+            <label class="field-label">Subject</label>
+            <input type="text" id="cnt-sbj" placeholder="e.g. Meeting">
+          </div>
+          <div>
+            <label class="field-label">Target date &amp; time</label>
+            <input type="datetime-local" id="cnt-dt" style="color-scheme:dark">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="sendCountdown()">Start Countdown</button>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="card">
+      <div class="card-header">
+        <div class="icon">🌍</div>
+        <h2>Settings</h2>
+      </div>
+      <div class="card-body">
+        <div>
+          <label class="field-label">Timezone (POSIX TZ string)</label>
+          <select id="tz-sel" onchange="document.getElementById('tz-custom').value=this.value">
+            <option value="">— select common zone —</option>
+            <option value="UTC0">UTC</option>
+            <option value="CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00">Europe/Amsterdam, Berlin, Paris (CET)</option>
+            <option value="GMT0BST-1,M3.5.0/1,M10.5.0">Europe/London (GMT/BST)</option>
+            <option value="EET-2EEST-3,M3.5.0/3,M10.5.0/4">Europe/Kyiv, Helsinki (EET)</option>
+            <option value="MSK-3">Europe/Moscow (MSK)</option>
+            <option value="EST5EDT,M3.2.0,M11.1.0">US Eastern (EST/EDT)</option>
+            <option value="CST6CDT,M3.2.0,M11.1.0">US Central (CST/CDT)</option>
+            <option value="MST7MDT,M3.2.0,M11.1.0">US Mountain (MST/MDT)</option>
+            <option value="PST8PDT,M3.2.0,M11.1.0">US Pacific (PST/PDT)</option>
+            <option value="JST-9">Japan (JST)</option>
+            <option value="AEST-10AEDT-11,M10.1.0,M4.1.0">Australia/Sydney (AEST)</option>
+          </select>
+          <input type="text" id="tz-custom" placeholder="or type POSIX string directly" style="margin-top:8px">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="saveTz()">Save Timezone</button>
+
+        <hr style="border-color:var(--border);margin:6px 0">
+
+        <div>
+          <label class="field-label">OpenWeatherMap Location</label>
+          <input type="text" id="owm-loc" placeholder="e.g. Amsterdam,NL">
+        </div>
+        <div>
+          <label class="field-label">OpenWeatherMap API Key</label>
+          <input type="password" id="owm-key" placeholder="••••••••••••••••" autocomplete="off">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="saveOWM()">Save Weather Settings</button>
+      </div>
+    </div>
+
+    <!-- WiFi -->
+    <div class="card">
+      <div class="card-header">
+        <div class="icon">📶</div>
+        <h2>WiFi</h2>
+      </div>
+      <div class="card-body">
+        <button class="btn btn-secondary btn-sm" onclick="scanWifi()">🔍 Scan Networks</button>
+        <div class="wifi-list" id="wifi-list"></div>
+        <div id="wifi-connect-form" style="display:none;gap:10px;" class="grid">
+          <div>
+            <label class="field-label">SSID</label>
+            <input type="text" id="wifi-ssid" readonly>
+          </div>
+          <div>
+            <label class="field-label">Password</label>
+            <input type="password" id="wifi-pass" placeholder="WiFi password">
+          </div>
+          <button class="btn btn-primary" onclick="connectWifi()">Connect</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Image Manager -->
+    <div class="card">
+      <div class="card-header">
+        <div class="icon">🖼️</div>
+        <h2>Image Manager</h2>
+      </div>
+      <div class="card-body">
+        <div class="dropzone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+          <div class="dz-icon">📂</div>
+          <div>Click or drag JPEG files to upload</div>
+          <input type="file" id="file-input" accept=".jpg,.jpeg" style="display:none" multiple
+            onchange="uploadFiles(this.files)">
+        </div>
+        <div class="progress-wrap" id="upload-progress">
+          <div class="progress-bar" id="upload-bar"></div>
+        </div>
+        <table id="file-table">
+          <thead>
+            <tr>
+              <th>File</th>
+              <th>Size</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="file-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- System -->
+    <div class="card">
+      <div class="card-header">
+        <div class="icon">🔧</div>
+        <h2>System</h2>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <a href="/update" class="btn btn-secondary">⬆️ OTA Firmware Update</a>
+          <button class="btn btn-secondary btn-sm"
+            onclick="fetch('/test').then(()=>toast('Display test started','success'))">🎨 Display Test</button>
+          <button class="btn btn-secondary btn-sm"
+            onclick="fetch('/log').then(r=>r.text()).then(t=>{document.getElementById('log-pre').textContent=t;document.getElementById('log-box').style.display='block'})">📋
+            View Logs</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmFactoryReset()">🗑️ Factory Reset</button>
+        </div>
+        <pre id="log-pre"
+          style="display:none;font-size:11px;background:var(--surface2);padding:12px;border-radius:var(--radius-sm);overflow-x:auto;color:var(--muted);max-height:200px;overflow-y:auto"></pre>
+        <div id="log-box" style="display:none">
+          <button class="btn btn-secondary btn-sm"
+            onclick="document.getElementById('log-box').style.display='none'">Close log</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <div id="toast-container"></div>
+
+  <script>
+    // ── State ────────────────────────────────────────────────────────────────────
+    let appState = {};
+    let ws = null;
+    let wsReconnectTimer = null;
+    const THEME_NAMES = { 1: 'Clock', 2: 'Message', 3: 'Image', 4: 'Countdown', 5: 'Big Clock' };
+
+    // ── Helpers ───────────────────────────────────────────────────────────────────
+    const $ = id => document.getElementById(id);
+    const enc = s => encodeURIComponent(s);
+
+    function toast(msg, type = 'success', duration = 3000) {
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.textContent = msg;
+      $('toast-container').appendChild(el);
+      setTimeout(() => el.remove(), duration);
+    }
+
+    function set(param, value) {
+      fetch(`/set?${param}=${enc(value)}`)
+        .then(r => r.ok ? toast(`${param} updated`) : toast(`Error updating ${param}`, 'error'));
+    }
+
+    function updateCounter(el, counterId) {
+      $(counterId).textContent = `${el.value.length}/${el.maxLength}`;
+    }
+
+    // ── WebSocket ─────────────────────────────────────────────────────────────────
+    function connectWS() {
+      if (ws) { try { ws.close(); } catch (e) { } }
+      ws = new WebSocket(`ws://${location.host}/ws`);
+
+      ws.onopen = () => {
+        const s = $('ws-status');
+        s.className = 'status-dot connected';
+        s.textContent = 'live';
+        clearTimeout(wsReconnectTimer);
+        loadAll();
+      };
+
+      ws.onmessage = e => {
+        try {
+          const d = JSON.parse(e.data);
+          if (d.theme !== undefined) setActivThemBtn(d.theme);
+          if (d.brt !== undefined) { $('stat-brt').textContent = d.brt + '%'; }
+          if (d.mem_heap !== undefined) { $('stat-heap').textContent = Math.round(d.mem_heap / 1024) + 'KB'; }
+          if (d.space_free !== undefined) { $('stat-fs').textContent = Math.round(d.space_free / 1024) + 'KB'; }
+        } catch (_) { }
+      };
+
+      ws.onclose = ws.onerror = () => {
+        const s = $('ws-status');
+        s.className = 'status-dot connecting';
+        s.textContent = 'connecting';
+        wsReconnectTimer = setTimeout(connectWS, 3000);
+      };
+    }
+
+    // ── Data loading ──────────────────────────────────────────────────────────────
+    async function loadAll() {
+      try {
+        const [app, mem, fs, ver, msg, note] = await Promise.all([
+          fetch('/app.json').then(r => r.json()),
+          fetch('/memory.json').then(r => r.json()),
+          fetch('/space.json').then(r => r.json()),
+          fetch('/v.json').then(r => r.json()),
+          fetch('/message.json').then(r => r.json()),
+          fetch('/note.json').then(r => r.json()),
+        ]);
+
+        appState = app;
+        $('header-ip').textContent = app.ip || location.hostname;
+        $('stat-heap').textContent = Math.round(mem.heap / 1024) + 'KB';
+        $('stat-fs').textContent = Math.round(fs.free / 1024) + 'KB';
+        $('stat-brt').textContent = app.brt !== undefined ? app.brt + '%' : '—';
+        $('stat-ver').textContent = ver.v || '—';
+        $('stat-theme').textContent = THEME_NAMES[app.theme] || app.theme;
+
+        // Check for firmware update
+        if (ver.v) checkForUpdate(ver.v);
+        $('msg-body').value = msg.msg || '';
+        $('msg-sbj').value = msg.sbj || '';
+        $('msg-style').value = msg.style || '';
+        $('note-body').value = note.note || '';
+        $('note-rpm').value = note.rpm || '';
+
+        // Brightness slider
+        if (app.brt !== undefined) {
+          $('brt-slider').value = app.brt;
+          $('brt-val').textContent = app.brt;
+        }
+
+        // Toggles
+        $('chk-ip').checked = !!app.showIP;
+        $('chk-sec').checked = !!app.showSec;
+        $('chk-weather').checked = !!app.showWeather;
+
+        // TZ
+        if (app.tz) $('tz-custom').value = app.tz;
+
+        // OWM
+        if (app.owmLoc) $('owm-loc').value = app.owmLoc;
+
+        // Active theme
+        setActivThemBtn(app.theme);
+
+        // Default theme checkbox
+        $('chk-default').checked = false;
+
+        // Load file list
+        loadFiles();
+
+      } catch (e) { toast('Failed to load device state', 'error'); }
+    }
+
+    function setActivThemBtn(theme) {
+      document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', +b.dataset.theme === +theme));
+      $('stat-theme').textContent = THEME_NAMES[theme] || '—';
+    }
+
+    // ── Actions ───────────────────────────────────────────────────────────────────
+    function setTheme(id) {
+      const def = $('chk-default').checked;
+      fetch(`/set?theme=${id}${def ? '&default=true' : ''}`)
+        .then(() => { setActivThemBtn(id); toast(`Theme: ${THEME_NAMES[id]}`); });
+    }
+
+    function onBrtInput(v) { $('brt-val').textContent = v; }
+    function saveBrightness() { set('brt', $('brt-slider').value); }
+
+    function saveTz() {
+      const tz = $('tz-custom').value.trim();
+      if (!tz) { toast('Please enter a timezone', 'error'); return; }
+      set('tz', tz);
+    }
+
+    function saveOWM() {
+      const loc = $('owm-loc').value.trim();
+      const key = $('owm-key').value.trim();
+      if (!loc || !key) { toast('Both location and API key are required', 'error'); return; }
+      fetch(`/set?owmLoc=${enc(loc)}&owmKey=${enc(key)}`)
+        .then(r => r.ok ? toast('Weather settings saved') : toast('Error saving weather settings', 'error'));
+    }
+
+    function sendMessage() {
+      const msg = $('msg-body').value.trim();
+      const sbj = $('msg-sbj').value.trim();
+      const style = $('msg-style').value;
+      const timeout = $('msg-timeout').value || 0;
+      if (!msg) { toast('Message cannot be empty', 'error'); return; }
+      let url = `/set?msg=${enc(msg)}&timeout=${timeout}`;
+      if (sbj) url += `&sbj=${enc(sbj)}`;
+      if (style) url += `&style=${enc(style)}`;
+      fetch(url).then(r => r.ok ? toast('Message sent!') : toast('Error sending message', 'error'));
+    }
+
+    function sendNote() {
+      const note = $('note-body').value;
+      const rpm = $('note-rpm').value || 0;
+      const timeout = $('note-timeout').value || 0;
+      fetch(`/set?note=${enc(note)}&rpm=${rpm}&timeout=${timeout}&force=true`)
+        .then(r => r.ok ? toast('Note set!') : toast('Error setting note', 'error'));
+    }
+    function clearNote() {
+      fetch('/set?note=&force=true').then(() => { $('note-body').value = ''; toast('Note cleared'); });
+    }
+
+    function sendCountdown() {
+      const sbj = $('cnt-sbj').value.trim();
+      const dt = $('cnt-dt').value;
+      if (!dt) { toast('Please select a date and time', 'error'); return; }
+      const iso = dt.replace('T', 'T'); // already ISO-ish
+      let url = `/set?cnt=${enc(iso)}&timeout=5`;
+      if (sbj) url += `&sbj=${enc(sbj)}`;
+      fetch(url).then(r => r.ok ? toast('Countdown started!') : toast('Error starting countdown', 'error'));
+    }
+
+    // ── WiFi ──────────────────────────────────────────────────────────────────────
+    async function scanWifi() {
+      toast('Scanning…');
+      // Start the async scan (returns immediately)
+      await fetch('/scan').catch(() => { });
+
+      // Poll /scanresults until the firmware signals it's done
+      let nets = [];
+      for (let i = 0; i < 30; i++) {          // up to 15 s
+        await new Promise(r => setTimeout(r, 500));
+        const res = await fetch('/scanresults').then(r => r.json()).catch(() => null);
+        if (!res) break;
+        if (res.status === 'scanning') continue; // still running
+        nets = Array.isArray(res) ? res : [];
+        break;
+      }
+
+      const list = $('wifi-list');
+      list.innerHTML = '';
+      nets.sort((a, b) => b.rssi - a.rssi).forEach(n => {
+        const item = document.createElement('div');
+        item.className = 'wifi-item';
+        item.innerHTML = `<span class="wifi-ssid">${n.ssid}</span><span class="wifi-rssi">${n.rssi} dBm</span>`;
+        item.onclick = () => {
+          $('wifi-ssid').value = n.ssid;
+          $('wifi-pass').value = '';
+          $('wifi-connect-form').style.display = 'grid';
+        };
+        list.appendChild(item);
+      });
+      if (!nets.length) toast('No networks found', 'error');
+    }
+
+    function connectWifi() {
+      const ssid = $('wifi-ssid').value;
+      const pass = $('wifi-pass').value;
+      if (!ssid) { toast('No SSID selected', 'error'); return; }
+      toast('Connecting to ' + ssid + '…');
+      fetch(`/connect?ssid=${enc(ssid)}&password=${enc(pass)}`);
+    }
+
+    // ── File Manager ──────────────────────────────────────────────────────────────
+    async function loadFiles() {
+      const resp = await fetch('/filelist?dir=/image').catch(() => null);
+      const tbody = $('file-tbody');
+      tbody.innerHTML = '';
+      if (!resp || !resp.ok) return;
+      const html = await resp.text();
+      // Parse the HTML table rows returned by the firmware
+      const tmp = document.createElement('tbody');
+      tmp.innerHTML = html.replace(/<table[^>]*>|<\/table>|<thead>.*?<\/thead>|<tbody>|<\/tbody>/gs, '');
+      // Re-render rows in our style
+      tmp.querySelectorAll('tr').forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length < 2) return;
+        const linkEl = cells[0].querySelector('a');
+        const href = linkEl?.href || '';
+        const name = linkEl?.textContent || '';
+        const size = cells[1]?.textContent || '';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
       <td><a href="${href}" target="_blank">${name}</a></td>
       <td style="color:var(--muted);font-size:12px">${size}B</td>
       <td class="file-actions">
         ${href.toLowerCase().endsWith('.jpg') ? `<button class="btn btn-secondary btn-sm" onclick="displayImg('${href}')">SET</button>` : ''}
         <button class="btn btn-danger btn-sm" onclick="deleteFile('${href}')">DEL</button>
       </td>`;
-    tbody.appendChild(tr);
-  });
-}
+        tbody.appendChild(tr);
+      });
+    }
 
-function displayImg(path) {
-  const p = new URL(path).pathname;
-  fetch(`/set?img=${enc(p)}&timeout=60`).then(()=>toast('Image set!'));
-}
+    function displayImg(path) {
+      const p = new URL(path).pathname;
+      fetch(`/set?img=${enc(p)}&timeout=60`).then(() => toast('Image set!'));
+    }
 
-async function deleteFile(path) {
-  if (!confirm(`Delete ${path}?`)) return;
-  const p = new URL(path).pathname;
-  await fetch(`/delete?file=${enc(p)}`);
-  toast('File deleted');
-  loadFiles();
-}
+    async function deleteFile(path) {
+      if (!confirm(`Delete ${path}?`)) return;
+      const p = new URL(path).pathname;
+      await fetch(`/delete?file=${enc(p)}`);
+      toast('File deleted');
+      loadFiles();
+    }
 
-// ── Upload ────────────────────────────────────────────────────────────────────
-const dropZone = $('drop-zone');
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); uploadFiles(e.dataTransfer.files); });
+    // ── Upload ────────────────────────────────────────────────────────────────────
+    const dropZone = $('drop-zone');
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); uploadFiles(e.dataTransfer.files); });
 
-async function uploadFiles(files) {
-  if (!files || !files.length) return;
-  const progress = $('upload-progress');
-  const bar      = $('upload-bar');
-  progress.classList.add('visible');
-  for (let i = 0; i < files.length; i++) {
-    const fd = new FormData();
-    fd.append('file', files[i]);
-    bar.style.width = ((i / files.length) * 100) + '%';
-    await fetch('/doUpload?dir=/image/', { method: 'POST', body: fd });
-    bar.style.width = (((i+1) / files.length) * 100) + '%';
-  }
-  setTimeout(() => progress.classList.remove('visible'), 800);
-  toast(`${files.length} file(s) uploaded`);
-  loadFiles();
-}
-
-// ── System ────────────────────────────────────────────────────────────────────
-function confirmFactoryReset() {
-  if (!confirm('⚠️ Factory reset will erase all settings and WiFi credentials.\nAre you sure?')) return;
-  fetch('/factoryreset').then(()=>toast('Factory reset triggered — device rebooting…'));
-}
-
-// ── Firmware update check ─────────────────────────────────────────────────────
-function compareVersions(v1, v2) {
-  const a = v1.split('.').map(Number);
-  const b = v2.split('.').map(Number);
-  for (let i = 0; i < Math.max(a.length, b.length); i++) {
-    const num1 = a[i] || 0;
-    const num2 = b[i] || 0;
-    if (num1 > num2) return 1;
-    if (num1 < num2) return -1;
-  }
-  return 0;
-}
-
-async function checkForUpdate(currentVersion) {
-  const lastCheck = localStorage.getItem('lastUpdateCheck');
-  const now = Date.now();
-  if (!lastCheck || (now - Number(lastCheck)) / (1000 * 60 * 60) > 3) {
-    try {
-      const response = await fetch('https://api.github.com/repos/aydarik/geekmagic-tv-esp8266/releases/latest');
-      localStorage.setItem('lastUpdateCheck', now);
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem('lastVersion', data.tag_name);
+    async function uploadFiles(files) {
+      if (!files || !files.length) return;
+      const progress = $('upload-progress');
+      const bar = $('upload-bar');
+      progress.classList.add('visible');
+      for (let i = 0; i < files.length; i++) {
+        const fd = new FormData();
+        fd.append('file', files[i]);
+        bar.style.width = ((i / files.length) * 100) + '%';
+        await fetch('/doUpload?dir=/image/', { method: 'POST', body: fd });
+        bar.style.width = (((i + 1) / files.length) * 100) + '%';
       }
-    } catch(_) {}
-  }
+      setTimeout(() => progress.classList.remove('visible'), 800);
+      toast(`${files.length} file(s) uploaded`);
+      loadFiles();
+    }
 
-  const lastVersion = localStorage.getItem('lastVersion');
-  if (lastVersion && compareVersions(lastVersion, currentVersion) > 0)
-    $('newVersion').style.display = 'block';
-}
+    // ── System ────────────────────────────────────────────────────────────────────
+    function confirmFactoryReset() {
+      if (!confirm('⚠️ Factory reset will erase all settings and WiFi credentials.\nAre you sure?')) return;
+      fetch('/factoryreset').then(() => toast('Factory reset triggered — device rebooting…'));
+    }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-connectWS();
-</script>
+    // ── Firmware update check ─────────────────────────────────────────────────────
+    function compareVersions(v1, v2) {
+      const a = v1.split('.').map(Number);
+      const b = v2.split('.').map(Number);
+      for (let i = 0; i < Math.max(a.length, b.length); i++) {
+        const num1 = a[i] || 0;
+        const num2 = b[i] || 0;
+        if (num1 > num2) return 1;
+        if (num1 < num2) return -1;
+      }
+      return 0;
+    }
+
+    async function checkForUpdate(currentVersion) {
+      const lastCheck = localStorage.getItem('lastUpdateCheck');
+      const now = Date.now();
+      if (!lastCheck || (now - Number(lastCheck)) / (1000 * 60 * 60) > 3) {
+        try {
+          const response = await fetch('https://api.github.com/repos/aydarik/geekmagic-tv-esp8266/releases/latest');
+          localStorage.setItem('lastUpdateCheck', now);
+          if (response.ok) {
+            const data = await response.json();
+            localStorage.setItem('lastVersion', data.tag_name);
+          }
+        } catch (_) { }
+      }
+
+      const lastVersion = localStorage.getItem('lastVersion');
+      if (lastVersion && compareVersions(lastVersion, currentVersion) > 0)
+        $('newVersion').style.display = 'block';
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────────
+    connectWS();
+  </script>
 </body>
+
 </html>

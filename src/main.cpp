@@ -15,7 +15,6 @@
 constexpr char NTP_SERVER[] = "pool.ntp.org";
 
 Settings appSettings;
-Secrets  appSecrets;
 
 static unsigned long lastDisplayUpdate = 0;
 static unsigned long lastWeatherUpdate = 0;
@@ -156,17 +155,29 @@ static void setupFilesystem() {
 void factoryReset() {
     showMessage(F("Performing\nfactory reset..."));
 
-    WiFi.disconnect(true);
-    yield();
-    ESP.eraseConfig();
-    yield();
-
+    // 1. EEPROM ops first — safe, no flash/WiFi stack dependency
     settingsReset(appSettings);
-    secretsReset(appSecrets);
-    powerCycleCounterReset();
+    showMessage(F("Settings reset"));
+    delay(1000);
 
+    powerCycleCounterReset();
+    showMessage(F("Power cycles reset"));
+    delay(1000);
+
+    // 2. Unmount FS before formatting to avoid corruption
+    LittleFS.end();
     LittleFS.format();
+    showMessage(F("LittleFS formatted"));
+    delay(1000);
+
+    // 3. Clear WiFi credentials — must init the stack first or SDK crashes.
+    //    WiFi.mode() initialises the SDK; disconnect(true) then safely erases
+    //    saved SSID/password from flash and turns WiFi off.
+    WiFi.mode(WIFI_STA);
+    delay(100);
     yield();
+    WiFi.disconnect(true);
+    delay(200);
 
     Serial.println(F("Factory reset complete. Rebooting..."));
     showMessage(F("Success!\nRebooting..."));
@@ -193,10 +204,9 @@ void setup() {
     displaySetBrightness(DEFAULT_BRIGHTNESS);
     showMessage(F("Starting..."));
 
-    setupFilesystem();       // Must come before settingsLoad (uses LittleFS)
-
     settingsLoad(appSettings);
-    secretsLoad(appSecrets);
+
+    setupFilesystem();
 
     // Factory reset via 5 quick power cycles
     if (powerCycleCounterCheckReset()) {

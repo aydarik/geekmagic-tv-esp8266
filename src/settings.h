@@ -15,29 +15,26 @@ constexpr int FIRMWARE_VERSION = 3;
 #define FIRMWARE_VERSION_STRING "dev"
 #endif
 
-// Paths on LittleFS
-constexpr char SETTINGS_PATH[]    = "/config.json";
-constexpr char SECRETS_PATH[]     = "/secrets.json";
-constexpr char BOOT_COUNT_PATH[]  = "/boot_count.json";
-
 // Number of quick power cycles before factory reset
 constexpr int POWER_CYCLE_THRESHOLD = 5;
 
-// Non-sensitive settings — persisted to /config.json
+// Settings — persisted to EEPROM
 struct Settings {
-    int  version;         // Must match FIRMWARE_VERSION
-    int  brightness;
-    Theme defaultTheme;
-    char tz[64];
-    bool showIP;
-    bool showSec;
-    bool showWeather;
+    uint16_t version;      // Must match FIRMWARE_VERSION
+    int      brightness;
+    Theme    defaultTheme;
+    char     tz[64];
+    bool     showIP;
+    bool     showSec;
+    bool     showWeather;
+    char     owmApiKey[64];
+    char     owmLocation[64];
 };
 
-// Sensitive settings — persisted to /secrets.json (gitignored)
-struct Secrets {
-    char owmApiKey[64];
-    char owmLocation[64];
+// Power cycle reset structure (user-initiated factory reset)
+struct PowerCycleCounter {
+    uint16_t magic;      // Magic number to validate (0x5C01)
+    uint8_t  cycleCount;
 };
 
 void settingsInit();
@@ -45,10 +42,6 @@ void settingsInit();
 void settingsLoad(Settings &settings);
 void settingsSave(const Settings &settings);
 void settingsReset(Settings &settings);
-
-void secretsLoad(Secrets &secrets);
-void secretsSave(const Secrets &secrets);
-void secretsReset(Secrets &secrets);
 
 // Power cycle counter (user-initiated factory reset via 5 quick power cycles)
 uint8_t powerCycleCounterGet();

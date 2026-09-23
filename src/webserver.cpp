@@ -20,7 +20,6 @@ static AsyncWebServer server(WEB_SERVER_PORT);
 static AsyncWebSocket ws("/ws");
 
 extern Settings  appSettings;
-extern Secrets   appSecrets;
 extern NotificationState notificationState;
 extern CountdownState    countdownState;
 extern ClockState        clockState;
@@ -31,9 +30,9 @@ extern ClockState        clockState;
 
 void wsBroadcast(const JsonDocument &doc) {
     if (ws.count() == 0) return;
-    char buf[128];
-    const size_t len = serializeJson(doc, buf, sizeof(buf));
-    ws.textAll(buf, len);
+    String payload;
+    serializeJson(doc, payload);
+    ws.textAll(payload);
 }
 
 void wsBroadcastState() {
@@ -49,14 +48,6 @@ void wsBroadcastState() {
     FSInfo fs_info;
     LittleFS.info(fs_info);
     doc["space_free"] = fs_info.totalBytes - fs_info.usedBytes;
-
-    // doc["msg_text"]  = notificationState.message;
-    // doc["msg_sbj"]   = notificationState.subject;
-    // doc["msg_style"] = notificationState.style;
-    //
-    // doc["note_text"] = clockState.note;
-    // if (clockState.noteRotations > 0)
-    //     doc["note_rpm"] = clockState.noteRotations;
 
     wsBroadcast(doc);
 }
@@ -90,7 +81,7 @@ static void handleAppJson(AsyncWebServerRequest *request) {
     doc["showIP"]      = appSettings.showIP;
     doc["showSec"]     = appSettings.showSec;
     doc["showWeather"] = appSettings.showWeather;
-    doc["owmLoc"]      = appSecrets.owmLocation;
+    doc["owmLoc"]      = appSettings.owmLocation;
     // Note: owmKey intentionally omitted from this endpoint
     if (displayState.timeout != 0)
         doc["timeout"] = displayState.timeout;
@@ -307,12 +298,12 @@ static void handleSet(AsyncWebServerRequest *request) {
     } else if (request->hasParam("owmLoc") && request->hasParam("owmKey")) {
         const AsyncWebParameter *pLoc = request->getParam("owmLoc");
         const AsyncWebParameter *pKey = request->getParam("owmKey");
-        strncpy(appSecrets.owmLocation, pLoc->value().c_str(), sizeof(appSecrets.owmLocation) - 1);
-        appSecrets.owmLocation[sizeof(appSecrets.owmLocation) - 1] = '\0';
-        strncpy(appSecrets.owmApiKey,   pKey->value().c_str(), sizeof(appSecrets.owmApiKey) - 1);
-        appSecrets.owmApiKey[sizeof(appSecrets.owmApiKey) - 1] = '\0';
+        strncpy(appSettings.owmLocation, pLoc->value().c_str(), sizeof(appSettings.owmLocation) - 1);
+        appSettings.owmLocation[sizeof(appSettings.owmLocation) - 1] = '\0';
+        strncpy(appSettings.owmApiKey,   pKey->value().c_str(), sizeof(appSettings.owmApiKey) - 1);
+        appSettings.owmApiKey[sizeof(appSettings.owmApiKey) - 1] = '\0';
         if (displayState.theme == Theme::CLOCK) displayScheduleUpdate(Theme::NONE, true);
-        secretsSave(appSecrets);
+        settingsSave(appSettings);
 
     } else {
         request->send(400, "text/plain", "No action");
@@ -414,17 +405,41 @@ static void handleFactoryReset(AsyncWebServerRequest *request) {
 }
 
 // ---------------------------------------------------------------------------
-// GET /scan — WiFi network scan
+// GET /scan        — start async WiFi scan, returns immediately
+// GET /scan/results — poll for results; returns {"status":"scanning"} while
+//                    in progress, or JSON array of networks when done.
 // ---------------------------------------------------------------------------
 
 static void handleWiFiScan(AsyncWebServerRequest *request) {
-    const int n = WiFi.scanNetworks(false, true);
+    // WIFI_SCAN_RUNNING = -1 means a scan is already in progress
+    if (WiFi.scanComplete() == WIFI_SCAN_RUNNING) {
+        request->send(200, "text/plain", "scan already running");
+        return;
+    }
+    // async=true — returns immediately, no WDT risk
+    WiFi.scanNetworks(true);
+    request->send(200, "text/plain", "scan started");
+}
+
+static void handleWiFiScanResults(AsyncWebServerRequest *request) {
+    const int n = WiFi.scanComplete();
+    if (n == WIFI_SCAN_RUNNING) {
+        // Still scanning — tell the client to poll again
+        JsonDocument busy;
+        busy["status"] = "scanning";
+        sendJson(request, busy);
+        return;
+    }
+    // n == WIFI_SCAN_FAILED or n >= 0
     JsonDocument doc;
-    for (int i = 0; i < n; i++) {
-        JsonDocument entry;
-        entry["ssid"] = WiFi.SSID(i);
-        entry["rssi"] = WiFi.RSSI(i);
-        doc.add(entry);
+    if (n > 0) {
+        for (int i = 0; i < n; i++) {
+            if (WiFi.SSID(i).isEmpty()) continue;
+            JsonDocument entry;
+            entry["ssid"] = WiFi.SSID(i);
+            entry["rssi"] = WiFi.RSSI(i);
+            doc.add(entry);
+        }
     }
     WiFi.scanDelete();
     sendJson(request, doc);
@@ -599,6 +614,7 @@ void webserverInit() {
     server.on("/log",          HTTP_GET, handleLog);
     server.on("/factoryreset", HTTP_GET, handleFactoryReset);
     server.on("/scan",         HTTP_GET, handleWiFiScan);
+    server.on("/scanresults",  HTTP_GET, handleWiFiScanResults);
     server.on("/connect",      HTTP_GET, handleWiFiConnect);
 
     // File upload
