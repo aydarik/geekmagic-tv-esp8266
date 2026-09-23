@@ -2,7 +2,7 @@
 #include "config.h"
 #include "display.h"
 #include "utils.h"
-#include "fonts/NotoSans_Regular24.h"
+#include "generated/NotoSans_Regular24.h"
 
 NotificationState notificationState;
 
@@ -99,7 +99,7 @@ static void showNotification(const int maxLines, const int y) {
 
     tft.loadFont(NotoSans_Regular24);
     tft.startWrite();
-    for (int i = 0; i < count; i++) {
+    for (size_t i = 0; i < count; i++) {
         const int lineY = currentY + i * LINES_HEIGHT;
         if (strcmp(wrapped[i], "---") == 0) {
             tft.drawFastHLine(0, lineY + LINES_HEIGHT / 4, DISPLAY_SIZE, TFT_DARKGREY);

@@ -7,9 +7,11 @@ COMMANDS = [
     "gzip -9 -c res/index.html > src/generated/index.html.gz",
     "xxd -i src/generated/index.html.gz > src/generated/index_html.h",
     "sed -i 's/unsigned char/const unsigned char PROGMEM/' src/generated/index_html.h",
+    "rm src/generated/index.html.gz",
     "gzip -9 -c res/ota.html > src/generated/ota.html.gz",
     "xxd -i src/generated/ota.html.gz > src/generated/ota_html.h",
     "sed -i 's/unsigned char/const unsigned char PROGMEM/' src/generated/ota_html.h",
+    "rm src/generated/ota.html.gz",
 ]
 
 def main() -> None:

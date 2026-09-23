@@ -8,7 +8,7 @@
 #include "config.h"
 #include "TJpg_Decoder.h"
 #include "utils.h"
-#include "fonts/NotoSans_Regular24.h"
+#include "generated/NotoSans_Regular24.h"
 
 extern Settings appSettings;
 extern Secrets  appSecrets;

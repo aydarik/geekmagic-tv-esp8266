@@ -55,7 +55,7 @@ void themeRenderCountdown(const bool forceClear, const time_t &now) {
     }
 
     // Draw countdown
-    char buffer[8];
+    char buffer[16];
     if (passed) sprintf(buffer, "-%d:%02d", minutes, seconds);
     else sprintf(buffer, "%d:%02d", minutes, seconds);
 

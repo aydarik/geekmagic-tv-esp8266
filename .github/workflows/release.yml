@@ -38,6 +38,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install --upgrade platformio
 
+      - name: Generate font headers
+        run: |
+          pip install --upgrade Pillow
+          python3 tools/generate_font.py
+
       - name: Generate web headers
         run: python3 tools/generate_html.py
 

@@ -5,7 +5,7 @@
 #include "settings.h"
 #include "utils.h"
 #include "weather.h"
-#include "fonts/NotoSans_Regular24.h"
+#include "generated/NotoSans_Regular24.h"
 
 extern Settings appSettings;
 
@@ -70,7 +70,7 @@ void themeRenderClock(const bool forceClear, const time_t &now) {
 
         String lines[MAX_LINES];
         const size_t count = splitString(String(clockState.note), lines, MAX_LINES);
-        const unsigned int rotations = clockState.noteRotations > count ? clockState.noteRotations : count;
+        const unsigned int rotations = static_cast<size_t>(clockState.noteRotations) > count ? clockState.noteRotations : count;
         const unsigned int idx = sec * rotations / 60 % count;
         const unsigned int idxPrev = (sec == 0 ? 59 : sec - 1) * rotations / 60 % count;
 

@@ -562,9 +562,9 @@ void webserverInit() {
 
     // Root page (gzip compressed)
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        AsyncWebServerResponse *resp = request->beginResponse_P(
+        AsyncWebServerResponse *resp = request->beginResponse(
             200, "text/html",
-            reinterpret_cast<const uint8_t *>(src_generated_index_html_gz),
+            src_generated_index_html_gz,
             src_generated_index_html_gz_len);
         resp->addHeader("Content-Encoding", "gzip");
         resp->addHeader("Cache-Control", "max-age=600");
@@ -573,9 +573,9 @@ void webserverInit() {
 
     // OTA page (gzip compressed)
     server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request) {
-        AsyncWebServerResponse *resp = request->beginResponse_P(
+        AsyncWebServerResponse *resp = request->beginResponse(
             200, "text/html",
-            reinterpret_cast<const uint8_t *>(src_generated_ota_html_gz),
+            src_generated_ota_html_gz,
             src_generated_ota_html_gz_len);
         resp->addHeader("Content-Encoding", "gzip");
         resp->addHeader("Cache-Control", "max-age=600");
