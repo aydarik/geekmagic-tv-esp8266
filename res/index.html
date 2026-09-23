@@ -252,6 +252,21 @@
   .dropzone:hover, .dropzone.drag-over { border-color: var(--accent); color: var(--accent); background: rgba(108,140,255,.06); }
   .dropzone .dz-icon { font-size: 28px; margin-bottom: 8px; }
 
+  /* ── Update banner ── */
+  #newVersion {
+    display: none;
+    position: sticky; top: 60px; z-index: 99;
+    background: linear-gradient(90deg, rgba(251,191,36,.15), rgba(251,191,36,.08));
+    border-bottom: 1px solid rgba(251,191,36,.35);
+    padding: 10px 24px;
+    font-size: 13px; color: var(--warn);
+    text-align: center;
+  }
+  #newVersion a {
+    color: var(--warn); font-weight: 600;
+    text-decoration: underline; margin-left: 6px;
+  }
+
   /* ── Toast notifications ── */
   #toast-container { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 10px; z-index: 9999; }
   .toast {
@@ -285,6 +300,8 @@
   <h1>SmallTV <span id="header-ip">—</span></h1>
   <div class="status-dot connecting" id="ws-status">connecting</div>
 </header>
+
+<div id="newVersion">🆕 A new firmware version is available!<a href="https://github.com/aydarik/geekmagic-tv-esp8266/releases/latest" target="_blank">Download</a></div>
 
 <main>
 
@@ -601,6 +618,9 @@ async function loadAll() {
     $('stat-brt').textContent   = app.brt !== undefined ? app.brt+'%' : '—';
     $('stat-ver').textContent   = ver.v || '—';
     $('stat-theme').textContent = THEME_NAMES[app.theme] || app.theme;
+
+    // Check for firmware update
+    if (ver.v) checkForUpdate(ver.v);
     $('msg-body').value         = msg.msg || '';
     $('msg-sbj').value          = msg.sbj || '';
     $('msg-style').value        = msg.style || '';
@@ -796,6 +816,38 @@ async function uploadFiles(files) {
 function confirmFactoryReset() {
   if (!confirm('⚠️ Factory reset will erase all settings and WiFi credentials.\nAre you sure?')) return;
   fetch('/factoryreset').then(()=>toast('Factory reset triggered — device rebooting…'));
+}
+
+// ── Firmware update check ─────────────────────────────────────────────────────
+function compareVersions(v1, v2) {
+  const a = v1.split('.').map(Number);
+  const b = v2.split('.').map(Number);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const num1 = a[i] || 0;
+    const num2 = b[i] || 0;
+    if (num1 > num2) return 1;
+    if (num1 < num2) return -1;
+  }
+  return 0;
+}
+
+async function checkForUpdate(currentVersion) {
+  const lastCheck = localStorage.getItem('lastUpdateCheck');
+  const now = Date.now();
+  if (!lastCheck || (now - Number(lastCheck)) / (1000 * 60 * 60) > 3) {
+    try {
+      const response = await fetch('https://api.github.com/repos/aydarik/geekmagic-tv-esp8266/releases/latest');
+      localStorage.setItem('lastUpdateCheck', now);
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem('lastVersion', data.tag_name);
+      }
+    } catch(_) {}
+  }
+
+  const lastVersion = localStorage.getItem('lastVersion');
+  if (lastVersion && compareVersions(lastVersion, currentVersion) > 0)
+    $('newVersion').style.display = 'block';
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
