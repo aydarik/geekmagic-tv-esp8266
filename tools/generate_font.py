@@ -1,5 +1,7 @@
+import os
 import struct
 from PIL import Image, ImageFont
+from pathlib import Path
 
 FONT_PATH = "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf"
 
@@ -165,5 +167,15 @@ def generate_vlw_header(
     print(f"Generated {output_file} ({len(vlw_bytes)} byte).")
 
 
-if __name__ == "__main__":
+def main() -> None:
+    project_root = Path(__file__).resolve().parent.parent
+    os.chdir(project_root)
+    os.makedirs("src/generated", exist_ok=True)
+
     generate_vlw_header(24)
+
+    print("Done.")
+
+
+if __name__ == "__main__":
+    main()
