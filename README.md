@@ -56,8 +56,6 @@ details: [FLASHING.md](https://github.com/bvweerd/geekmagic-tv-esp8266/blob/dev/
 6. The new assigned IP address will be shown at startup and at the top of the clock screen. You can now navigate to it
    to access the Web UI:
 
-![WEB UI](/assets/web_ui.png)
-
 _Optional:_ configure a static IP for the device on your router, so it won’t be reassigned after restarts.
 
 ## 🔄 OTA Updates
