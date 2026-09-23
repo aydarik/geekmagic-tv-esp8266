@@ -1,126 +1,537 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>OTA Update</title>
-    <style>
-        :root {
-            --bg: #0f1115;
-            --card: #1a1d23;
-            --border: #2a2f38;
-            --text: #e9ecef;
-            --muted: #9aa0a6;
-            --primary-color: #4dabf7;
-            --primary-hover-color: #339af0;
-            --shadow-color: rgba(0, 0, 0, 0.6);
-            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmallTV • Firmware OTA Update</title>
+<link rel="icon" type="image/png" sizes="16x16" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAALGPC/xhBQAAAAFzUkdCAdnJLH8AAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAs9JREFUOE9tkUtMnFUYhp9z5v9nBpgbDLVVpJraIqEp6EbbGEkrrdG91cSu1EStYVm3LnRhjUnTjS4MLo3pRncmBomJ1KiLZkK1QkqFjgPaDnNh7pd/5n9dcBGJ7+bbvE++5zsH9kXSqKSPJKUkdSX5khYkXZV0fH/f7AFDwAelUundRnUD4zfwpd2asQGC4RiVauurDy9/fGXm85lb3U530wB8/eWVxx5/pOeXSmE5mYgU6elxMDaEE4rR6XSQ7wGiJxQgHipB6y8Wf78/P/HKjUkH4MSJiU8DmTeSNxfDIA/XgUTM0htqYmkjDA890KZhhwj6S3SaBq/52hjcwJE0mk3/+PwPtxyufj++9ypARP0yR5Mek+OrnBy7TbtjAeH0HkhKetoCr3v1PB317YG3ZrNeYyxZ4f3zLoloFIhitl5kZ8ObDnDONRXS90KcfvYUQ8PDLM5doz9YJR6qsVAe4dK1Am+9WKTr+choRw7grAXGvUqGWivEoQcPUSmXeeGZEU4e9Thy0JIrtzCDIwRMG/nVbYMdnsMWwDF5FtIuf6Yz/L2+xm9LK1QaPtYNcWdllfn56wwkhPyDO+q7RzjAr+3qzxOrxT5qCzdJ311Bvr9bHEz2k8sXCbtZamUH3C1022DNFgqFn7Bxjh0Y4NHeQU6dfYnhh4eYmnqORDzGqxcucOb0JOFwFJ+BvTDAnDM7Ozs3NVx+2+ne57vUbUiBDQTIrK0DkF5doVwsEu9rkm0Lev/z0TNOPfdtKTFa54v3UoBFWFrtKKXKJhJ4/h80nrRgXKCJMHS6wms2Nowx1518ZrmxeiejZCxsDE2coCEQKNHfZ3CDwtgcEmRzEWKRGIVClWr/5Vxq/d452LZxXce9ePGdJ6anpy/FIuGXG8UsIIxXo76ZxVrIb2SJhF0So2e+OXzk2HljTJ3/i6Tjkj6RtKR/syzpM0lP7e//AxhlWAssfNCaAAAAAElFTkSuQmCC"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg:        #0d0f14;
+    --surface:   rgba(255,255,255,0.05);
+    --surface2:  rgba(255,255,255,0.09);
+    --border:    rgba(255,255,255,0.10);
+    --accent:    #6c8cff;
+    --accent2:   #a78bfa;
+    --success:   #34d399;
+    --warn:      #fbbf24;
+    --danger:    #f87171;
+    --text:      #e2e8f0;
+    --muted:     #64748b;
+    --radius:    14px;
+    --radius-sm: 8px;
+    --shadow:    0 8px 32px rgba(0,0,0,.45);
+    --glow:      0 0 24px rgba(108,140,255,0.18);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
 
-        * {
-            box-sizing: border-box;
-            font-family: var(--font-family);
-        }
+  /* ── Header ── */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    backdrop-filter: blur(20px);
+    background: rgba(13,15,20,0.85);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex; align-items: center; gap: 14px;
+    min-height: 60px;
+  }
+  header h1 { font-size: 17px; font-weight: 600; letter-spacing: -.3px; }
+  header h1 span { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 8px; }
+  .header-actions { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .btn-back {
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    transition: all .15s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-back:hover { background: var(--surface2); border-color: rgba(255,255,255,0.2); }
 
-        body {
-            margin: 0;
-            background-color: var(--bg);
-            color: var(--text);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
+  /* ── Main Layout ── */
+  main {
+    flex: 1;
+    max-width: 580px;
+    width: 100%;
+    margin: 32px auto;
+    padding: 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
 
-        .card {
-            background: var(--card);
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px var(--shadow-color);
-            width: 100%;
-            max-width: 420px;
-            border: 1px solid var(--border);
-        }
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .card-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-header h2 { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .card-body { padding: 20px; display: grid; gap: 16px; }
 
-        h1 {
-            margin-top: 0;
-            margin-bottom: 1.5rem;
-            text-align: center;
-            font-weight: 600;
-        }
+  /* ── Stats Strip ── */
+  .live-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  .stat { display: flex; flex-direction: column; gap: 3px; }
+  .stat label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
+  .stat value { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .stat value.accent { color: var(--accent); }
 
-        input[type="file"] {
-            width: 100%;
-            padding: 0.5rem;
-            background: #2a2a2a;
-            color: var(--muted);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-        }
+  /* ── Dropzone ── */
+  .dropzone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 36px 20px;
+    text-align: center;
+    background: rgba(255,255,255,0.02);
+    cursor: pointer;
+    transition: all .2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .dropzone:hover, .dropzone.dragover {
+    border-color: var(--accent);
+    background: rgba(108,140,255,0.06);
+    box-shadow: 0 0 20px rgba(108,140,255,0.12);
+  }
+  .dropzone svg {
+    width: 44px; height: 44px;
+    stroke: var(--accent);
+    stroke-width: 1.5;
+    fill: none;
+    opacity: 0.85;
+    transition: transform .2s;
+  }
+  .dropzone:hover svg { transform: translateY(-3px); }
+  .dropzone-title { font-size: 15px; font-weight: 500; }
+  .dropzone-sub { font-size: 12px; color: var(--muted); }
+  input[type="file"] { display: none; }
 
-        .button {
-            margin-top: 1.5rem;
-            width: 100%;
-            padding: 0.75rem;
-            border: none;
-            border-radius: 6px;
-            background-color: var(--primary-color);
-            color: var(--text);
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-        }
+  /* ── Selected File Preview ── */
+  .file-preview {
+    display: none;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    align-items: center;
+    gap: 12px;
+  }
+  .file-preview.active { display: flex; }
+  .file-icon {
+    width: 34px; height: 34px;
+    background: rgba(108,140,255,0.15);
+    border-radius: 6px;
+    display: grid; place-items: center;
+    color: var(--accent);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .file-details { flex: 1; min-width: 0; }
+  .file-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-size { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .file-remove {
+    background: none; border: none; color: var(--muted);
+    font-size: 18px; cursor: pointer; padding: 4px 8px;
+    border-radius: 4px; transition: color .15s;
+  }
+  .file-remove:hover { color: var(--danger); }
 
-        .button:hover {
-            background-color: var(--primary-hover-color);
-            color: var(--text);
-        }
-    </style>
+  /* ── Warnings ── */
+  .alert-warning {
+    background: rgba(251,191,36,0.1);
+    border: 1px solid rgba(251,191,36,0.25);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    display: flex; gap: 10px;
+    font-size: 12px; color: #fde68a; line-height: 1.5;
+  }
+  .alert-warning svg { width: 18px; height: 18px; flex-shrink: 0; stroke: var(--warn); fill: none; }
+
+  /* ── Buttons ── */
+  .btn {
+    padding: 11px 20px;
+    border-radius: var(--radius-sm);
+    font-family: inherit; font-size: 14px; font-weight: 600;
+    cursor: pointer; border: none; outline: none;
+    transition: all .15s; user-select: none;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    box-shadow: 0 2px 12px rgba(108,140,255,.35);
+    width: 100%;
+  }
+  .btn-primary:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn:active:not(:disabled) { transform: scale(.98); }
+
+  /* ── Progress Box ── */
+  .progress-section {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .progress-section.active { display: flex; }
+  .progress-labels {
+    display: flex; justify-content: space-between;
+    font-size: 12px; color: var(--muted);
+  }
+  .progress-bar-bg {
+    width: 100%; height: 10px;
+    background: var(--surface2);
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .progress-bar-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 999px;
+    transition: width .2s ease;
+    box-shadow: 0 0 12px rgba(108,140,255,0.4);
+  }
+
+  /* ── Status Message ── */
+  .status-box {
+    display: none;
+    padding: 14px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    text-align: center;
+    line-height: 1.5;
+  }
+  .status-box.active { display: block; }
+  .status-box.success {
+    background: rgba(52,211,153,0.12);
+    border: 1px solid rgba(52,211,153,0.3);
+    color: #a7f3d0;
+  }
+  .status-box.error {
+    background: rgba(248,113,113,0.12);
+    border: 1px solid rgba(248,113,113,0.3);
+    color: #fca5a5;
+  }
+  .status-box.info {
+    background: rgba(108,140,255,0.12);
+    border: 1px solid rgba(108,140,255,0.3);
+    color: #bfdbfe;
+  }
+
+  /* ── Reboot Countdown ── */
+  .reboot-countdown {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--accent);
+    margin: 8px 0 4px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (max-width: 480px) {
+    .live-bar { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
 </head>
 <body>
-<div class="card">
-    <h1>OTA Update</h1>
-    <form id="otaForm" enctype="multipart/form-data">
-        <input type="file" name="update" accept=".bin" required>
-        <input type="submit" id="updateBtn" value="Update Firmware" class="button">
-    </form>
-</div>
+
+<header>
+  <h1>Firmware Update <span>OTA</span></h1>
+  <div class="header-actions">
+    <a href="/" class="btn-back">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Dashboard
+    </a>
+  </div>
+</header>
+
+<main>
+  <!-- Device stats -->
+  <div class="card">
+    <div class="card-body">
+      <div class="live-bar">
+        <div class="stat"><label>Model</label><value id="stat-model">—</value></div>
+        <div class="stat"><label>Version</label><value id="stat-ver" class="accent">—</value></div>
+        <div class="stat"><label>Free Heap</label><value id="stat-heap">—</value></div>
+        <div class="stat"><label>Free FS</label><value id="stat-fs">—</value></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firmware upload card -->
+  <div class="card">
+    <div class="card-header">
+      <h2>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+        Upload Firmware
+      </h2>
+    </div>
+    <div class="card-body">
+      <!-- Drag & Drop Zone -->
+      <div class="dropzone" id="dropzone">
+        <svg viewBox="0 0 24 24"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+        <div class="dropzone-title">Click to select or drop firmware.bin here</div>
+        <div class="dropzone-sub">Compiled ESP8266 binary (.bin) format</div>
+        <input type="file" id="file-input" accept=".bin">
+      </div>
+
+      <!-- File Preview -->
+      <div class="file-preview" id="file-preview">
+        <div class="file-icon">BIN</div>
+        <div class="file-details">
+          <div class="file-name" id="file-name">—</div>
+          <div class="file-size" id="file-size">—</div>
+        </div>
+        <button class="file-remove" id="file-remove" title="Remove file">&times;</button>
+      </div>
+
+      <!-- Safety warning -->
+      <div class="alert-warning">
+        <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4m0 4h.01"/></svg>
+        <div><strong>Caution:</strong> Do not power off or reset the device while updating. Wait until the device reboots automatically.</div>
+      </div>
+
+      <!-- Progress Section -->
+      <div class="progress-section" id="progress-section">
+        <div class="progress-labels">
+          <span id="progress-status">Uploading...</span>
+          <span id="progress-percent">0%</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progress-fill"></div>
+        </div>
+        <div class="progress-labels">
+          <span id="progress-bytes">0 / 0 KB</span>
+          <span id="progress-speed"></span>
+        </div>
+      </div>
+
+      <!-- Status Message / Reboot countdown -->
+      <div class="status-box" id="status-box"></div>
+
+      <!-- Action Button -->
+      <button class="btn btn-primary" id="btn-flash" disabled>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        Start Update
+      </button>
+    </div>
+  </div>
+</main>
 
 <script>
-    const form = document.getElementById('otaForm');
-    const btn = document.getElementById('updateBtn');
+const $ = id => document.getElementById(id);
 
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const fileInput = form.querySelector('input[type="file"]');
-        if (!fileInput.files.length) return;
+let selectedFile = null;
+let uploadStartTime = 0;
 
-        const file = fileInput.files[0];
-        const formData = new FormData();
-        formData.append('update', file);
+// Load device statistics
+async function loadDeviceStats() {
+  try {
+    const [ver, mem, spc] = await Promise.all([
+      fetch('/v.json').then(r => r.json()).catch(() => ({})),
+      fetch('/memory.json').then(r => r.json()).catch(() => ({})),
+      fetch('/space.json').then(r => r.json()).catch(() => ({}))
+    ]);
 
-        // change button to loading
-        btn.value = 'Updating...';
-        btn.disabled = true;
+    if (ver.m) $('stat-model').textContent = ver.m;
+    if (ver.v) $('stat-ver').textContent = ver.v;
+    if (mem.heap) $('stat-heap').textContent = Math.round(mem.heap / 1024) + ' KB';
+    if (spc.free) $('stat-fs').textContent = Math.round(spc.free / 1024) + ' KB';
+  } catch (err) {
+    console.warn('Could not fetch device stats:', err);
+  }
+}
+loadDeviceStats();
 
-        const response = await fetch('/update', {
-            method: 'POST',
-            body: formData
-        });
+// Drag and drop handlers
+const dropzone = $('dropzone');
+const fileInput = $('file-input');
+const filePreview = $('file-preview');
+const fileName = $('file-name');
+const fileSize = $('file-size');
+const fileRemove = $('file-remove');
+const btnFlash = $('btn-flash');
+const progressSection = $('progress-section');
+const progressFill = $('progress-fill');
+const progressStatus = $('progress-status');
+const progressPercent = $('progress-percent');
+const progressBytes = $('progress-bytes');
+const progressSpeed = $('progress-speed');
+const statusBox = $('status-box');
 
-        const text = await response.text();
-        let countdown = 30;
-        const interval = setInterval(() => {
-            btn.value = `${text}\nRedirecting in ${countdown} seconds...`;
-            countdown--;
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dropzone.classList.add('dragover');
+});
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+dropzone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropzone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', (e) => {
+  if (e.target.files.length) handleFile(e.target.files[0]);
+});
 
-            if (countdown < 0) {
-                clearInterval(interval);
-                window.location.href = '/';
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1048576).toFixed(2) + ' MB';
+}
+
+function handleFile(file) {
+  if (!file.name.toLowerCase().endsWith('.bin')) {
+    showStatus('Please select a compiled firmware binary (.bin)', 'error');
+    return;
+  }
+  selectedFile = file;
+  fileName.textContent = file.name;
+  fileSize.textContent = formatBytes(file.size);
+  filePreview.classList.add('active');
+  dropzone.style.display = 'none';
+  btnFlash.disabled = false;
+  hideStatus();
+}
+
+fileRemove.addEventListener('click', () => {
+  selectedFile = null;
+  fileInput.value = '';
+  filePreview.classList.remove('active');
+  dropzone.style.display = 'flex';
+  btnFlash.disabled = true;
+  hideStatus();
+});
+
+function showStatus(html, type = 'info') {
+  statusBox.className = 'status-box active ' + type;
+  statusBox.innerHTML = html;
+}
+function hideStatus() {
+  statusBox.className = 'status-box';
+  statusBox.innerHTML = '';
+}
+
+// Flash firmware via POST /update
+btnFlash.addEventListener('click', () => {
+  if (!selectedFile) return;
+
+  btnFlash.disabled = true;
+  fileRemove.style.display = 'none';
+  progressSection.classList.add('active');
+  showStatus('Uploading firmware to device...', 'info');
+
+  const formData = new FormData();
+  formData.append('update', selectedFile, selectedFile.name);
+
+  const xhr = new XMLHttpRequest();
+  uploadStartTime = Date.now();
+
+  xhr.upload.addEventListener('progress', (e) => {
+    if (e.lengthComputable) {
+      const pct = Math.round((e.loaded / e.total) * 100);
+      progressFill.style.width = pct + '%';
+      progressPercent.textContent = pct + '%';
+      progressBytes.textContent = `${formatBytes(e.loaded)} / ${formatBytes(e.total)}`;
+
+      const elapsedSec = (Date.now() - uploadStartTime) / 1000;
+      if (elapsedSec > 0.5) {
+        const speed = e.loaded / elapsedSec;
+        progressSpeed.textContent = formatBytes(speed) + '/s';
+      }
+
+      if (pct >= 100) {
+        progressStatus.textContent = 'Writing to Flash memory...';
+        showStatus('Firmware uploaded. Flashing and verifying...', 'info');
+      }
+    }
+  });
+
+  xhr.addEventListener('load', () => {
+    const resp = xhr.responseText.trim();
+    if (xhr.status === 200 && (resp.includes('OK') || resp.includes('Rebooting'))) {
+      progressFill.style.width = '100%';
+      progressStatus.textContent = 'Flashing Complete!';
+      startRebootCountdown();
+    } else {
+      showStatus('Update failed: ' + (resp || `HTTP ${xhr.status}`), 'error');
+      btnFlash.disabled = false;
+      fileRemove.style.display = 'block';
+    }
+  });
+
+  xhr.addEventListener('error', () => {
+    showStatus('Network connection error during upload. Please check WiFi and try again.', 'error');
+    btnFlash.disabled = false;
+    fileRemove.style.display = 'block';
+  });
+
+  xhr.open('POST', '/update');
+  xhr.send(formData);
+});
+
+function startRebootCountdown() {
+  let seconds = 20;
+  const render = () => {
+    showStatus(`
+      <div><strong>Update Successful!</strong></div>
+      <div style="font-size:12px; margin-top:4px; opacity:0.85;">Device is rebooting. Reconnecting...</div>
+      <div class="reboot-countdown">${seconds}s</div>
+      <div style="font-size:11px; color:var(--muted);">Do not close this page.</div>
+    `, 'success');
+  };
+
+  render();
+  const timer = setInterval(() => {
+    seconds--;
+    if (seconds > 0) {
+      render();
+      // Try probing the device in the last 10 seconds
+      if (seconds <= 10) {
+        fetch('/v.json', { cache: 'no-store' })
+          .then(r => {
+            if (r.ok) {
+              clearInterval(timer);
+              window.location.href = '/';
             }
-        }, 1000);
-    });
+          })
+          .catch(() => {});
+      }
+    } else {
+      clearInterval(timer);
+      window.location.href = '/';
+    }
+  }, 1000);
+}
 </script>
+
 </body>
 </html>

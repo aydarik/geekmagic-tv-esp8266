@@ -8,7 +8,7 @@
 #include "config.h"
 #include "TJpg_Decoder.h"
 #include "utils.h"
-#include "fonts/NotoSans_Regular24.h"
+#include "generated/NotoSans_Regular24.h"
 
 extern Settings appSettings;
 
@@ -62,7 +62,7 @@ const IconMap *getIcon(const char *key) {
 }
 
 bool weatherUpdateTask() {
-    if (!appSettings.showWeather || appSettings.brightness == 0 || displayState.theme != 1) return false;
+    if (!appSettings.showWeather || appSettings.brightness == 0 || displayState.theme != Theme::CLOCK) return false;
     if (appSettings.owmApiKey[0] == '\0' || appSettings.owmLocation[0] == '\0') return false;
 
     char url[256];
@@ -75,7 +75,14 @@ bool weatherUpdateTask() {
     http.begin(client, url);
     httpCode = http.GET();
     if (httpCode == HTTP_CODE_OK) {
-        if (JsonDocument doc; !deserializeJson(doc, http.getStream())) {
+        JsonDocument filter;
+        filter["main"]["temp"] = true;
+        filter["main"]["humidity"] = true;
+        filter["wind"]["speed"] = true;
+        filter["wind"]["deg"] = true;
+        filter["weather"][0]["icon"] = true;
+
+        if (JsonDocument doc; !deserializeJson(doc, http.getStream(), DeserializationOption::Filter(filter))) {
             temp = doc["main"]["temp"] | temp;
             humidity = doc["main"]["humidity"] | humidity;
             windSpeed = doc["wind"]["speed"] | windSpeed;

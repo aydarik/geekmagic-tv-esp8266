@@ -1,7 +1,7 @@
 #ifndef THEME_CLOCK_H
 #define THEME_CLOCK_H
 
-#define CLOCK_NOTE_SIZE 128
+constexpr int CLOCK_NOTE_SIZE = 128;
 
 struct ClockState {
     char note[CLOCK_NOTE_SIZE];

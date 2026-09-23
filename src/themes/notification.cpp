@@ -2,7 +2,7 @@
 #include "config.h"
 #include "display.h"
 #include "utils.h"
-#include "fonts/NotoSans_Regular24.h"
+#include "generated/NotoSans_Regular24.h"
 
 NotificationState notificationState;
 
@@ -46,11 +46,7 @@ static void drawGauge(const int x, const int y, const int r, const float current
     constexpr int totalAngle = endAngle - startAngle;
     tft.drawArc(x, y, r, r - 12, startAngle, endAngle, TFT_DARKGREY, TFT_BLACK);
 
-    const bool hasSubject = notificationState.subject[0] != '\0';
-    const int subjectOffset = hasSubject ? DISPLAY_CENTER / ANIMATION_STEPS : 0;
-
     const uint32_t gaugeColor = percent < 0.2f || percent > 0.8f ? TFT_RED : TFT_OLIVE;
-
     tft.startWrite();
     for (int i = 1; i <= ANIMATION_STEPS; ++i) {
         const int currentAngle = startAngle + totalAngle * percent * static_cast<float>(i) / ANIMATION_STEPS;
@@ -103,7 +99,7 @@ static void showNotification(const int maxLines, const int y) {
 
     tft.loadFont(NotoSans_Regular24);
     tft.startWrite();
-    for (int i = 0; i < count; i++) {
+    for (size_t i = 0; i < count; i++) {
         const int lineY = currentY + i * LINES_HEIGHT;
         if (strcmp(wrapped[i], "---") == 0) {
             tft.drawFastHLine(0, lineY + LINES_HEIGHT / 4, DISPLAY_SIZE, TFT_DARKGREY);

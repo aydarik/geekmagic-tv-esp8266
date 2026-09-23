@@ -3,34 +3,29 @@
 
 #include <Arduino.h>
 #include <TFT_eSPI.h>
+#include "config.h"
 
-#define DISPLAY_SIZE 240
-#define DISPLAY_CENTER 120
-
-#define DISPLAY_IP_BUFFER_SIZE 24
-#define DISPLAY_IMG_PATH_BUFFER_SIZE 32
-#define DISPLAY_MSG_BUFFER_SIZE 512
+constexpr int DISPLAY_IP_BUFFER_SIZE       = 24;
+constexpr int DISPLAY_IMG_PATH_BUFFER_SIZE = 32;
 
 struct DisplayState {
-    int theme;
-    time_t timeout;
-    char ipInfo[DISPLAY_IP_BUFFER_SIZE];
-    char image[DISPLAY_IMG_PATH_BUFFER_SIZE];
+    Theme  theme   = Theme::NONE;
+    time_t timeout = 0;
+    char   ipInfo[DISPLAY_IP_BUFFER_SIZE]      = {};
+    char   image[DISPLAY_IMG_PATH_BUFFER_SIZE] = {};
 };
 
 void displayInit();
-
 void displaySetBrightness(int brightness);
-
 void displayTest();
-
-void displayUpdate(int theme = 0, bool forceClear = true);
-
+void displayUpdate(Theme theme = Theme::NONE, bool forceClear = true);
+void displayScheduleUpdate(Theme theme = Theme::NONE, bool forceClear = true, time_t timeout = 0);
+void displayScheduleTest();
+bool displayProcessPending();
 void displayCycleNextPage();
-
 void displayToggleBacklight();
 
 extern DisplayState displayState;
-extern TFT_eSPI tft;
+extern TFT_eSPI     tft;
 
-#endif
+#endif // DISPLAY_H

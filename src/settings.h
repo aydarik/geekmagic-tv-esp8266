@@ -2,51 +2,51 @@
 #define SETTINGS_H
 
 #include <Arduino.h>
-#include <EEPROM.h>
+#include "config.h"
 
-// Firmware model
-#define FIRMWARE_MODEL "aydarik"
-// Firmware version - increment when Settings structure changes
-#define FIRMWARE_VERSION 2
+// Firmware model identifier (used in /v.json)
+constexpr char FIRMWARE_MODEL[] = "aydarik";
+
+// Increment when Settings structure layout changes (triggers reset on boot)
+constexpr int FIRMWARE_VERSION = 3;
 
 // Semantic version string (replaced by GitHub Action during release builds)
 #ifndef FIRMWARE_VERSION_STRING
 #define FIRMWARE_VERSION_STRING "dev"
 #endif
 
+// Number of quick power cycles before factory reset
+constexpr int POWER_CYCLE_THRESHOLD = 5;
+
+// Settings — persisted to EEPROM
 struct Settings {
-    uint16_t version; // Firmware version for compatibility check
-    int brightness;
-    int defaultTheme;
-    char tz[64];
-    bool showIP;
-    bool showSec;
-    bool showWeather;
-    char owmApiKey[64];
-    char owmLocation[64];
+    uint16_t version;      // Must match FIRMWARE_VERSION
+    int      brightness;
+    Theme    defaultTheme;
+    char     tz[64];
+    bool     showIP;
+    bool     showSec;
+    bool     showWeather;
+    char     owmApiKey[64];
+    char     owmLocation[64];
 };
 
 // Power cycle reset structure (user-initiated factory reset)
 struct PowerCycleCounter {
-    uint16_t magic; // Magic number to validate power cycle counter (0x5C01)
-    uint8_t cycleCount; // Number of quick power cycles
+    uint16_t magic;      // Magic number to validate (0x5C01)
+    uint8_t  cycleCount;
 };
 
 void settingsInit();
 
 void settingsLoad(Settings &settings);
-
 void settingsSave(const Settings &settings);
-
 void settingsReset(Settings &settings);
 
-// Power cycle counter functions (user-initiated factory reset)
+// Power cycle counter (user-initiated factory reset via 5 quick power cycles)
 uint8_t powerCycleCounterGet();
+void    powerCycleCounterIncrement();
+void    powerCycleCounterReset();
+bool    powerCycleCounterCheckReset();
 
-void powerCycleCounterIncrement();
-
-void powerCycleCounterReset();
-
-bool powerCycleCounterCheckReset();
-
-#endif
+#endif // SETTINGS_H

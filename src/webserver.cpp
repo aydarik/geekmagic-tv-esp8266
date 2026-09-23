@@ -10,262 +10,357 @@
 #include "utils.h"
 #include <LittleFS.h>
 #include <ArduinoJson.h>
-#include <ESP8266WebServer.h>
+#include <ESPAsyncWebServer.h>
 #include <ESP8266WiFi.h>
 
 #include "generated/index_html.h"
 #include "generated/ota_html.h"
 
-ESP8266WebServer server(WEB_SERVER_PORT);
+static AsyncWebServer server(WEB_SERVER_PORT);
+static AsyncWebSocket ws("/ws");
 
-extern Settings appSettings;
+extern Settings  appSettings;
 extern NotificationState notificationState;
-extern CountdownState countdownState;
-extern ClockState clockState;
+extern CountdownState    countdownState;
+extern ClockState        clockState;
 
-// File upload buffer
-static File uploadFile;
+// ---------------------------------------------------------------------------
+// WebSocket — broadcast JSON events to all connected clients
+// ---------------------------------------------------------------------------
 
-static void handleAppJson() {
-    JsonDocument doc;
-    doc["theme"] = displayState.theme;
-    doc["defaultTheme"] = appSettings.defaultTheme;
-    doc["img"] = displayState.image;
-    doc["tz"] = appSettings.tz;
-    doc["showIP"] = appSettings.showIP;
-    doc["showSec"] = appSettings.showSec;
-    doc["showWeather"] = appSettings.showWeather;
-    doc["owmLoc"] = appSettings.owmLocation;
-    doc["owmKey"] = appSettings.owmApiKey;
-    if (displayState.timeout != 0) {
-        doc["timeout"] = displayState.timeout;
-    }
-
-    server.setContentLength(measureJson(doc));
-    server.send(200, CONTENT_TYPE_JSON, F(""));
-    serializeJson(doc, server.client());
+void wsBroadcast(const JsonDocument &doc) {
+    if (ws.count() == 0) return;
+    String payload;
+    serializeJson(doc, payload);
+    ws.textAll(payload);
 }
 
-static void handleSpaceJson() {
-    FSInfo fs_info;
-    LittleFS.info(fs_info);
-
+void wsBroadcastState() {
+    if (ws.count() == 0) return;
     JsonDocument doc;
-    doc["total"] = fs_info.totalBytes;
-    doc["free"] = fs_info.totalBytes - fs_info.usedBytes;
-    // 4 blocks × 4096 bytes -> LittleFS overhead
+    if (displayState.theme != Theme::NONE)
+        doc["theme"] = static_cast<int8_t>(displayState.theme);
 
-    server.setContentLength(measureJson(doc));
-    server.send(200, CONTENT_TYPE_JSON, F(""));
-    serializeJson(doc, server.client());
-}
-
-static void handleMemoryJson() {
-    FSInfo fs_info;
-    LittleFS.info(fs_info);
-
-    JsonDocument doc;
-    doc["heap"] = ESP.getFreeHeap();
-    doc["fragm"] = ESP.getHeapFragmentation();
-
-    server.setContentLength(measureJson(doc));
-    server.send(200, CONTENT_TYPE_JSON, F(""));
-    serializeJson(doc, server.client());
-}
-
-static void handleBrtJson() {
-    JsonDocument doc;
     doc["brt"] = appSettings.brightness;
 
-    server.setContentLength(measureJson(doc));
-    server.send(200, CONTENT_TYPE_JSON, F(""));
-    serializeJson(doc, server.client());
+    doc["mem_heap"] = ESP.getFreeHeap();
+
+    FSInfo fs_info;
+    LittleFS.info(fs_info);
+    doc["space_free"] = fs_info.totalBytes - fs_info.usedBytes;
+
+    wsBroadcast(doc);
 }
 
-static void handleVersionJson() {
+void webserverHandle() {
+    ws.cleanupClients();
+
+    // Push WiFi scan results over WebSocket as soon as the async scan finishes
+    const int scanResult = WiFi.scanComplete();
+    if (scanResult >= 0) {
+        JsonDocument doc;
+        doc["type"] = "wifi_scan";
+        JsonArray nets = doc["networks"].to<JsonArray>();
+        for (int i = 0; i < scanResult; i++) {
+            if (WiFi.SSID(i).isEmpty()) continue;
+            JsonObject entry = nets.add<JsonObject>();
+            entry["ssid"] = WiFi.SSID(i);
+            entry["rssi"] = WiFi.RSSI(i);
+        }
+        WiFi.scanDelete();
+        wsBroadcast(doc);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// JSON response helpers
+// ---------------------------------------------------------------------------
+
+static void sendJson(AsyncWebServerRequest *request, const JsonDocument &doc) {
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    serializeJson(doc, *response);
+    request->send(response);
+}
+
+// ---------------------------------------------------------------------------
+// GET /app.json
+// ---------------------------------------------------------------------------
+
+static void handleAppJson(AsyncWebServerRequest *request) {
+    JsonDocument doc;
+    doc["ip"]          = WiFi.localIP().toString();
+    doc["brt"]         = appSettings.brightness;
+    doc["theme"]       = static_cast<int8_t>(displayState.theme);
+    doc["defaultTheme"]= static_cast<int8_t>(appSettings.defaultTheme);
+    doc["img"]         = displayState.image;
+    doc["tz"]          = appSettings.tz;
+    doc["showIP"]      = appSettings.showIP;
+    doc["showSec"]     = appSettings.showSec;
+    doc["showWeather"] = appSettings.showWeather;
+    doc["owmLoc"]      = appSettings.owmLocation;
+    // Note: owmKey intentionally omitted from this endpoint
+    if (displayState.timeout != 0)
+        doc["timeout"] = displayState.timeout;
+    sendJson(request, doc);
+}
+
+// ---------------------------------------------------------------------------
+// GET /space.json
+// ---------------------------------------------------------------------------
+
+static void handleSpaceJson(AsyncWebServerRequest *request) {
+    FSInfo fs_info;
+    LittleFS.info(fs_info);
+    JsonDocument doc;
+    doc["total"] = fs_info.totalBytes;
+    doc["free"]  = fs_info.totalBytes - fs_info.usedBytes;
+    sendJson(request, doc);
+}
+
+// ---------------------------------------------------------------------------
+// GET /memory.json
+// ---------------------------------------------------------------------------
+
+static void handleMemoryJson(AsyncWebServerRequest *request) {
+    JsonDocument doc;
+    doc["heap"]  = ESP.getFreeHeap();
+    doc["fragm"] = ESP.getHeapFragmentation();
+    sendJson(request, doc);
+}
+
+// ---------------------------------------------------------------------------
+// GET /brt.json
+// ---------------------------------------------------------------------------
+
+static void handleBrtJson(AsyncWebServerRequest *request) {
+    JsonDocument doc;
+    doc["brt"] = appSettings.brightness;
+    sendJson(request, doc);
+}
+
+// ---------------------------------------------------------------------------
+// GET /v.json
+// ---------------------------------------------------------------------------
+
+static void handleVersionJson(AsyncWebServerRequest *request) {
     JsonDocument doc;
     doc["m"] = FIRMWARE_MODEL;
     doc["v"] = FIRMWARE_VERSION_STRING;
-
-    server.setContentLength(measureJson(doc));
-    server.send(200, CONTENT_TYPE_JSON, F(""));
-    serializeJson(doc, server.client());
+    sendJson(request, doc);
 }
 
-static void handleMessageJson() {
+// ---------------------------------------------------------------------------
+// GET /message.json
+// ---------------------------------------------------------------------------
+
+static void handleMessageJson(AsyncWebServerRequest *request) {
     JsonDocument doc;
-    doc["msg"] = notificationState.message;
-    doc["sbj"] = notificationState.subject;
+    doc["msg"]   = notificationState.message;
+    doc["sbj"]   = notificationState.subject;
     doc["style"] = notificationState.style;
-
-    server.setContentLength(measureJson(doc));
-    server.send(200, CONTENT_TYPE_JSON, F(""));
-    serializeJson(doc, server.client());
+    sendJson(request, doc);
 }
 
-static void handleNoteJson() {
+// ---------------------------------------------------------------------------
+// GET /note.json
+// ---------------------------------------------------------------------------
+
+static void handleNoteJson(AsyncWebServerRequest *request) {
     JsonDocument doc;
     doc["note"] = clockState.note;
     if (clockState.noteRotations > 0)
         doc["rpm"] = clockState.noteRotations;
-
-    server.setContentLength(measureJson(doc));
-    server.send(200, CONTENT_TYPE_JSON, F(""));
-    serializeJson(doc, server.client());
+    sendJson(request, doc);
 }
 
-static int hexToInt(char c) {
-    if (c >= '0' && c <= '9') return c - '0';
-    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
-    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-    return -1;
-}
+// ---------------------------------------------------------------------------
+// GET /set — device control endpoint
+// All args are URL-decoded by ESPAsyncWebServer automatically.
+// ---------------------------------------------------------------------------
 
-static void urlDecode(const char *input, char *output, const size_t output_size) {
-    const size_t max_size = output_size - 1;
-    size_t written = 0;
-    while (*input && written < max_size) {
-        if (*input == '+') {
-            output[written++] = ' ';
-            input++;
-        } else if (*input == '%' && isxdigit(*(input + 1)) && isxdigit(*(input + 2))) {
-            output[written++] = hexToInt(*(input + 1)) << 4 | hexToInt(*(input + 2));
-            input += 3;
+static void handleSet(AsyncWebServerRequest *request) {
+    if (request->hasParam("msg")) {
+        const AsyncWebParameter *pMsg = request->getParam("msg");
+        strncpy(notificationState.message, pMsg->value().c_str(), NOTIFICATION_MSG_BUFFER_SIZE - 1);
+        notificationState.message[NOTIFICATION_MSG_BUFFER_SIZE - 1] = '\0';
+
+        const AsyncWebParameter *pSbj = request->getParam("sbj");
+        if (pSbj) {
+            strncpy(notificationState.subject, pSbj->value().c_str(), NOTIFICATION_SBJ_BUFFER_SIZE - 1);
+            notificationState.subject[NOTIFICATION_SBJ_BUFFER_SIZE - 1] = '\0';
         } else {
-            output[written++] = *input++;
+            notificationState.subject[0] = '\0';
         }
-    }
-    output[written] = '\0';
-}
 
-static void handleSet() {
-    if (server.hasArg("msg")) {
-        urlDecode(server.arg("msg").c_str(), notificationState.message, NOTIFICATION_MSG_BUFFER_SIZE);
-        urlDecode(server.arg("sbj").c_str(), notificationState.subject, NOTIFICATION_SBJ_BUFFER_SIZE);
-        urlDecode(server.arg("style").c_str(), notificationState.style, NOTIFICATION_STYLE_BUFFER_SIZE);
-        displayUpdate(2);
-        if (const int timeout = server.arg("timeout").toInt(); timeout > 0)
-            displayState.timeout = time(nullptr) + timeout;
-    } else if (server.hasArg("note")) {
+        const AsyncWebParameter *pStyle = request->getParam("style");
+        if (pStyle) {
+            strncpy(notificationState.style, pStyle->value().c_str(), NOTIFICATION_STYLE_BUFFER_SIZE - 1);
+            notificationState.style[NOTIFICATION_STYLE_BUFFER_SIZE - 1] = '\0';
+        } else {
+            notificationState.style[0] = '\0';
+        }
+
+        time_t timeoutAt = 0;
+        const AsyncWebParameter *pTimeout = request->getParam("timeout");
+        if (pTimeout) {
+            const int timeout = pTimeout->value().toInt();
+            if (timeout > 0) timeoutAt = time(nullptr) + timeout;
+        }
+        displayScheduleUpdate(Theme::NOTIFICATION, true, timeoutAt);
+
+    } else if (request->hasParam("note")) {
         const bool hadNote = clockState.note[0] != '\0';
-        urlDecode(server.arg("note").c_str(), clockState.note, CLOCK_NOTE_SIZE);
-        const boolean hasNote = clockState.note[0] != '\0';
-        clockState.noteRotations = server.arg("rpm").toInt();
-        if (clockState.noteRotations > 60) clockState.noteRotations = 60; // Not more than every second
-        if (const int timeout = server.arg("timeout").toInt(); timeout > 0)
-            clockState.noteTimeout = time(nullptr) + timeout;
-        else clockState.noteTimeout = 0;
-        const String force = server.arg("force");
-        if (displayState.theme == 1
+        const AsyncWebParameter *pNote = request->getParam("note");
+        strncpy(clockState.note, pNote->value().c_str(), CLOCK_NOTE_SIZE - 1);
+        clockState.note[CLOCK_NOTE_SIZE - 1] = '\0';
+        const bool hasNote = clockState.note[0] != '\0';
+
+        const AsyncWebParameter *pRpm = request->getParam("rpm");
+        clockState.noteRotations = pRpm ? pRpm->value().toInt() : 0;
+        if (clockState.noteRotations > 60) clockState.noteRotations = 60;
+
+        const AsyncWebParameter *pTimeout = request->getParam("timeout");
+        if (pTimeout) {
+            const int timeout = pTimeout->value().toInt();
+            clockState.noteTimeout = timeout > 0 ? time(nullptr) + timeout : 0;
+        } else {
+            clockState.noteTimeout = 0;
+        }
+
+        const AsyncWebParameter *pForce = request->getParam("force");
+        const String force = pForce ? pForce->value() : "";
+        if (displayState.theme == Theme::CLOCK
             && (hadNote != hasNote
                 || force.equalsIgnoreCase("true")
-                || force.equals("1"))
-        ) {
-            displayUpdate();
+                || force == "1")) {
+            displayScheduleUpdate(Theme::NONE, true);
         }
-    } else if (server.hasArg("cnt")) {
-        urlDecode(server.arg("sbj").c_str(), countdownState.subject, COUNTDOWN_SBJ_BUFFER_SIZE);
-        urlDecode(server.arg("cnt").c_str(), countdownState.datetime, COUNTDOWN_DATETIME_BUFFER_SIZE);
-        displayUpdate(4);
-        if (const int timeout = server.arg("timeout").toInt(); timeout > 0)
-            if (const time_t datetime = parseDateTime(countdownState.datetime); datetime > time(nullptr))
-                displayState.timeout = datetime + timeout;
-    } else if (server.hasArg("brt")) {
-        appSettings.brightness = server.arg("brt").toInt();
+
+    } else if (request->hasParam("cnt")) {
+        const AsyncWebParameter *pSbj = request->getParam("sbj");
+        if (pSbj) {
+            strncpy(countdownState.subject, pSbj->value().c_str(), COUNTDOWN_SBJ_BUFFER_SIZE - 1);
+            countdownState.subject[COUNTDOWN_SBJ_BUFFER_SIZE - 1] = '\0';
+        } else {
+            countdownState.subject[0] = '\0';
+        }
+
+        const AsyncWebParameter *pCnt = request->getParam("cnt");
+        strncpy(countdownState.datetime, pCnt->value().c_str(), COUNTDOWN_DATETIME_BUFFER_SIZE - 1);
+        countdownState.datetime[COUNTDOWN_DATETIME_BUFFER_SIZE - 1] = '\0';
+
+        time_t timeoutAt = 0;
+        const AsyncWebParameter *pTimeout = request->getParam("timeout");
+        if (pTimeout) {
+            const int timeout = pTimeout->value().toInt();
+            if (timeout > 0) {
+                const time_t dt = parseDateTime(countdownState.datetime);
+                if (dt > time(nullptr)) timeoutAt = dt + timeout;
+            }
+        }
+        displayScheduleUpdate(Theme::COUNTDOWN, true, timeoutAt);
+
+    } else if (request->hasParam("brt")) {
+        appSettings.brightness = request->getParam("brt")->value().toInt();
         displaySetBrightness(appSettings.brightness);
         settingsSave(appSettings);
-    } else if (server.hasArg("theme")) {
-        const int theme = server.arg("theme").toInt();
-        if (server.hasArg("default") && server.arg("default") != "false") {
+
+    } else if (request->hasParam("theme")) {
+        const auto theme = static_cast<Theme>(request->getParam("theme")->value().toInt());
+        const bool setDefault = request->hasParam("default") && request->getParam("default")->value() != "false";
+        if (setDefault) {
             appSettings.defaultTheme = theme;
             settingsSave(appSettings);
         }
-        displayUpdate(theme);
-    } else if (server.hasArg("img")) {
-        urlDecode(server.arg("img").c_str(), displayState.image, DISPLAY_IMG_PATH_BUFFER_SIZE);
-        displayUpdate(3);
-        if (const int timeout = server.arg("timeout").toInt(); timeout > 0)
-            displayState.timeout = time(nullptr) + timeout;
-    } else if (server.hasArg("ip")) {
-        appSettings.showIP = server.arg("ip") != "false";
-        if (displayState.theme == 1) displayUpdate();
+        displayScheduleUpdate(theme, true);
+
+    } else if (request->hasParam("img")) {
+        const AsyncWebParameter *pImg = request->getParam("img");
+        strncpy(displayState.image, pImg->value().c_str(), DISPLAY_IMG_PATH_BUFFER_SIZE - 1);
+        displayState.image[DISPLAY_IMG_PATH_BUFFER_SIZE - 1] = '\0';
+
+        time_t timeoutAt = 0;
+        const AsyncWebParameter *pTimeout = request->getParam("timeout");
+        if (pTimeout) {
+            const int timeout = pTimeout->value().toInt();
+            if (timeout > 0) timeoutAt = time(nullptr) + timeout;
+        }
+        displayScheduleUpdate(Theme::IMAGE, true, timeoutAt);
+
+    } else if (request->hasParam("ip")) {
+        appSettings.showIP = request->getParam("ip")->value() != "false";
+        if (displayState.theme == Theme::CLOCK) displayScheduleUpdate(Theme::NONE, true);
         settingsSave(appSettings);
-    } else if (server.hasArg("sec")) {
-        appSettings.showSec = server.arg("sec") != "false";
-        if (displayState.theme == 1 || displayState.theme == 5) displayUpdate();
+
+    } else if (request->hasParam("sec")) {
+        appSettings.showSec = request->getParam("sec")->value() != "false";
+        if (displayState.theme == Theme::CLOCK || displayState.theme == Theme::BIG_CLOCK) displayScheduleUpdate(Theme::NONE, true);
         settingsSave(appSettings);
-    } else if (server.hasArg("weather")) {
-        appSettings.showWeather = server.arg("weather") != "false";
-        if (displayState.theme == 1) displayUpdate();
+
+    } else if (request->hasParam("weather")) {
+        appSettings.showWeather = request->getParam("weather")->value() != "false";
+        if (displayState.theme == Theme::CLOCK) displayScheduleUpdate(Theme::NONE, true);
         settingsSave(appSettings);
-    } else if (server.hasArg("tz")) {
-        strncpy(appSettings.tz, server.arg("tz").c_str(), sizeof(appSettings.tz));
-        appSettings.tz[sizeof(appSettings.tz) - 1] = '\0'; // Ensure null-termination
+
+    } else if (request->hasParam("tz")) {
+        const AsyncWebParameter *pTz = request->getParam("tz");
+        strncpy(appSettings.tz, pTz->value().c_str(), sizeof(appSettings.tz) - 1);
+        appSettings.tz[sizeof(appSettings.tz) - 1] = '\0';
         setenv("TZ", appSettings.tz, 1);
         tzset();
-        if (displayState.theme == 1) displayUpdate();
+        if (displayState.theme == Theme::CLOCK) displayScheduleUpdate(Theme::NONE, true);
         settingsSave(appSettings);
-    } else if (server.hasArg("owmLoc") && server.hasArg("owmKey")) {
-        strncpy(appSettings.owmLocation, server.arg("owmLoc").c_str(), sizeof(appSettings.owmLocation));
+
+    } else if (request->hasParam("owmLoc") && request->hasParam("owmKey")) {
+        const AsyncWebParameter *pLoc = request->getParam("owmLoc");
+        const AsyncWebParameter *pKey = request->getParam("owmKey");
+        strncpy(appSettings.owmLocation, pLoc->value().c_str(), sizeof(appSettings.owmLocation) - 1);
         appSettings.owmLocation[sizeof(appSettings.owmLocation) - 1] = '\0';
-        strncpy(appSettings.owmApiKey, server.arg("owmKey").c_str(), sizeof(appSettings.owmApiKey));
+        strncpy(appSettings.owmApiKey,   pKey->value().c_str(), sizeof(appSettings.owmApiKey) - 1);
         appSettings.owmApiKey[sizeof(appSettings.owmApiKey) - 1] = '\0';
-        if (displayState.theme == 1) displayUpdate();
+        if (displayState.theme == Theme::CLOCK) displayScheduleUpdate(Theme::NONE, true);
         settingsSave(appSettings);
+
     } else {
-        server.send(400, CONTENT_TYPE_TEXT, F("No action"));
+        request->send(400, "text/plain", "No action");
         return;
     }
-    server.send(200, CONTENT_TYPE_TEXT, F("OK"));
+
+    request->send(200, "text/plain", "OK");
 }
 
-static void handleTest() {
-    displayTest();
-    server.send(200, CONTENT_TYPE_TEXT, F("OK"));
+// ---------------------------------------------------------------------------
+// GET /test
+// ---------------------------------------------------------------------------
+
+static void handleTest(AsyncWebServerRequest *request) {
+    displayScheduleTest();
+    request->send(200, "text/plain", "OK");
 }
 
-static void handleFileUpload() {
-    const String dir = server.hasArg("dir") ? server.arg("dir") : "/";
-    if (!LittleFS.exists(dir)) LittleFS.mkdir(dir);
+// ---------------------------------------------------------------------------
+// GET /delete
+// ---------------------------------------------------------------------------
 
-    const HTTPUpload &upload = server.upload();
-    if (upload.status == UPLOAD_FILE_START) {
-        const String filename = upload.filename;
-        const String filepath = dir + filename;
-        uploadFile = LittleFS.open(filepath, "w");
-        if (!uploadFile)
-            logPrint("Failed to open file for writing!");
-    } else if (upload.status == UPLOAD_FILE_WRITE) {
-        if (uploadFile) {
-            if (const size_t bytesWritten = uploadFile.write(upload.buf, upload.currentSize);
-                bytesWritten != upload.currentSize) {
-                logPrintf("Only %u of %u bytes written!", bytesWritten, upload.currentSize);
-            }
-        }
-    } else if (upload.status == UPLOAD_FILE_END) {
-        if (uploadFile) {
-            uploadFile.close();
-            logPrintf("File uploaded: %u bytes", upload.totalSize);
-        }
+static void handleDelete(AsyncWebServerRequest *request) {
+    if (!request->hasParam("file")) {
+        request->send(400, "text/plain", "Missing file parameter");
+        return;
+    }
+    const String path = request->getParam("file")->value();
+    if (LittleFS.remove(path)) {
+        logPrintf("File deleted: %s", path.c_str());
+        request->send(200, "text/plain", "Deleted");
+    } else {
+        request->send(404, "text/plain", "Not found");
     }
 }
 
-static void handleUploadDone() {
-    server.send(200, CONTENT_TYPE_TEXT, F("OK"));
-}
+// ---------------------------------------------------------------------------
+// GET /filelist — HTML table (compatible with legacy API)
+// ---------------------------------------------------------------------------
 
-static void handleDelete() {
-    if (server.hasArg("file")) {
-        char imagePath[DISPLAY_IMG_PATH_BUFFER_SIZE];
-        urlDecode(server.arg("file").c_str(), imagePath, DISPLAY_IMG_PATH_BUFFER_SIZE);
-        if (LittleFS.remove(imagePath)) {
-            server.send(200, CONTENT_TYPE_TEXT, F("Deleted"));
-            logPrintf("File deleted", imagePath);
-        } else server.send(404, CONTENT_TYPE_TEXT, F("Not found"));
-    } else server.send(400, CONTENT_TYPE_TEXT, F("Missing file parameter"));
-}
-
-static void streamDirRecursiveHtml(const char *dirname) {
+static void streamDirRecursive(AsyncResponseStream *stream, const char *dirname) {
     File root = LittleFS.open(dirname, "r");
     if (!root || !root.isDirectory()) return;
 
@@ -275,152 +370,93 @@ static void streamDirRecursiveHtml(const char *dirname) {
             const size_t len = strlen(file.fullName()) + 2;
             char childPath[len];
             snprintf(childPath, len, "/%s", file.fullName());
-            streamDirRecursiveHtml(childPath);
+            streamDirRecursive(stream, childPath);
         } else {
             const char *fileName = file.name();
             const size_t fileSize = file.size();
-
             auto fnameLower = String(fileName);
             fnameLower.toLowerCase();
 
-            server.sendContent(F("<tr><td>"));
+            stream->print("<tr><td>");
             if (strcmp(displayState.image, file.fullName()) == 0)
-                server.sendContent(F("&#x2714; "));
-            server.sendContent(F("<a href='"));
-            server.sendContent(dirname);
-            server.sendContent(F("/"));
-            server.sendContent(fileName);
-            server.sendContent(F("'>"));
-            server.sendContent(fileName);
-            server.sendContent(F("</a></td><td class='size'>"));
-            server.sendContent(String(fileSize));
-            server.sendContent(F("</td><td><div class='button-group'>"));
-
-            // Delete button
-            server.sendContent(F("<button class='button' onclick=\"deleteImage('"));
-            server.sendContent(dirname);
-            server.sendContent(F("/"));
-            server.sendContent(fileName);
-            server.sendContent(F("')\">DEL</button>"));
-
-            // Set button for JPGs
-            if (fnameLower.endsWith(F(".jpg"))) {
-                server.sendContent(F("<button class='button' onclick=\"displayImage('"));
-                server.sendContent(dirname);
-                server.sendContent(F("/"));
-                server.sendContent(fileName);
-                server.sendContent(F("')\">SET</button>"));
-            }
-
-            server.sendContent(F("</div></td></tr>\n"));
+                stream->print("&#x2714; ");
+            stream->printf("<a href='%s/%s'>%s</a></td>", dirname, fileName, fileName);
+            stream->printf("<td class='size'>%u</td>", fileSize);
+            stream->print("<td><div class='button-group'>");
+            stream->printf("<button class='button' onclick=\"deleteImage('%s/%s')\">DEL</button>", dirname, fileName);
+            if (fnameLower.endsWith(".jpg"))
+                stream->printf("<button class='button' onclick=\"displayImage('%s/%s')\">SET</button>", dirname, fileName);
+            stream->print("</div></td></tr>\n");
         }
         file = root.openNextFile();
     }
 }
 
-static void handleFileList() {
-    server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-    server.send(200, CONTENT_TYPE_HTML, F(""));
-
-    server.sendContent(F("<table><thead><tr><th>Path</th><th>Size</th><th>Actions</th></tr></thead><tbody>\n"));
-    streamDirRecursiveHtml(server.hasArg("dir") ? server.arg("dir").c_str() : "/");
-    server.sendContent(F("</tbody></table>\n"));
-    server.sendContent(F("")); // End of chunked response
+static void handleFileList(AsyncWebServerRequest *request) {
+    const char *dir = request->hasParam("dir") ? request->getParam("dir")->value().c_str() : "/";
+    AsyncResponseStream *stream = request->beginResponseStream("text/html");
+    stream->print("<table><thead><tr><th>Path</th><th>Size</th><th>Actions</th></tr></thead><tbody>\n");
+    streamDirRecursive(stream, dir);
+    stream->print("</tbody></table>\n");
+    request->send(stream);
 }
 
-// Function to handle factory reset
-static void handleFactoryReset() {
-    server.send(200, CONTENT_TYPE_TEXT, F("Factory Reset triggered. Clearing data and restarting..."));
-    delay(100); // Give time for response to send
+// ---------------------------------------------------------------------------
+// GET /log
+// ---------------------------------------------------------------------------
+
+static void handleLog(AsyncWebServerRequest *request) {
+    AsyncResponseStream *response = request->beginResponseStream("text/plain");
+    logPrintTo(*response);
+    request->send(response);
+}
+
+// ---------------------------------------------------------------------------
+// GET /factoryreset
+// ---------------------------------------------------------------------------
+
+static void handleFactoryReset(AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", "Factory Reset triggered. Clearing data and restarting...");
     factoryReset();
 }
 
-static void handleOTAForm() {
-    server.sendHeader(F("Content-Encoding"), F("gzip"));
-    server.sendHeader(F("Cache-Control"), F("max-age=600"));
-    server.send_P(200, CONTENT_TYPE_HTML, reinterpret_cast<const char *>(src_generated_ota_html_gz),
-                  src_generated_index_html_gz_len);
-}
+// ---------------------------------------------------------------------------
+// GET /scan — start async WiFi scan; results are pushed via WebSocket
+//             as {"type":"wifi_scan","networks":[...]} by webserverHandle()
+// ---------------------------------------------------------------------------
 
-static void handleOTAUpload() {
-    HTTPUpload &upload = server.upload();
-
-    if (upload.status == UPLOAD_FILE_START) {
-        showMessage(F("OTA Update..."));
-        const uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
-        if (!Update.begin(maxSketchSpace))
-            Update.printError(Serial);
-    } else if (upload.status == UPLOAD_FILE_WRITE) {
-        if (Update.write(upload.buf, upload.currentSize) != upload.currentSize)
-            Update.printError(Serial);
-    } else if (upload.status == UPLOAD_FILE_END) {
-        if (!Update.end(true)) {
-            Update.printError(Serial);
-            showMessage(F("OTA Failed!"));
-        }
-    }
-}
-
-static void handleOTADone() {
-    const bool shouldReboot = !Update.hasError();
-    server.send(200, CONTENT_TYPE_TEXT, shouldReboot ? F("OK - Rebooting...") : F("FAIL"));
-    if (shouldReboot) {
-        showMessage(F("Success!\nRebooting..."));
-        delay(2000);
-        ESP.restart();
-    }
-}
-
-static void handleLog() {
-    const String log = logGetAll();
-    server.send(200, CONTENT_TYPE_TEXT, log);
-}
-
-static void handleWiFiScan() {
-    const int numNetworks = WiFi.scanNetworks(false, true);
-
-    JsonDocument docRoot;
-    for (int i = 0; i < numNetworks; i++) {
-        JsonDocument doc;
-        doc["ssid"] = WiFi.SSID(i);
-        doc["rssi"] = WiFi.RSSI(i);
-        docRoot.add(doc);
-    }
-
-    WiFi.scanDelete(); // Clear scan results
-
-    server.setContentLength(measureJson(docRoot));
-    server.send(200, CONTENT_TYPE_JSON, F(""));
-    serializeJson(docRoot, server.client());
-}
-
-static void handleWiFiConnect() {
-    if (!server.hasArg("ssid")) {
-        server.send(400, CONTENT_TYPE_TEXT, F("Missing SSID"));
+static void handleWiFiScan(AsyncWebServerRequest *request) {
+    if (WiFi.scanComplete() == WIFI_SCAN_RUNNING) {
+        request->send(200, "text/plain", "scan already running");
         return;
     }
+    // async=true — returns immediately, results pushed via WS
+    WiFi.scanNetworks(true);
+    request->send(200, "text/plain", "scan started");
+}
 
-    const String ssid = server.arg("ssid");
-    const String password = server.hasArg("password") ? server.arg("password") : "";
+// ---------------------------------------------------------------------------
+// GET /connect — join a new WiFi network
+// ---------------------------------------------------------------------------
 
-    server.send(200, CONTENT_TYPE_TEXT, F("Connecting..."));
-    delay(100);
+static void handleWiFiConnect(AsyncWebServerRequest *request) {
+    if (!request->hasParam("ssid")) {
+        request->send(400, "text/plain", "Missing SSID");
+        return;
+    }
+    const String ssid     = request->getParam("ssid")->value();
+    const String password = request->hasParam("password") ? request->getParam("password")->value() : "";
 
-    // Enable persistent WiFi credentials storage
+    request->send(200, "text/plain", "Connecting...");
+
     WiFi.persistent(true);
     WiFi.setAutoReconnect(true);
-
-    // Disconnect from AP mode and switch to STA mode
     WiFi.softAPdisconnect(true);
     delay(100);
-
     WiFi.mode(WIFI_STA);
     delay(100);
-
-    // Connect to new WiFi with credentials
     WiFi.begin(ssid.c_str(), password.c_str());
 
-    // Wait up to 20 seconds for connection
     int attempts = 0;
     while (WiFi.status() != WL_CONNECTED && attempts < 40) {
         attempts++;
@@ -434,67 +470,155 @@ static void handleWiFiConnect() {
     ESP.restart();
 }
 
-static void handleStatic() {
-    String path = server.uri();
+// ---------------------------------------------------------------------------
+// POST /doUpload — file upload handler
+// ---------------------------------------------------------------------------
 
-    // Check if file exists in LittleFS
+static File uploadFile;
+
+static void handleFileUpload(AsyncWebServerRequest *request, const String &filename,
+                              size_t index, uint8_t *data, size_t len, bool final) {
+    const String dir = request->hasParam("dir") ? request->getParam("dir")->value() : "/";
+    if (!LittleFS.exists(dir)) LittleFS.mkdir(dir);
+
+    if (index == 0) {
+        const String filepath = dir + filename;
+        uploadFile = LittleFS.open(filepath, "w");
+        if (!uploadFile) logPrint("Failed to open file for writing!");
+    }
+    if (uploadFile && len > 0) {
+        const size_t written = uploadFile.write(data, len);
+        if (written != len) logPrintf("Only %u of %u bytes written!", written, len);
+    }
+    if (final && uploadFile) {
+        uploadFile.close();
+        logPrintf("File uploaded: %u bytes", index + len);
+        request->send(200, "text/plain", "OK");
+    }
+}
+
+// ---------------------------------------------------------------------------
+// OTA update handlers
+// ---------------------------------------------------------------------------
+
+static void handleOTAUpload(AsyncWebServerRequest *request, const String &filename,
+                              size_t index, uint8_t *data, size_t len, bool final) {
+    if (index == 0) {
+        showMessage(F("OTA Update..."));
+        const uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
+        if (!Update.begin(maxSketchSpace)) Update.printError(Serial);
+    }
+    if (len > 0 && Update.write(data, len) != len) {
+        Update.printError(Serial);
+    }
+    if (final) {
+        if (!Update.end(true)) {
+            Update.printError(Serial);
+            showMessage(F("OTA Failed!"));
+        }
+        const bool ok = !Update.hasError();
+        request->send(200, "text/plain", ok ? F("OK - Rebooting...") : F("FAIL"));
+        if (ok) {
+            showMessage(F("Success!\nRebooting..."));
+            delay(2000);
+            ESP.restart();
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Serve static files from LittleFS (images etc.)
+// ---------------------------------------------------------------------------
+
+static void handleStatic(AsyncWebServerRequest *request) {
+    const String path = request->url();
     if (!LittleFS.exists(path)) {
-        server.send(404, CONTENT_TYPE_TEXT, F("File not found"));
+        request->send(404, "text/plain", "File not found");
         return;
     }
+    const String contentType = path.endsWith(".jpg") ? "image/jpeg" : "application/octet-stream";
+    request->send(LittleFS, path, contentType);
+}
 
-    File file = LittleFS.open(path, "r");
-    if (!file) {
-        server.send(500, CONTENT_TYPE_TEXT, F("Failed to open file"));
-        return;
+// ---------------------------------------------------------------------------
+// WebSocket event handler
+// ---------------------------------------------------------------------------
+
+static void onWsEvent(AsyncWebSocket *srv, AsyncWebSocketClient *client,
+                      AwsEventType type, void *arg, uint8_t *data, size_t len) {
+    (void)srv; (void)arg; (void)data; (void)len;
+    if (type == WS_EVT_CONNECT) {
+        JsonDocument doc;
+        doc["theme"] = static_cast<int8_t>(displayState.theme);
+        doc["brt"]   = appSettings.brightness;
+        char buf[128];
+        const size_t len = serializeJson(doc, buf, sizeof(buf));
+        client->text(buf, len);
     }
-
-    server.streamFile(file, path.endsWith(F(".jpg")) ? F("image/jpeg") : F("application/octet-stream"));
-    file.close();
 }
 
-static void handleRoot() {
-    server.sendHeader(F("Content-Encoding"), F("gzip"));
-    server.sendHeader(F("Cache-Control"), F("max-age=600"));
-    server.send_P(200, CONTENT_TYPE_HTML, reinterpret_cast<const char *>(src_generated_index_html_gz),
-                  src_generated_index_html_gz_len);
-}
+// ---------------------------------------------------------------------------
+// webserverInit
+// ---------------------------------------------------------------------------
 
 void webserverInit() {
-    // GET endpoints
-    server.on(F("/"), HTTP_GET, handleRoot);
-    server.on(F("/app.json"), HTTP_GET, handleAppJson);
-    server.on(F("/space.json"), HTTP_GET, handleSpaceJson);
-    server.on(F("/memory.json"), HTTP_GET, handleMemoryJson);
-    server.on(F("/brt.json"), HTTP_GET, handleBrtJson);
-    server.on(F("/v.json"), HTTP_GET, handleVersionJson);
-    server.on(F("/message.json"), HTTP_GET, handleMessageJson);
-    server.on(F("/note.json"), HTTP_GET, handleNoteJson);
+    ws.onEvent(onWsEvent);
+    server.addHandler(&ws);
 
-    server.on(F("/filelist"), HTTP_GET, handleFileList);
-    server.on(F("/delete"), HTTP_GET, handleDelete);
-    server.on(F("/set"), HTTP_GET, handleSet);
+    // Root page (gzip compressed)
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+        AsyncWebServerResponse *resp = request->beginResponse(
+            200, "text/html",
+            src_generated_index_html_gz,
+            src_generated_index_html_gz_len);
+        resp->addHeader("Content-Encoding", "gzip");
+        resp->addHeader("Cache-Control", "max-age=600");
+        request->send(resp);
+    });
 
-    server.on(F("/test"), HTTP_GET, handleTest);
-    server.on(F("/log"), HTTP_GET, handleLog);
-    server.on(F("/factoryreset"), HTTP_GET, handleFactoryReset);
-    server.on(F("/scan"), HTTP_GET, handleWiFiScan);
-    server.on(F("/connect"), HTTP_GET, handleWiFiConnect);
+    // OTA page (gzip compressed)
+    server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request) {
+        AsyncWebServerResponse *resp = request->beginResponse(
+            200, "text/html",
+            src_generated_ota_html_gz,
+            src_generated_ota_html_gz_len);
+        resp->addHeader("Content-Encoding", "gzip");
+        resp->addHeader("Cache-Control", "max-age=600");
+        request->send(resp);
+    });
+
+    // JSON endpoints
+    server.on("/app.json",     HTTP_GET, handleAppJson);
+    server.on("/space.json",   HTTP_GET, handleSpaceJson);
+    server.on("/memory.json",  HTTP_GET, handleMemoryJson);
+    server.on("/brt.json",     HTTP_GET, handleBrtJson);
+    server.on("/v.json",       HTTP_GET, handleVersionJson);
+    server.on("/message.json", HTTP_GET, handleMessageJson);
+    server.on("/note.json",    HTTP_GET, handleNoteJson);
+
+    // Control endpoints
+    server.on("/set",          HTTP_GET, handleSet);
+    server.on("/filelist",     HTTP_GET, handleFileList);
+    server.on("/delete",       HTTP_GET, handleDelete);
+    server.on("/test",         HTTP_GET, handleTest);
+    server.on("/log",          HTTP_GET, handleLog);
+    server.on("/factoryreset", HTTP_GET, handleFactoryReset);
+    server.on("/scan",         HTTP_GET, handleWiFiScan);
+    server.on("/connect",      HTTP_GET, handleWiFiConnect);
 
     // File upload
-    server.on(F("/doUpload"), HTTP_POST, handleUploadDone, handleFileUpload);
+    server.on("/doUpload", HTTP_POST,
+        [](AsyncWebServerRequest *request) { /* handled in upload callback */ },
+        handleFileUpload);
 
-    // OTA
-    server.on(F("/update"), HTTP_GET, handleOTAForm);
-    server.on(F("/update"), HTTP_POST, handleOTADone, handleOTAUpload);
+    // OTA upload
+    server.on("/update", HTTP_POST,
+        [](AsyncWebServerRequest *request) { /* handled in upload callback */ },
+        handleOTAUpload);
 
-    // Serve images from LittleFS (catches all unhandled routes)
+    // Fallback: serve files from LittleFS
     server.onNotFound(handleStatic);
 
     server.begin();
-    Serial.println(F("Web server started"));
-}
-
-void webserverHandle() {
-    server.handleClient();
+    Serial.println(F("Async web server started"));
 }

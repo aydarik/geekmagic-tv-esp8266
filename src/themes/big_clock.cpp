@@ -92,8 +92,8 @@ void themeRenderBigClock(const bool forceClear, const time_t &now) {
     // Stop here, no need to update the rest
     if (!forceClear && sec != 0 && !appSettings.showSec) return;
 
-    constexpr int hourY = 17;
-    constexpr int minuteY = 124;
+    constexpr int hourY = 18;
+    constexpr int minuteY = 126;
     tft.setTextDatum(TC_DATUM);
     tft.setTextSize(2);
 

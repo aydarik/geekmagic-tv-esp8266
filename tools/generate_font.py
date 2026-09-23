@@ -21,7 +21,7 @@ CHARACTERS = (
 
 def generate_vlw_header(
         font_size: int,
-        output_file: str = "src/fonts/NotoSans_Regular24.h",
+        output_file: str = "src/generated/NotoSans_Regular24.h",
         array_name: str = "NotoSans_Regular24",
         font_name: str = "NotoSans-Regular",
         postscript_name: str = "NotoSans-Regular",
