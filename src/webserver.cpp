@@ -54,6 +54,22 @@ void wsBroadcastState() {
 
 void webserverHandle() {
     ws.cleanupClients();
+
+    // Push WiFi scan results over WebSocket as soon as the async scan finishes
+    const int scanResult = WiFi.scanComplete();
+    if (scanResult >= 0) {
+        JsonDocument doc;
+        doc["type"] = "wifi_scan";
+        JsonArray nets = doc["networks"].to<JsonArray>();
+        for (int i = 0; i < scanResult; i++) {
+            if (WiFi.SSID(i).isEmpty()) continue;
+            JsonObject entry = nets.add<JsonObject>();
+            entry["ssid"] = WiFi.SSID(i);
+            entry["rssi"] = WiFi.RSSI(i);
+        }
+        WiFi.scanDelete();
+        wsBroadcast(doc);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -405,44 +421,18 @@ static void handleFactoryReset(AsyncWebServerRequest *request) {
 }
 
 // ---------------------------------------------------------------------------
-// GET /scan        — start async WiFi scan, returns immediately
-// GET /scan/results — poll for results; returns {"status":"scanning"} while
-//                    in progress, or JSON array of networks when done.
+// GET /scan — start async WiFi scan; results are pushed via WebSocket
+//             as {"type":"wifi_scan","networks":[...]} by webserverHandle()
 // ---------------------------------------------------------------------------
 
 static void handleWiFiScan(AsyncWebServerRequest *request) {
-    // WIFI_SCAN_RUNNING = -1 means a scan is already in progress
     if (WiFi.scanComplete() == WIFI_SCAN_RUNNING) {
         request->send(200, "text/plain", "scan already running");
         return;
     }
-    // async=true — returns immediately, no WDT risk
+    // async=true — returns immediately, results pushed via WS
     WiFi.scanNetworks(true);
     request->send(200, "text/plain", "scan started");
-}
-
-static void handleWiFiScanResults(AsyncWebServerRequest *request) {
-    const int n = WiFi.scanComplete();
-    if (n == WIFI_SCAN_RUNNING) {
-        // Still scanning — tell the client to poll again
-        JsonDocument busy;
-        busy["status"] = "scanning";
-        sendJson(request, busy);
-        return;
-    }
-    // n == WIFI_SCAN_FAILED or n >= 0
-    JsonDocument doc;
-    if (n > 0) {
-        for (int i = 0; i < n; i++) {
-            if (WiFi.SSID(i).isEmpty()) continue;
-            JsonDocument entry;
-            entry["ssid"] = WiFi.SSID(i);
-            entry["rssi"] = WiFi.RSSI(i);
-            doc.add(entry);
-        }
-    }
-    WiFi.scanDelete();
-    sendJson(request, doc);
 }
 
 // ---------------------------------------------------------------------------
@@ -614,7 +604,6 @@ void webserverInit() {
     server.on("/log",          HTTP_GET, handleLog);
     server.on("/factoryreset", HTTP_GET, handleFactoryReset);
     server.on("/scan",         HTTP_GET, handleWiFiScan);
-    server.on("/scanresults",  HTTP_GET, handleWiFiScanResults);
     server.on("/connect",      HTTP_GET, handleWiFiConnect);
 
     // File upload

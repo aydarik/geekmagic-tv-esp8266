@@ -1007,6 +1007,7 @@
       ws.onmessage = e => {
         try {
           const d = JSON.parse(e.data);
+          if (d.type === 'wifi_scan') { renderWifiNetworks(d.networks || []); return; }
           if (d.theme !== undefined) setActivThemBtn(d.theme);
           if (d.brt !== undefined) { $('stat-brt').textContent = d.brt + '%'; }
           if (d.mem_heap !== undefined) { $('stat-heap').textContent = Math.round(d.mem_heap / 1024) + 'KB'; }
@@ -1144,20 +1145,11 @@
     // ── WiFi ──────────────────────────────────────────────────────────────────────
     async function scanWifi() {
       toast('Scanning…');
-      // Start the async scan (returns immediately)
-      await fetch('/scan').catch(() => { });
+      // Fire-and-forget: results arrive via WebSocket (wifi_scan message)
+      await fetch('/scan').catch(() => toast('Scan request failed', 'error'));
+    }
 
-      // Poll /scanresults until the firmware signals it's done
-      let nets = [];
-      for (let i = 0; i < 30; i++) {          // up to 15 s
-        await new Promise(r => setTimeout(r, 500));
-        const res = await fetch('/scanresults').then(r => r.json()).catch(() => null);
-        if (!res) break;
-        if (res.status === 'scanning') continue; // still running
-        nets = Array.isArray(res) ? res : [];
-        break;
-      }
-
+    function renderWifiNetworks(nets) {
       const list = $('wifi-list');
       list.innerHTML = '';
       nets.sort((a, b) => b.rssi - a.rssi).forEach(n => {
