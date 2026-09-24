@@ -8,4 +8,4 @@ void webserverHandle();
 void wsBroadcast(const JsonDocument &doc);
 void wsBroadcastState();
 
-#endif // WEBSERVER_H
+#endif

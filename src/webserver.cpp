@@ -204,8 +204,8 @@ static void handleSet(AsyncWebServerRequest *request) {
         time_t timeoutAt = 0;
         const AsyncWebParameter *pTimeout = request->getParam("timeout");
         if (pTimeout) {
-            const int timeout = pTimeout->value().toInt();
-            if (timeout > 0) timeoutAt = time(nullptr) + timeout;
+            if (const int timeout = pTimeout->value().toInt(); timeout > 0)
+                timeoutAt = time(nullptr) + timeout;
         }
         displayScheduleUpdate(Theme::NOTIFICATION, true, timeoutAt);
 
@@ -253,10 +253,9 @@ static void handleSet(AsyncWebServerRequest *request) {
         time_t timeoutAt = 0;
         const AsyncWebParameter *pTimeout = request->getParam("timeout");
         if (pTimeout) {
-            const int timeout = pTimeout->value().toInt();
-            if (timeout > 0) {
-                const time_t dt = parseDateTime(countdownState.datetime);
-                if (dt > time(nullptr)) timeoutAt = dt + timeout;
+            if (const int timeout = pTimeout->value().toInt(); timeout > 0) {
+                if (const time_t dt = parseDateTime(countdownState.datetime); dt > time(nullptr))
+                    timeoutAt = dt + timeout;
             }
         }
         displayScheduleUpdate(Theme::COUNTDOWN, true, timeoutAt);
@@ -283,24 +282,27 @@ static void handleSet(AsyncWebServerRequest *request) {
         time_t timeoutAt = 0;
         const AsyncWebParameter *pTimeout = request->getParam("timeout");
         if (pTimeout) {
-            const int timeout = pTimeout->value().toInt();
-            if (timeout > 0) timeoutAt = time(nullptr) + timeout;
+            if (const int timeout = pTimeout->value().toInt(); timeout > 0)
+                timeoutAt = time(nullptr) + timeout;
         }
         displayScheduleUpdate(Theme::IMAGE, true, timeoutAt);
 
     } else if (request->hasParam("ip")) {
         appSettings.showIP = request->getParam("ip")->value() != "false";
-        if (displayState.theme == Theme::CLOCK) displayScheduleUpdate(Theme::NONE, true);
+        if (displayState.theme == Theme::CLOCK)
+            displayScheduleUpdate(Theme::NONE, true);
         settingsSave(appSettings);
 
     } else if (request->hasParam("sec")) {
         appSettings.showSec = request->getParam("sec")->value() != "false";
-        if (displayState.theme == Theme::CLOCK || displayState.theme == Theme::BIG_CLOCK) displayScheduleUpdate(Theme::NONE, true);
+        if (displayState.theme == Theme::CLOCK || displayState.theme == Theme::BIG_CLOCK || displayState.theme == Theme::ANALOG)
+            displayScheduleUpdate(Theme::NONE, true);
         settingsSave(appSettings);
 
     } else if (request->hasParam("weather")) {
         appSettings.showWeather = request->getParam("weather")->value() != "false";
-        if (displayState.theme == Theme::CLOCK) displayScheduleUpdate(Theme::NONE, true);
+        if (displayState.theme == Theme::CLOCK)
+            displayScheduleUpdate(Theme::NONE, true);
         settingsSave(appSettings);
 
     } else if (request->hasParam("tz")) {
@@ -309,7 +311,8 @@ static void handleSet(AsyncWebServerRequest *request) {
         appSettings.tz[sizeof(appSettings.tz) - 1] = '\0';
         setenv("TZ", appSettings.tz, 1);
         tzset();
-        if (displayState.theme == Theme::CLOCK) displayScheduleUpdate(Theme::NONE, true);
+        if (displayState.theme == Theme::CLOCK || displayState.theme == Theme::BIG_CLOCK || displayState.theme == Theme::ANALOG)
+            displayScheduleUpdate(Theme::NONE, true);
         settingsSave(appSettings);
 
     } else if (request->hasParam("owmLoc") && request->hasParam("owmKey")) {
@@ -319,7 +322,8 @@ static void handleSet(AsyncWebServerRequest *request) {
         appSettings.owmLocation[sizeof(appSettings.owmLocation) - 1] = '\0';
         strncpy(appSettings.owmApiKey,   pKey->value().c_str(), sizeof(appSettings.owmApiKey) - 1);
         appSettings.owmApiKey[sizeof(appSettings.owmApiKey) - 1] = '\0';
-        if (displayState.theme == Theme::CLOCK) displayScheduleUpdate(Theme::NONE, true);
+        if (displayState.theme == Theme::CLOCK)
+            displayScheduleUpdate(Theme::NONE, true);
         settingsSave(appSettings);
 
     } else {

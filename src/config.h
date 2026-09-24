@@ -57,9 +57,10 @@ enum class Theme : int8_t {
     IMAGE        =  3, // JPEG image viewer
     COUNTDOWN    =  4, // Countdown to a datetime
     BIG_CLOCK    =  5, // Large digital clock
+    ANALOG       =  6, // Analog clock
 };
 
 constexpr auto DEFAULT_THEME = Theme::CLOCK;
-constexpr int  THEME_COUNT   = 5; // Highest valid theme ID
+constexpr int  THEME_COUNT   = 6; // Highest valid theme ID
 
-#endif // CONFIG_H
+#endif

@@ -5,6 +5,7 @@
 #include "utils.h"
 #include "themes/clock.h"
 #include "themes/big_clock.h"
+#include "themes/analog.h"
 #include "themes/ap.h"
 #include "themes/notification.h"
 #include "themes/countdown.h"
@@ -124,6 +125,7 @@ void displayUpdate(const Theme theme, const bool forceClear) {
         case Theme::IMAGE:        displayRenderImage(forceClear);            break;
         case Theme::COUNTDOWN:    themeRenderCountdown(forceClear, now);     break;
         case Theme::BIG_CLOCK:    themeRenderBigClock(forceClear, now);      break;
+        case Theme::ANALOG:       themeRenderAnalog(forceClear, now);        break;
         default: break;
     }
 

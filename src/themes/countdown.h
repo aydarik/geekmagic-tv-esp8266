@@ -14,4 +14,4 @@ struct CountdownState {
 
 void themeRenderCountdown(bool forceClear, const time_t &now);
 
-#endif // THEME_COUNTDOWN_H
+#endif

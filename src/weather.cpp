@@ -110,7 +110,7 @@ static void clearWeather() {
 }
 
 void renderWeather(const bool clear) {
-    char tempStr[24];
+    char tempStr[32];
     if (httpCode == HTTP_CODE_OK) {
         const int roundedTemp = static_cast<int>(roundf(temp));
         const int roundedWind = static_cast<int>(roundf(windSpeed));

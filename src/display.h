@@ -28,4 +28,4 @@ void displayToggleBacklight();
 extern DisplayState displayState;
 extern TFT_eSPI     tft;
 
-#endif // DISPLAY_H
+#endif

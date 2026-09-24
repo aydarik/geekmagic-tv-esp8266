@@ -20,4 +20,4 @@ struct GaugeState {
 
 void themeRenderNotification(bool forceClear);
 
-#endif // THEME_NOTIFICATION_H
+#endif

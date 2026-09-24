@@ -702,8 +702,9 @@
       </div>
       <div class="card-body">
         <div class="theme-grid">
-          <button class="theme-btn" data-theme="1" onclick="setTheme(1)"><span class="icon">🕐</span>Clock</button>
+          <button class="theme-btn" data-theme="1" onclick="setTheme(1)"><span class="icon">📟</span>Clock</button>
           <button class="theme-btn" data-theme="5" onclick="setTheme(5)"><span class="icon">🔢</span>Big Clock</button>
+          <button class="theme-btn" data-theme="6" onclick="setTheme(6)"><span class="icon">🕑</span>Analog</button>
           <button class="theme-btn" data-theme="2" onclick="setTheme(2)"><span class="icon">📨</span>Message</button>
           <button class="theme-btn" data-theme="4" onclick="setTheme(4)"><span class="icon">⏳</span>Countdown</button>
           <button class="theme-btn" data-theme="3" onclick="setTheme(3)"><span class="icon">🖼️</span>Image</button>
@@ -968,7 +969,7 @@
     let appState = {};
     let ws = null;
     let wsReconnectTimer = null;
-    const THEME_NAMES = { 1: 'Clock', 2: 'Message', 3: 'Image', 4: 'Countdown', 5: 'Big Clock' };
+    const THEME_NAMES = { 1: 'Clock', 2: 'Message', 3: 'Image', 4: 'Countdown', 5: 'Big Clock', 6: 'Analog' };
 
     // ── Helpers ───────────────────────────────────────────────────────────────────
     const $ = id => document.getElementById(id);

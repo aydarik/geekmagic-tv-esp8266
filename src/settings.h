@@ -49,4 +49,4 @@ void    powerCycleCounterIncrement();
 void    powerCycleCounterReset();
 bool    powerCycleCounterCheckReset();
 
-#endif // SETTINGS_H
+#endif
