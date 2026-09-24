@@ -142,7 +142,6 @@ void themeRenderAnalog(const bool forceClear, const time_t &now) {
     if (forceClear) {
         tft.startWrite();
         for (int tick = 0; tick < 60; tick++) {
-            delay(ANIMATION_STEP_DELAY / 2);
             drawArrow(tick, DrawType::TICK);
         }
         tft.endWrite();
