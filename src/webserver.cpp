@@ -90,7 +90,6 @@ static void sendJson(AsyncWebServerRequest *request, const JsonDocument &doc) {
 static void handleAppJson(AsyncWebServerRequest *request) {
     JsonDocument doc;
     doc["ip"]          = WiFi.localIP().toString();
-    doc["brt"]         = appSettings.brightness;
     doc["theme"]       = static_cast<int8_t>(displayState.theme);
     doc["defaultTheme"]= static_cast<int8_t>(appSettings.defaultTheme);
     doc["img"]         = displayState.image;
@@ -100,8 +99,6 @@ static void handleAppJson(AsyncWebServerRequest *request) {
     doc["showWeather"] = appSettings.showWeather;
     doc["owmLoc"]      = appSettings.owmLocation;
     // Note: owmKey intentionally omitted from this endpoint
-    if (displayState.timeout != 0)
-        doc["timeout"] = displayState.timeout;
     sendJson(request, doc);
 }
 
@@ -383,8 +380,6 @@ static void streamDirRecursive(AsyncResponseStream *stream, const char *dirname)
             fnameLower.toLowerCase();
 
             stream->print("<tr><td>");
-            if (strcmp(displayState.image, file.fullName()) == 0)
-                stream->print("&#x2714; ");
             stream->printf("<a href='%s/%s'>%s</a></td>", dirname, fileName, fileName);
             stream->printf("<td class='size'>%u</td>", fileSize);
             stream->print("<td><div class='button-group'>");

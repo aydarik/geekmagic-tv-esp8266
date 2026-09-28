@@ -784,7 +784,7 @@
           </div>
           <div>
             <label class="field-label">Timeout (seconds, 0 = sticky)</label>
-            <input type="number" id="msg-timeout" value="30" min="0">
+            <input type="number" id="msg-timeout" value="10" min="0">
           </div>
         </div>
         <button class="btn btn-primary" onclick="sendMessage()">Send</button>
@@ -807,11 +807,11 @@
         <div class="row">
           <div>
             <label class="field-label">Rotations per minute (0 = fixed)</label>
-            <input type="number" id="note-rpm" value="6" min="0" max="60">
+            <input type="number" id="note-rpm" value="0" min="0" max="60">
           </div>
           <div>
             <label class="field-label">Timeout (seconds, 0 = sticky)</label>
-            <input type="number" id="note-timeout" value="3600" min="0">
+            <input type="number" id="note-timeout" value="0" min="0">
           </div>
         </div>
         <div style="display:flex;gap:8px;">
@@ -828,14 +828,18 @@
         <h2>Countdown</h2>
       </div>
       <div class="card-body">
+        <div>
+          <label class="field-label">Subject (optional)</label>
+          <input type="text" id="cnt-sbj" placeholder="e.g. Meeting">
+        </div>
         <div class="row">
-          <div>
-            <label class="field-label">Subject</label>
-            <input type="text" id="cnt-sbj" placeholder="e.g. Meeting">
-          </div>
           <div>
             <label class="field-label">Target date &amp; time</label>
             <input type="datetime-local" id="cnt-dt" style="color-scheme:dark">
+          </div>
+          <div>
+            <label class="field-label">Timeout (seconds, 0 = sticky)</label>
+            <input type="number" id="cnt-timeout" value="60" min="0">
           </div>
         </div>
         <button class="btn btn-primary" onclick="sendCountdown()">Start Countdown</button>
@@ -932,6 +936,12 @@
           </thead>
           <tbody id="file-tbody"></tbody>
         </table>
+        <div class="row">
+          <div>
+            <label class="field-label">Timeout (seconds, 0 = sticky)</label>
+            <input type="number" id="img-timeout" value="0" min="0">
+          </div>
+        </div>
       </div>
     </div>
 
@@ -966,7 +976,6 @@
 
   <script>
     // ── State ────────────────────────────────────────────────────────────────────
-    let appState = {};
     let ws = null;
     let wsReconnectTimer = null;
     const THEME_NAMES = { 1: 'Clock', 2: 'Message', 3: 'Image', 4: 'Countdown', 5: 'Big Clock', 6: 'Analog' };
@@ -1003,7 +1012,6 @@
         s.className = 'status-dot connected';
         s.textContent = 'live';
         clearTimeout(wsReconnectTimer);
-        loadAll();
       };
 
       ws.onmessage = e => {
@@ -1028,56 +1036,44 @@
     // ── Data loading ──────────────────────────────────────────────────────────────
     async function loadAll() {
       try {
-        const [app, mem, fs, ver, msg, note] = await Promise.all([
-          fetch('/app.json').then(r => r.json()),
-          fetch('/memory.json').then(r => r.json()),
-          fetch('/space.json').then(r => r.json()),
-          fetch('/v.json').then(r => r.json()),
-          fetch('/message.json').then(r => r.json()),
-          fetch('/note.json').then(r => r.json()),
-        ]);
-
-        appState = app;
+        const app = await fetch('/app.json').then(r => r.json()).catch(() => ({}));
         $('header-ip').textContent = app.ip || location.hostname;
-        $('stat-heap').textContent = Math.round(mem.heap / 1024) + 'KB';
-        $('stat-fs').textContent = Math.round(fs.free / 1024) + 'KB';
-        $('stat-brt').textContent = app.brt !== undefined ? app.brt + '%' : '—';
-        $('stat-ver').textContent = ver.v || '—';
         $('stat-theme').textContent = THEME_NAMES[app.theme] || app.theme;
-
-        // Check for firmware update
-        if (ver.v) checkForUpdate(ver.v);
-        $('msg-body').value = msg.msg || '';
-        $('msg-sbj').value = msg.sbj || '';
-        $('msg-style').value = msg.style || '';
-        $('note-body').value = note.note || '';
-        $('note-rpm').value = note.rpm || '';
-
-        // Brightness slider
-        if (app.brt !== undefined) {
-          $('brt-slider').value = app.brt;
-          $('brt-val').textContent = app.brt;
-        }
-
-        // Toggles
         $('chk-ip').checked = !!app.showIP;
         $('chk-sec').checked = !!app.showSec;
         $('chk-weather').checked = !!app.showWeather;
-
-        // TZ
         if (app.tz) $('tz-custom').value = app.tz;
-
-        // OWM
         if (app.owmLoc) $('owm-loc').value = app.owmLoc;
-
-        // Active theme
         setActivThemBtn(app.theme);
 
-        // Default theme checkbox
-        $('chk-default').checked = false;
+        const brt = await fetch('/brt.json').then(r => r.json()).catch(() => ({}));
+        if (brt.brt !== undefined) {
+          $('stat-brt').textContent = brt.brt + '%';
+          $('brt-slider').value = brt.brt;
+          $('brt-val').textContent = brt.brt;
+        }
+
+        const mem = await fetch('/memory.json').then(r => r.json()).catch(() => ({}));
+        $('stat-heap').textContent = Math.round(mem.heap / 1024) + 'KB';
+
+        const fs = await fetch('/space.json').then(r => r.json()).catch(() => ({}));
+        $('stat-fs').textContent = Math.round(fs.free / 1024) + 'KB';
+
+        const ver = await fetch('/v.json').then(r => r.json()).catch(() => ({}));
+        $('stat-ver').textContent = ver.v || '—';
+        if (ver.v) await checkForUpdate(ver.v);
+
+        const msg = await fetch('/message.json').then(r => r.json()).catch(() => ({}));
+        $('msg-body').value = msg.msg || '';
+        $('msg-sbj').value = msg.sbj || '';
+        $('msg-style').value = msg.style || '';
+
+        const note = await fetch('/note.json').then(r => r.json()).catch(() => ({}));
+        $('note-body').value = note.note || '';
+        $('note-rpm').value = note.rpm || '';
 
         // Load file list
-        loadFiles();
+        await loadFiles();
 
       } catch (e) { toast('Failed to load device state', 'error'); }
     }
@@ -1137,9 +1133,10 @@
     function sendCountdown() {
       const sbj = $('cnt-sbj').value.trim();
       const dt = $('cnt-dt').value;
+      const timeout = $('cnt-timeout').value || 0;
       if (!dt) { toast('Please select a date and time', 'error'); return; }
       const iso = dt.replace('T', 'T'); // already ISO-ish
-      let url = `/set?cnt=${enc(iso)}&timeout=5`;
+      let url = `/set?cnt=${enc(iso)}&timeout=${timeout}`;
       if (sbj) url += `&sbj=${enc(sbj)}`;
       fetch(url).then(r => r.ok ? toast('Countdown started!') : toast('Error starting countdown', 'error'));
     }
@@ -1208,7 +1205,8 @@
 
     function displayImg(path) {
       const p = new URL(path).pathname;
-      fetch(`/set?img=${enc(p)}&timeout=60`).then(() => toast('Image set!'));
+      const timeout = $('img-timeout').value || 0;
+      fetch(`/set?img=${enc(p)}&timeout=${timeout}`).then(() => toast('Image set!'));
     }
 
     async function deleteFile(path) {
@@ -1281,6 +1279,7 @@
     }
 
     // ── Init ──────────────────────────────────────────────────────────────────────
+    loadAll();
     connectWS();
   </script>
 </body>

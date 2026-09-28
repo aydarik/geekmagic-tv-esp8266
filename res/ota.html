@@ -355,16 +355,15 @@ let uploadStartTime = 0;
 // Load device statistics
 async function loadDeviceStats() {
   try {
-    const [ver, mem, spc] = await Promise.all([
-      fetch('/v.json').then(r => r.json()).catch(() => ({})),
-      fetch('/memory.json').then(r => r.json()).catch(() => ({})),
-      fetch('/space.json').then(r => r.json()).catch(() => ({}))
-    ]);
+    const mem = await fetch('/memory.json').then(r => r.json()).catch(() => ({}));
+    if (mem.heap) $('stat-heap').textContent = Math.round(mem.heap / 1024) + ' KB';
 
+    const fs = await fetch('/space.json').then(r => r.json()).catch(() => ({}));
+    if (fs.free) $('stat-fs').textContent = Math.round(fs.free / 1024) + ' KB';
+
+    const ver = await fetch('/v.json').then(r => r.json()).catch(() => ({}));
     if (ver.m) $('stat-model').textContent = ver.m;
     if (ver.v) $('stat-ver').textContent = ver.v;
-    if (mem.heap) $('stat-heap').textContent = Math.round(mem.heap / 1024) + ' KB';
-    if (spc.free) $('stat-fs').textContent = Math.round(spc.free / 1024) + ' KB';
   } catch (err) {
     console.warn('Could not fetch device stats:', err);
   }
