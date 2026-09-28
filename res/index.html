@@ -995,7 +995,8 @@
     // ── WebSocket ─────────────────────────────────────────────────────────────────
     function connectWS() {
       if (ws) { try { ws.close(); } catch (e) { } }
-      ws = new WebSocket(`ws://${location.host}/ws`);
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${location.host}/ws`);
 
       ws.onopen = () => {
         const s = $('ws-status');
