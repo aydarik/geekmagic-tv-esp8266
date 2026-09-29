@@ -308,11 +308,6 @@
       transform: scale(.97);
     }
 
-    .btn-sm {
-      padding: 6px 13px;
-      font-size: 12px;
-    }
-
     /* ── Row helpers ── */
     .row {
       display: grid;
@@ -724,10 +719,9 @@
       </div>
       <div class="card-body">
         <div class="range-wrap">
-          <input type="range" id="brt-slider" min="0" max="100" value="50" oninput="onBrtInput(this.value)">
+          <input type="range" id="brt-slider" min="0" max="100" value="50" oninput="onBrtInput(this.value)" onchange="saveBrightness(this.value)">
           <span class="range-val" id="brt-val">50</span>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="saveBrightness()">Apply</button>
       </div>
     </div>
 
@@ -814,10 +808,8 @@
             <input type="number" id="note-timeout" value="0" min="0">
           </div>
         </div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn btn-primary" onclick="sendNote()">Set Note</button>
-          <button class="btn btn-secondary" onclick="clearNote()">Clear</button>
-        </div>
+        <button class="btn btn-primary" onclick="sendNote()">Set Note</button>
+        <button class="btn btn-secondary" onclick="clearNote()">Clear</button>
       </div>
     </div>
 
@@ -871,7 +863,7 @@
           </select>
           <input type="text" id="tz-custom" placeholder="or type POSIX string directly" style="margin-top:8px">
         </div>
-        <button class="btn btn-primary btn-sm" onclick="saveTz()">Save Timezone</button>
+        <button class="btn btn-primary" onclick="saveTz()">Save Timezone</button>
 
         <hr style="border-color:var(--border);margin:6px 0">
 
@@ -883,7 +875,7 @@
           <label class="field-label">OpenWeatherMap API Key</label>
           <input type="password" id="owm-key" placeholder="••••••••••••••••" autocomplete="off">
         </div>
-        <button class="btn btn-primary btn-sm" onclick="saveOWM()">Save Weather Settings</button>
+        <button class="btn btn-primary" onclick="saveOWM()">Save Weather Settings</button>
       </div>
     </div>
 
@@ -894,7 +886,7 @@
         <h2>WiFi</h2>
       </div>
       <div class="card-body">
-        <button class="btn btn-secondary btn-sm" onclick="scanWifi()">🔍 Scan Networks</button>
+        <button class="btn btn-secondary" onclick="scanWifi()">🔍 Scan Networks</button>
         <div class="wifi-list" id="wifi-list"></div>
         <div id="wifi-connect-form" style="display:none;gap:10px;" class="grid">
           <div>
@@ -920,7 +912,7 @@
         <div class="dropzone" id="drop-zone" onclick="document.getElementById('file-input').click()">
           <div class="dz-icon">📂</div>
           <div>Click or drag JPEG files to upload</div>
-          <input type="file" id="file-input" accept=".jpg,.jpeg" style="display:none" multiple
+          <input type="file" id="file-input" accept=".jpg" style="display:none" multiple
             onchange="uploadFiles(this.files)">
         </div>
         <div class="progress-wrap" id="upload-progress">
@@ -936,12 +928,11 @@
           </thead>
           <tbody id="file-tbody"></tbody>
         </table>
-        <div class="row">
-          <div>
-            <label class="field-label">Timeout (seconds, 0 = sticky)</label>
-            <input type="number" id="img-timeout" value="0" min="0">
-          </div>
+        <div>
+          <label class="field-label">Timeout (seconds, 0 = sticky)</label>
+          <input type="number" id="img-timeout" value="0" min="0">
         </div>
+        <button class="btn btn-secondary" onclick="loadFiles()">🔄 Reload</button>
       </div>
     </div>
 
@@ -954,17 +945,17 @@
       <div class="card-body">
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           <a href="/update" class="btn btn-secondary">⬆️ OTA Firmware Update</a>
-          <button class="btn btn-secondary btn-sm"
+          <button class="btn btn-secondary"
             onclick="fetch('/test').then(()=>toast('Display test started','success'))">🎨 Display Test</button>
-          <button class="btn btn-secondary btn-sm"
+          <button class="btn btn-secondary"
             onclick="fetch('/log').then(r=>r.text()).then(t=>{document.getElementById('log-pre').textContent=t;document.getElementById('log-box').style.display='grid'})">📋
             View Logs</button>
-          <button class="btn btn-danger btn-sm" onclick="confirmFactoryReset()">🗑️ Factory Reset</button>
+          <button class="btn btn-danger" onclick="confirmFactoryReset()">🗑️ Factory Reset</button>
         </div>
         <div id="log-box" style="display:none;gap:14px">
           <pre id="log-pre"
             style="font-size:11px;background:var(--surface2);padding:12px;border-radius:var(--radius-sm);overflow-x:auto;color:var(--muted);max-height:200px;overflow-y:auto"></pre>
-          <button class="btn btn-secondary btn-sm"
+          <button class="btn btn-secondary"
             onclick="document.getElementById('log-box').style.display='none'">Close log</button>
         </div>
       </div>
@@ -983,6 +974,14 @@
     // ── Helpers ───────────────────────────────────────────────────────────────────
     const $ = id => document.getElementById(id);
     const enc = s => encodeURIComponent(s);
+
+    function formatBytes(bytes) {
+      if (!bytes || bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
 
     function toast(msg, type = 'success', duration = 3000) {
       const el = document.createElement('div');
@@ -1014,18 +1013,21 @@
         clearTimeout(wsReconnectTimer);
       };
 
-      ws.onmessage = e => {
+      ws.onmessage = msg => {
         try {
-          const d = JSON.parse(e.data);
+          const d = JSON.parse(msg.data);
           if (d.type === 'wifi_scan') { renderWifiNetworks(d.networks || []); return; }
           if (d.theme !== undefined) setActivThemBtn(d.theme);
           if (d.brt !== undefined) { $('stat-brt').textContent = d.brt + '%'; }
-          if (d.mem_heap !== undefined) { $('stat-heap').textContent = Math.round(d.mem_heap / 1024) + 'KB'; }
-          if (d.space_free !== undefined) { $('stat-fs').textContent = Math.round(d.space_free / 1024) + 'KB'; }
-        } catch (_) { }
+          if (d.mem_heap !== undefined) { $('stat-heap').textContent = formatBytes(d.mem_heap); }
+          if (d.space_free !== undefined) { $('stat-fs').textContent = formatBytes(d.space_free); }
+        } catch (e) {
+          console.error(e);
+        }
       };
 
-      ws.onclose = ws.onerror = () => {
+      ws.onclose = ws.onerror = (e) => {
+        console.error(e);
         const s = $('ws-status');
         s.className = 'status-dot connecting';
         s.textContent = 'connecting';
@@ -1054,10 +1056,10 @@
         }
 
         const mem = await fetch('/memory.json').then(r => r.json()).catch(() => ({}));
-        $('stat-heap').textContent = Math.round(mem.heap / 1024) + 'KB';
+        $('stat-heap').textContent = formatBytes(mem.heap);
 
         const fs = await fetch('/space.json').then(r => r.json()).catch(() => ({}));
-        $('stat-fs').textContent = Math.round(fs.free / 1024) + 'KB';
+        $('stat-fs').textContent = formatBytes(fs.free);
 
         const ver = await fetch('/v.json').then(r => r.json()).catch(() => ({}));
         $('stat-ver').textContent = ver.v || '—';
@@ -1071,11 +1073,10 @@
         const note = await fetch('/note.json').then(r => r.json()).catch(() => ({}));
         $('note-body').value = note.note || '';
         $('note-rpm').value = note.rpm || '';
-
-        // Load file list
-        await loadFiles();
-
-      } catch (e) { toast('Failed to load device state', 'error'); }
+      } catch (e) {
+        console.error(e);
+        toast('Failed to load device state', 'error');
+      }
     }
 
     function setActivThemBtn(theme) {
@@ -1091,7 +1092,7 @@
     }
 
     function onBrtInput(v) { $('brt-val').textContent = v; }
-    function saveBrightness() { set('brt', $('brt-slider').value); }
+    function saveBrightness(v) { set('brt', v); $('stat-brt').textContent = v + '%'; }
 
     function saveTz() {
       const tz = $('tz-custom').value.trim();
@@ -1175,46 +1176,64 @@
 
     // ── File Manager ──────────────────────────────────────────────────────────────
     async function loadFiles() {
-      const resp = await fetch('/filelist?dir=/image').catch(() => null);
-      const tbody = $('file-tbody');
-      tbody.innerHTML = '';
-      if (!resp || !resp.ok) return;
-      const html = await resp.text();
-      // Parse the HTML table rows returned by the firmware
-      const tmp = document.createElement('tbody');
-      tmp.innerHTML = html.replace(/<table[^>]*>|<\/table>|<thead>.*?<\/thead>|<tbody>|<\/tbody>/gs, '');
-      // Re-render rows in our style
-      tmp.querySelectorAll('tr').forEach(row => {
-        const cells = row.querySelectorAll('td');
-        if (cells.length < 2) return;
-        const linkEl = cells[0].querySelector('a');
-        const href = linkEl?.href || '';
-        const name = linkEl?.textContent || '';
-        const size = cells[1]?.textContent || '';
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-      <td><a href="${href}" target="_blank">${name}</a></td>
-      <td style="color:var(--muted);font-size:12px">${size}B</td>
-      <td class="file-actions">
-        ${href.toLowerCase().endsWith('.jpg') ? `<button class="btn btn-secondary btn-sm" onclick="displayImg('${href}')">SET</button>` : ''}
-        <button class="btn btn-danger btn-sm" onclick="deleteFile('${href}')">DEL</button>
-      </td>`;
-        tbody.appendChild(tr);
-      });
+      try {
+        const resp = await fetch('/filelist?dir=/image').catch(() => null);
+        const tbody = $('file-tbody');
+        tbody.innerHTML = '';
+        if (!resp || !resp.ok) return;
+        const htmlText = await resp.text();
+        const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+        doc.querySelectorAll('div').forEach(row => {
+          const aFile = row.querySelector('a');
+          if (!aFile) return;
+          const filename = aFile.innerText
+          const filepath = new URL(aFile.href).pathname;
+          aFile.target = '_blank';
+          const tr = document.createElement('tr');
+          const tdFile = document.createElement('td');
+          tdFile.appendChild(aFile)
+          tr.appendChild(tdFile);
+
+          const size = row.querySelectorAll('span')[0].innerText;
+          const tdSize = document.createElement('td');
+          tdSize.style = "color:var(--muted);font-size:12px";
+          tdSize.innerText = formatBytes(size);
+          tr.appendChild(tdSize);
+
+          const tdActions = document.createElement('td');
+          tdActions.className = 'file-actions';
+          if (filename.toLowerCase().endsWith('.jpg')) {
+            const btnSet = document.createElement('button');
+            btnSet.innerText = 'SET';
+            btnSet.className = 'btn btn-secondary';
+            btnSet.onclick = () => displayImg(filepath);
+            tdActions.appendChild(btnSet);
+          }
+          const btnDel = document.createElement('button');
+          btnDel.innerText = 'DEL';
+          btnDel.className = 'btn btn-danger';
+          btnDel.onclick = () => deleteFile(filepath);
+          tdActions.appendChild(btnDel);
+          tr.appendChild(tdActions);
+
+          tbody.appendChild(tr);
+        });
+      } catch (e) {
+        console.error(e);
+        toast('Failed to load files', 'error');
+      }
     }
 
-    function displayImg(path) {
-      const p = new URL(path).pathname;
+    function displayImg(p) {
       const timeout = $('img-timeout').value || 0;
       fetch(`/set?img=${enc(p)}&timeout=${timeout}`).then(() => toast('Image set!'));
     }
 
-    async function deleteFile(path) {
-      if (!confirm(`Delete ${path}?`)) return;
-      const p = new URL(path).pathname;
+    async function deleteFile(p) {
+      if (!confirm(`Delete ${p}?`)) return;
       await fetch(`/delete?file=${enc(p)}`);
       toast('File deleted');
-      loadFiles();
+      await loadFiles();
     }
 
     // ── Upload ────────────────────────────────────────────────────────────────────
@@ -1270,7 +1289,9 @@
             const data = await response.json();
             localStorage.setItem('lastVersion', data.tag_name);
           }
-        } catch (_) { }
+        } catch (e) {
+          console.error(e);
+        }
       }
 
       const lastVersion = localStorage.getItem('lastVersion');
@@ -1280,6 +1301,7 @@
 
     // ── Init ──────────────────────────────────────────────────────────────────────
     loadAll();
+    loadFiles();
     connectWS();
   </script>
 </body>

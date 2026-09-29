@@ -356,10 +356,10 @@ let uploadStartTime = 0;
 async function loadDeviceStats() {
   try {
     const mem = await fetch('/memory.json').then(r => r.json()).catch(() => ({}));
-    if (mem.heap) $('stat-heap').textContent = Math.round(mem.heap / 1024) + ' KB';
+    if (mem.heap) $('stat-heap').textContent = formatBytes(mem.heap);
 
     const fs = await fetch('/space.json').then(r => r.json()).catch(() => ({}));
-    if (fs.free) $('stat-fs').textContent = Math.round(fs.free / 1024) + ' KB';
+    if (fs.free) $('stat-fs').textContent = formatBytes(fs.free);
 
     const ver = await fetch('/v.json').then(r => r.json()).catch(() => ({}));
     if (ver.m) $('stat-model').textContent = ver.m;
@@ -402,9 +402,11 @@ fileInput.addEventListener('change', (e) => {
 });
 
 function formatBytes(bytes) {
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / 1048576).toFixed(2) + ' MB';
+  if (!bytes || bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
 function handleFile(file) {
@@ -498,7 +500,7 @@ btnFlash.addEventListener('click', () => {
 });
 
 function startRebootCountdown() {
-  let seconds = 20;
+  let seconds = 30;
   const render = () => {
     showStatus(`
       <div><strong>Update Successful!</strong></div>

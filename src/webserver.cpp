@@ -359,7 +359,7 @@ static void handleDelete(AsyncWebServerRequest *request) {
 }
 
 // ---------------------------------------------------------------------------
-// GET /filelist — HTML table (compatible with legacy API)
+// GET /filelist — HTML (compatible with legacy API)
 // ---------------------------------------------------------------------------
 
 static void streamDirRecursive(AsyncResponseStream *stream, const char *dirname) {
@@ -376,17 +376,7 @@ static void streamDirRecursive(AsyncResponseStream *stream, const char *dirname)
         } else {
             const char *fileName = file.name();
             const size_t fileSize = file.size();
-            auto fnameLower = String(fileName);
-            fnameLower.toLowerCase();
-
-            stream->print("<tr><td>");
-            stream->printf("<a href='%s/%s'>%s</a></td>", dirname, fileName, fileName);
-            stream->printf("<td class='size'>%u</td>", fileSize);
-            stream->print("<td><div class='button-group'>");
-            stream->printf("<button class='button' onclick=\"deleteImage('%s/%s')\">DEL</button>", dirname, fileName);
-            if (fnameLower.endsWith(".jpg"))
-                stream->printf("<button class='button' onclick=\"displayImage('%s/%s')\">SET</button>", dirname, fileName);
-            stream->print("</div></td></tr>\n");
+            stream->printf("<div><a href='%s/%s'>%s</a><span>%u</span></div>\n", dirname, fileName, fileName, fileSize);
         }
         file = root.openNextFile();
     }
@@ -395,9 +385,7 @@ static void streamDirRecursive(AsyncResponseStream *stream, const char *dirname)
 static void handleFileList(AsyncWebServerRequest *request) {
     const char *dir = request->hasParam("dir") ? request->getParam("dir")->value().c_str() : "/";
     AsyncResponseStream *stream = request->beginResponseStream("text/html");
-    stream->print("<table><thead><tr><th>Path</th><th>Size</th><th>Actions</th></tr></thead><tbody>\n");
     streamDirRecursive(stream, dir);
-    stream->print("</tbody></table>\n");
     request->send(stream);
 }
 
