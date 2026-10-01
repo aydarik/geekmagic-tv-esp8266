@@ -459,6 +459,22 @@
       color: var(--accent);
     }
 
+    .theme-btn.default-theme {
+      position: relative;
+    }
+
+    .theme-btn.default-theme::after {
+      content: '★';
+      position: absolute;
+      top: 4px;
+      right: 5px;
+      font-size: 14px;
+      line-height: 1;
+      color: var(--warn);
+      opacity: .9;
+      pointer-events: none;
+    }
+
     /* ── WiFi list ── */
     .wifi-list {
       display: grid;
@@ -970,6 +986,7 @@
     let ws = null;
     let wsReconnectTimer = null;
     const THEME_NAMES = { 1: 'Clock', 2: 'Message', 3: 'Image', 4: 'Countdown', 5: 'Big Clock', 6: 'Analog' };
+    let currentDefaultTheme = null;
 
     // ── Helpers ───────────────────────────────────────────────────────────────────
     const $ = id => document.getElementById(id);
@@ -1047,6 +1064,7 @@
         if (app.tz) $('tz-custom').value = app.tz;
         if (app.owmLoc) $('owm-loc').value = app.owmLoc;
         setActivThemBtn(app.theme);
+        if (app.defaultTheme !== undefined) setDefaultThemBtn(app.defaultTheme);
 
         const brt = await fetch('/brt.json').then(r => r.json()).catch(() => ({}));
         if (brt.brt !== undefined) {
@@ -1084,11 +1102,20 @@
       $('stat-theme').textContent = THEME_NAMES[theme] || '—';
     }
 
+    function setDefaultThemBtn(theme) {
+      currentDefaultTheme = +theme;
+      document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('default-theme', +b.dataset.theme === currentDefaultTheme));
+    }
+
     // ── Actions ───────────────────────────────────────────────────────────────────
     function setTheme(id) {
       const def = $('chk-default').checked;
       fetch(`/set?theme=${id}${def ? '&default=true' : ''}`)
-        .then(() => { setActivThemBtn(id); toast(`Theme: ${THEME_NAMES[id]}`); });
+        .then(() => {
+          setActivThemBtn(id);
+          if (def) setDefaultThemBtn(id);
+          toast(`Theme: ${THEME_NAMES[id]}${def ? ' (default)' : ''}`);
+        });
     }
 
     function onBrtInput(v) { $('brt-val').textContent = v; }
