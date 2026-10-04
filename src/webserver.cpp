@@ -459,6 +459,25 @@ static void handleWiFiConnect(AsyncWebServerRequest *request) {
 }
 
 // ---------------------------------------------------------------------------
+// GET /cycle — cycle through themes
+// ---------------------------------------------------------------------------
+
+static void handleDisplayCycle(AsyncWebServerRequest *request) {
+    char theme[8];
+    snprintf(theme, sizeof(theme), "%d", displayCycleNextPage(true));
+    request->send(200, "text/plain", theme);
+}
+
+// ---------------------------------------------------------------------------
+// GET /backlight — toggle screen backlight
+// ---------------------------------------------------------------------------
+
+static void handleScreenBacklight(AsyncWebServerRequest *request) {
+    const bool isOn = displayToggleBacklight();
+    request->send(200, "text/plain", isOn ? "true" : "false");
+}
+
+// ---------------------------------------------------------------------------
 // POST /doUpload — file upload handler
 // ---------------------------------------------------------------------------
 
@@ -546,6 +565,8 @@ void webserverInit() {
     server.on("/factoryreset", HTTP_GET, handleFactoryReset);
     server.on("/scan",         HTTP_GET, handleWiFiScan);
     server.on("/connect",      HTTP_GET, handleWiFiConnect);
+    server.on("/cycle",        HTTP_GET, handleDisplayCycle);
+    server.on("/backlight",    HTTP_GET, handleScreenBacklight);
 
     // File upload
     server.on("/doUpload", HTTP_POST,

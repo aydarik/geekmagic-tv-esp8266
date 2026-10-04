@@ -18,6 +18,9 @@ DisplayState displayState;
 
 extern Settings appSettings;
 
+static Theme lastTheme = DEFAULT_THEME;
+static bool backlightOn = true;
+
 static bool tft_output(const int16_t x, const int16_t y, const uint16_t w, const uint16_t h, uint16_t *bitmap) {
     if (y >= tft.height()) return false;
     tft.pushImage(x, y, w, h, bitmap);
@@ -38,6 +41,7 @@ void displayInit() {
     pinMode(PIN_BACKLIGHT, OUTPUT);
     analogWriteFreq(1000);
     analogWriteRange(1023); // 10-bit
+    backlightOn = analogRead(PIN_BACKLIGHT) < 1023;
 
     logPrint("Display init complete");
 }
@@ -55,6 +59,7 @@ void displaySetBrightness(int brightness) {
         pwmValue = map(brightness, 0, 100, 1023, 0);
     }
 
+    backlightOn = pwmValue < 1023;
     analogWrite(PIN_BACKLIGHT, pwmValue);
 }
 
@@ -118,6 +123,9 @@ void displayUpdate(const Theme theme, const bool forceClear) {
         }
     }
 
+    if (displayState.theme != Theme::NONE)
+        lastTheme = displayState.theme;
+
     switch (displayState.theme) {
         case Theme::SERVICE_AP:   themeRenderAPMode(forceClear);             break;
         case Theme::CLOCK:        themeRenderClock(forceClear, now);         break;
@@ -141,26 +149,57 @@ void displayUpdate(const Theme theme, const bool forceClear) {
     }
 }
 
-void displayCycleNextPage() {
-    if (displayState.theme == Theme::CLOCK) {
-        if (displayState.image[0] != '\0' && LittleFS.exists(displayState.image)) {
-            displayUpdate(Theme::IMAGE);
-        }
-    } else {
-        displayUpdate(Theme::CLOCK);
+int8_t displayCycleNextPage(const bool async) {
+    if (static_cast<int8_t>(displayState.theme) < 0) {
+        return static_cast<int8_t>(displayState.theme);
     }
+
+    static constexpr std::array cycleOrder = {
+        Theme::CLOCK,
+        Theme::BIG_CLOCK,
+        Theme::ANALOG,
+        Theme::NOTIFICATION,
+        Theme::COUNTDOWN,
+        Theme::IMAGE
+    };
+
+    // Find current index
+    size_t nextIdx = 0;
+    for (size_t i = 0; i < cycleOrder.size(); ++i) {
+        if (cycleOrder[i] == lastTheme) {
+            nextIdx = (i + 1) % cycleOrder.size();
+            break;
+        }
+    }
+
+    lastTheme = cycleOrder[nextIdx];
+    if (async) {
+        displayScheduleUpdate(lastTheme, true);
+    } else {
+        displayUpdate(lastTheme, true);
+    }
+
+    return static_cast<int8_t>(lastTheme);
 }
 
-static bool backlightOn = true;
-
-void displayToggleBacklight() {
-    if (backlightOn) {
-        displaySetBrightness(0);
-        backlightOn = false;
-    } else {
-        displaySetBrightness(appSettings.brightness);
-        backlightOn = true;
+bool displayToggleBacklight() {
+    if (backlightOn and static_cast<int8_t>(displayState.theme) <= 0) {
+        return backlightOn;
     }
+
+    if (backlightOn) {
+        for (int i = appSettings.brightness; i >= 0; --i) {
+            delay(ANIMATION_STEP_DELAY);
+            displaySetBrightness(i);
+        }
+    } else {
+        for (int i = 0; i <= appSettings.brightness; ++i) {
+            delay(ANIMATION_STEP_DELAY);
+            displaySetBrightness(i);
+        }
+    }
+
+    return backlightOn;
 }
 
 struct DisplaySchedule {

@@ -1,8 +1,6 @@
 #ifndef BUTTON_H
 #define BUTTON_H
 
-#include <Arduino.h>
-
 // Button press types
 enum ButtonPress {
     BUTTON_NONE = 0,

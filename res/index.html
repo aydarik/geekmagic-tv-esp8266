@@ -710,6 +710,7 @@
       <div class="card-header">
         <div class="icon">🖥️</div>
         <h2>Display Theme</h2>
+        <button class="btn btn-secondary" id="btn-cycle" style="margin-left:auto;padding:6px 12px" onclick="cycleTheme()">🔄 Next theme</button>
       </div>
       <div class="card-body">
         <div class="theme-grid">
@@ -732,6 +733,7 @@
       <div class="card-header">
         <div class="icon">💡</div>
         <h2>Brightness</h2>
+        <button class="btn btn-secondary" id="btn-backlight" style="margin-left:auto;padding:6px 12px" onclick="toggleBacklight()">🔆 Backlight</button>
       </div>
       <div class="card-body">
         <div class="range-wrap">
@@ -1118,6 +1120,24 @@
         });
     }
 
+    function cycleTheme() {
+      fetch('/cycle')
+        .then(r => r.text())
+        .then(t => {
+          const id = parseInt(t.trim(), 10);
+          setActivThemBtn(id);
+          toast(`Theme: ${THEME_NAMES[id] || id}`);
+        })
+        .catch(() => toast('Failed to cycle theme', 'error'));
+    }
+
+    function toggleBacklight() {
+      fetch('/backlight')
+        .then(r => r.text())
+        .then(t => toast(`Backlight: ${t.trim() === 'true' ? 'on' : 'off'}`))
+        .catch(() => toast('Failed to toggle backlight', 'error'));
+    }
+
     function onBrtInput(v) { $('brt-val').textContent = v; }
     function saveBrightness(v) { set('brt', v); $('stat-brt').textContent = v + '%'; }
 
@@ -1294,14 +1314,26 @@
 
     // ── Firmware update check ─────────────────────────────────────────────────────
     function compareVersions(v1, v2) {
-      const a = v1.split('.').map(Number);
-      const b = v2.split('.').map(Number);
-      for (let i = 0; i < Math.max(a.length, b.length); i++) {
-        const num1 = a[i] || 0;
-        const num2 = b[i] || 0;
-        if (num1 > num2) return 1;
-        if (num1 < num2) return -1;
+      if (v2 === "dev") {
+        return 0;
       }
+
+      const [core1, pre1] = v1.replace(/^v/, '').split('-');
+      const [core2, pre2] = v2.replace(/^v/, '').split('-');
+
+      const nums1 = core1.split('.').map(Number);
+      const nums2 = core2.split('.').map(Number);
+      const maxLen = Math.max(nums1.length, nums2.length);
+
+      for (let i = 0; i < maxLen; i++) {
+        const n1 = nums1[i] || 0;
+        const n2 = nums2[i] || 0;
+        if (n1 > n2) return 1;
+        if (n1 < n2) return -1;
+      }
+
+      if (!pre1 && pre2) return 1;  // 1.6.5 > 1.6.5-beta1
+      if (pre1 && !pre2) return -1; // 1.6.5-beta1 < 1.6.5
       return 0;
     }
 

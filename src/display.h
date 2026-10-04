@@ -22,8 +22,8 @@ void displayUpdate(Theme theme = Theme::NONE, bool forceClear = true);
 void displayScheduleUpdate(Theme theme = Theme::NONE, bool forceClear = true, time_t timeout = 0);
 void displayScheduleTest();
 bool displayProcessPending();
-void displayCycleNextPage();
-void displayToggleBacklight();
+int8_t displayCycleNextPage(bool async = false);
+bool displayToggleBacklight();
 
 extern DisplayState displayState;
 extern TFT_eSPI     tft;
