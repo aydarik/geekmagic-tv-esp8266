@@ -917,10 +917,37 @@
             </select>
           </div>
         </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="btn btn-primary" onclick="saveWebhook()">Save Webhook</button>
-          <button class="btn btn-secondary" onclick="sendWebhook()">Send Now</button>
+        <button class="btn btn-primary" onclick="saveWebhook()">Save Webhook</button>
+        <button class="btn btn-secondary" onclick="sendWebhook()">📢 Send Now</button>
+      </div>
+    </div>
+
+    <!-- Button actions -->
+    <div class="card">
+      <div class="card-header">
+        <div class="icon">🔘</div>
+        <h2>Button Actions (GPIO4)</h2>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div>
+            <label class="field-label">Short press</label>
+            <select id="btn-short">
+              <option value="0">Next page</option>
+              <option value="1">Toggle backlight</option>
+              <option value="2">Send webhook</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Long press</label>
+            <select id="btn-long">
+              <option value="0">Next page</option>
+              <option value="1">Toggle backlight</option>
+              <option value="2">Send webhook</option>
+            </select>
+          </div>
         </div>
+        <button class="btn btn-primary" onclick="saveButtons()">Save Button Actions</button>
       </div>
     </div>
 
@@ -1094,6 +1121,8 @@
         if (app.owmLoc) $('owm-loc').value = app.owmLoc;
         if (app.whUrl) $('wh-url').value = app.whUrl;
         if (app.whMethod) $('wh-method').value = app.whMethod;
+        if (app.btnShort !== undefined) $('btn-short').value = app.btnShort;
+        if (app.btnLong !== undefined) $('btn-long').value = app.btnLong;
         setActivThemBtn(app.theme);
         if (app.defaultTheme !== undefined) setDefaultThemBtn(app.defaultTheme);
 
@@ -1184,12 +1213,26 @@
         .then(r => r.ok ? toast('Weather settings saved') : toast('Error saving weather settings', 'error'));
     }
 
+    function isValidHttpUrl(urlString) {
+      try {
+        const parsed = new URL(urlString.trim());
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+      } catch {
+        return false;
+      }
+    }
+
     function saveWebhook() {
       const url = $('wh-url').value.trim();
       const method = $('wh-method').value;
-      if (url && !/^https?:\/\//i.test(url)) { toast('URL must start with http:// or https://', 'error'); return; }
+      if (!url || !isValidHttpUrl(url)) { toast('Invalid URL', 'error'); return; }
       fetch(`/set?whUrl=${enc(url)}&whMethod=${method}`)
         .then(r => r.ok ? toast('Webhook settings saved') : toast('Error saving webhook settings', 'error'));
+    }
+
+    function saveButtons() {
+      fetch(`/set?btnShort=${$('btn-short').value}&btnLong=${$('btn-long').value}`)
+        .then(r => r.ok ? toast('Button actions saved') : toast('Error saving button actions', 'error'));
     }
 
     function sendWebhook() {

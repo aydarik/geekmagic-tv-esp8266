@@ -103,6 +103,8 @@ static void handleAppJson(AsyncWebServerRequest *request) {
     doc["owmLoc"]      = appSettings.owmLocation;
     doc["whUrl"]       = appSettings.webhookUrl;
     doc["whMethod"]    = appSettings.webhookMethod == 1 ? "POST" : "GET";
+    doc["btnShort"]    = appSettings.btnShortAction;
+    doc["btnLong"]     = appSettings.btnLongAction;
     // Note: owmKey intentionally omitted from this endpoint
     sendJson(request, doc);
 }
@@ -335,6 +337,17 @@ static void handleSet(AsyncWebServerRequest *request) {
         appSettings.webhookMethod = request->getParam("whMethod")->value() == "POST" ? 1 : 0;
         settingsSave(appSettings);
 
+    } else if (request->hasParam("btnShort") && request->hasParam("btnLong")) {
+        const long s = request->getParam("btnShort")->value().toInt();
+        const long l = request->getParam("btnLong")->value().toInt();
+        if (s < 0 || s >= BTN_ACTION_COUNT || l < 0 || l >= BTN_ACTION_COUNT) {
+            request->send(400, "text/plain", "Invalid action");
+            return;
+        }
+        appSettings.btnShortAction = static_cast<ButtonAction>(s);
+        appSettings.btnLongAction  = static_cast<ButtonAction>(l);
+        settingsSave(appSettings);
+
     } else {
         request->send(400, "text/plain", "No action");
         return;
@@ -380,8 +393,10 @@ bool sendWebhook() {
 
     int code;
     if (appSettings.webhookMethod == 1) {
-        http.addHeader("Content-Type", "application/json");
-        code = http.POST(String("{}"));
+        http.addHeader(asyncsrv::T_Content_Type, asyncsrv::T_application_json);
+        char payload[64];
+        snprintf(payload, sizeof(payload), R"({"title":"GeekMagic","message":%d})", static_cast<int>(displayState.theme));
+        code = http.POST(payload);
     } else {
         code = http.GET();
     }

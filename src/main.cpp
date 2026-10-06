@@ -20,6 +20,15 @@ static unsigned long lastDisplayUpdate = 0;
 static unsigned long lastWeatherUpdate = 0;
 static bool powerCycleCounterCleared  = false;
 
+static void runButtonAction(const ButtonAction action) {
+    switch (action) {
+        case BTN_ACTION_NEXT_PAGE: displayCycleNextPage();   break;
+        case BTN_ACTION_BACKLIGHT: displayToggleBacklight(); break;
+        case BTN_ACTION_WEBHOOK:   webhookRequest();         break;
+        default: break;
+    }
+}
+
 // ---------------------------------------------------------------------------
 // WiFi connection helpers
 // ---------------------------------------------------------------------------
@@ -208,8 +217,8 @@ void loop() {
     // Button handling (skip in AP service mode or during OTA)
     if (displayState.theme != Theme::SERVICE_AP && !otaIsInProgress()) {
         const ButtonPress bp = buttonUpdate();
-        if (bp == BUTTON_SHORT) { displayCycleNextPage(); return; }
-        if (bp == BUTTON_LONG)  { displayToggleBacklight(); return; }
+        if (bp == BUTTON_SHORT) { runButtonAction(appSettings.btnShortAction); return; }
+        if (bp == BUTTON_LONG)  { runButtonAction(appSettings.btnLongAction);  return; }
     }
 
     const unsigned long now = millis();
