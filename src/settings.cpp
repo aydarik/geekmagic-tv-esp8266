@@ -40,6 +40,11 @@ static bool settingsValidate(Settings &s) {
         s.defaultTheme = DEFAULT_THEME;
         needFix = true;
     }
+    if (s.webhookMethod > 1) {
+        s.webhookMethod = 0;
+        needFix = true;
+    }
+    s.webhookUrl[sizeof(s.webhookUrl) - 1] = '\0';
     if (needFix) settingsSave(s);
     return true;
 }
@@ -56,6 +61,8 @@ void settingsReset(Settings &s) {
     s.showWeather = false;
     s.owmApiKey[0]   = '\0';
     s.owmLocation[0] = '\0';
+    s.webhookUrl[0]  = '\0';
+    s.webhookMethod  = 0;
     settingsSave(s);
 }
 

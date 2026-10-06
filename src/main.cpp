@@ -216,6 +216,7 @@ void loop() {
 
     otaHandle();
     webserverHandle(); // Cleans up dead WebSocket clients
+    webhookProcess();
 
     if (otaIsInProgress()) {
         yield();

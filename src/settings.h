@@ -8,7 +8,7 @@
 constexpr char FIRMWARE_MODEL[] = "aydarik";
 
 // Increment when Settings structure layout changes (triggers reset on boot)
-constexpr int FIRMWARE_VERSION = 3;
+constexpr int FIRMWARE_VERSION = 4;
 
 // Semantic version string (replaced by GitHub Action during release builds)
 #ifndef FIRMWARE_VERSION_STRING
@@ -29,6 +29,8 @@ struct Settings {
     bool     showWeather;
     char     owmApiKey[64];
     char     owmLocation[64];
+    char     webhookUrl[128];
+    uint8_t  webhookMethod;  // 0 = GET, 1 = POST
 };
 
 // Power cycle reset structure (user-initiated factory reset)

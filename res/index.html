@@ -897,6 +897,33 @@
       </div>
     </div>
 
+    <!-- Webhook -->
+    <div class="card">
+      <div class="card-header">
+        <div class="icon">🔗</div>
+        <h2>Webhook</h2>
+      </div>
+      <div class="card-body">
+        <div class="row" style="grid-template-columns:3fr 1fr">
+          <div>
+            <label class="field-label">URL</label>
+            <input type="text" id="wh-url" maxlength="127" placeholder="http://homeassistant.local:8123/api/webhook/geekmagic">
+          </div>
+          <div>
+            <label class="field-label">Method</label>
+            <select id="wh-method">
+              <option value="GET">GET</option>
+              <option value="POST">POST</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="saveWebhook()">Save Webhook</button>
+          <button class="btn btn-secondary" onclick="sendWebhook()">Send Now</button>
+        </div>
+      </div>
+    </div>
+
     <!-- WiFi -->
     <div class="card">
       <div class="card-header">
@@ -1065,6 +1092,8 @@
         $('chk-weather').checked = !!app.showWeather;
         if (app.tz) $('tz-custom').value = app.tz;
         if (app.owmLoc) $('owm-loc').value = app.owmLoc;
+        if (app.whUrl) $('wh-url').value = app.whUrl;
+        if (app.whMethod) $('wh-method').value = app.whMethod;
         setActivThemBtn(app.theme);
         if (app.defaultTheme !== undefined) setDefaultThemBtn(app.defaultTheme);
 
@@ -1153,6 +1182,20 @@
       if (!loc || !key) { toast('Both location and API key are required', 'error'); return; }
       fetch(`/set?owmLoc=${enc(loc)}&owmKey=${enc(key)}`)
         .then(r => r.ok ? toast('Weather settings saved') : toast('Error saving weather settings', 'error'));
+    }
+
+    function saveWebhook() {
+      const url = $('wh-url').value.trim();
+      const method = $('wh-method').value;
+      if (url && !/^https?:\/\//i.test(url)) { toast('URL must start with http:// or https://', 'error'); return; }
+      fetch(`/set?whUrl=${enc(url)}&whMethod=${method}`)
+        .then(r => r.ok ? toast('Webhook settings saved') : toast('Error saving webhook settings', 'error'));
+    }
+
+    function sendWebhook() {
+      fetch('/webhook')
+        .then(r => r.ok ? toast('Webhook triggered') : r.text().then(t => toast(t || 'Webhook failed', 'error')))
+        .catch(() => toast('Webhook request failed', 'error'));
     }
 
     function sendMessage() {
