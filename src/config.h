@@ -6,6 +6,8 @@
 // Pin definitions
 constexpr int PIN_BACKLIGHT = 5;
 constexpr int PIN_BUTTON = 4;
+// Logic level read on PIN_BUTTON when the button is pressed.
+constexpr int BUTTON_ACTIVE_HIGH = true;
 
 // Font size definitions
 constexpr int FONT_MICRO   = 1;  // Original Adafruit 8px font, ~1820 bytes flash
