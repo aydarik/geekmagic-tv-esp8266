@@ -13,6 +13,9 @@
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
 #include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+#include <WiFiClientSecure.h>
+#include <ESP8266HTTPClient.h>
 
 #include "generated/index_html.h"
 #include "generated/ota_html.h"
@@ -98,6 +101,10 @@ static void handleAppJson(AsyncWebServerRequest *request) {
     doc["showSec"]     = appSettings.showSec;
     doc["showWeather"] = appSettings.showWeather;
     doc["owmLoc"]      = appSettings.owmLocation;
+    doc["whUrl"]       = appSettings.webhookUrl;
+    doc["whMethod"]    = appSettings.webhookMethod == 1 ? "POST" : "GET";
+    doc["btnShort"]    = appSettings.btnShortAction;
+    doc["btnLong"]     = appSettings.btnLongAction;
     // Note: owmKey intentionally omitted from this endpoint
     sendJson(request, doc);
 }
@@ -323,6 +330,24 @@ static void handleSet(AsyncWebServerRequest *request) {
             displayScheduleUpdate(Theme::NONE, true);
         settingsSave(appSettings);
 
+    } else if (request->hasParam("whUrl") && request->hasParam("whMethod")) {
+        const AsyncWebParameter *pUrl = request->getParam("whUrl");
+        strncpy(appSettings.webhookUrl, pUrl->value().c_str(), sizeof(appSettings.webhookUrl) - 1);
+        appSettings.webhookUrl[sizeof(appSettings.webhookUrl) - 1] = '\0';
+        appSettings.webhookMethod = request->getParam("whMethod")->value() == "POST" ? 1 : 0;
+        settingsSave(appSettings);
+
+    } else if (request->hasParam("btnShort") && request->hasParam("btnLong")) {
+        const long s = request->getParam("btnShort")->value().toInt();
+        const long l = request->getParam("btnLong")->value().toInt();
+        if (s < 0 || s >= BTN_ACTION_COUNT || l < 0 || l >= BTN_ACTION_COUNT) {
+            request->send(400, "text/plain", "Invalid action");
+            return;
+        }
+        appSettings.btnShortAction = static_cast<ButtonAction>(s);
+        appSettings.btnLongAction  = static_cast<ButtonAction>(l);
+        settingsSave(appSettings);
+
     } else {
         request->send(400, "text/plain", "No action");
         return;
@@ -337,6 +362,72 @@ static void handleSet(AsyncWebServerRequest *request) {
 
 static void handleTest(AsyncWebServerRequest *request) {
     displayScheduleTest();
+    request->send(200, "text/plain", "OK");
+}
+
+// ---------------------------------------------------------------------------
+// Webhook sender
+// ---------------------------------------------------------------------------
+
+bool sendWebhook() {
+    const char *url = appSettings.webhookUrl;
+    if (url[0] == '\0') return false;
+    if (WiFi.status() != WL_CONNECTED) {
+        logPrint("Webhook skipped: WiFi not connected");
+        return false;
+    }
+
+    const bool https = strncmp(url, "https://", 8) == 0;
+    WiFiClient plain;
+    WiFiClientSecure secure;
+    secure.setInsecure();
+    secure.setBufferSizes(512, 512);
+
+    HTTPClient http;
+    http.setTimeout(5000);
+    const bool started = https ? http.begin(secure, url) : http.begin(plain, url);
+    if (!started) {
+        logPrint("Webhook: invalid URL");
+        return false;
+    }
+
+    int code;
+    if (appSettings.webhookMethod == 1) {
+        http.addHeader(asyncsrv::T_Content_Type, asyncsrv::T_application_json);
+        char payload[64];
+        snprintf(payload, sizeof(payload), R"({"title":"GeekMagic","message":%d})", static_cast<int>(displayState.theme));
+        code = http.POST(payload);
+    } else {
+        code = http.GET();
+    }
+    http.end();
+
+    logPrintf("Webhook %s -> %d", appSettings.webhookMethod == 1 ? "POST" : "GET", code);
+    return code >= 200 && code < 300;
+}
+
+static bool webhookPending = false;
+
+void webhookRequest() {
+    webhookPending = true;
+}
+
+void webhookProcess() {
+    if (!webhookPending) return;
+    webhookPending = false;
+    sendWebhook();
+}
+
+// ---------------------------------------------------------------------------
+// GET /webhook  — triggers the configured webhook
+// ---------------------------------------------------------------------------
+
+static void handleWebhook(AsyncWebServerRequest *request) {
+    if (appSettings.webhookUrl[0] == '\0') {
+        request->send(400, "text/plain", "Webhook URL not set");
+        return;
+    }
+    webhookRequest();
     request->send(200, "text/plain", "OK");
 }
 
@@ -561,6 +652,7 @@ void webserverInit() {
     server.on("/filelist",     HTTP_GET, handleFileList);
     server.on("/delete",       HTTP_GET, handleDelete);
     server.on("/test",         HTTP_GET, handleTest);
+    server.on("/webhook",      HTTP_GET, handleWebhook);
     server.on("/log",          HTTP_GET, handleLog);
     server.on("/factoryreset", HTTP_GET, handleFactoryReset);
     server.on("/scan",         HTTP_GET, handleWiFiScan);
@@ -580,5 +672,5 @@ void webserverInit() {
     server.onNotFound(handleStatic);
 
     server.begin();
-    Serial.println(F("Async web server started"));
+    logPrint("Web server started");
 }

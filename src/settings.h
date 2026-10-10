@@ -8,7 +8,7 @@
 constexpr char FIRMWARE_MODEL[] = "aydarik";
 
 // Increment when Settings structure layout changes (triggers reset on boot)
-constexpr int FIRMWARE_VERSION = 3;
+constexpr int FIRMWARE_VERSION = 4;
 
 // Semantic version string (replaced by GitHub Action during release builds)
 #ifndef FIRMWARE_VERSION_STRING
@@ -18,17 +18,30 @@ constexpr int FIRMWARE_VERSION = 3;
 // Number of quick power cycles before factory reset
 constexpr int POWER_CYCLE_THRESHOLD = 5;
 
+// Action assignable to a button press
+enum ButtonAction : uint8_t {
+    BTN_ACTION_NEXT_PAGE = 0,
+    BTN_ACTION_BACKLIGHT = 1,
+    BTN_ACTION_WEBHOOK   = 2
+};
+
+constexpr int BTN_ACTION_COUNT = 3;
+
 // Settings — persisted to EEPROM
 struct Settings {
-    uint16_t version;      // Must match FIRMWARE_VERSION
-    int      brightness;
-    Theme    defaultTheme;
-    char     tz[64];
-    bool     showIP;
-    bool     showSec;
-    bool     showWeather;
-    char     owmApiKey[64];
-    char     owmLocation[64];
+    uint16_t      version;      // Must match FIRMWARE_VERSION
+    int           brightness;
+    Theme         defaultTheme;
+    char          tz[64];
+    bool          showIP;
+    bool          showSec;
+    bool          showWeather;
+    char          owmApiKey[64];
+    char          owmLocation[64];
+    char          webhookUrl[128];
+    uint8_t       webhookMethod;  // 0 = GET, 1 = POST
+    ButtonAction  btnShortAction;
+    ButtonAction  btnLongAction;
 };
 
 // Power cycle reset structure (user-initiated factory reset)

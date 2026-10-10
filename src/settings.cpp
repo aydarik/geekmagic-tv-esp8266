@@ -40,6 +40,18 @@ static bool settingsValidate(Settings &s) {
         s.defaultTheme = DEFAULT_THEME;
         needFix = true;
     }
+    if (s.webhookMethod > 1) {
+        s.webhookMethod = 1;
+        needFix = true;
+    }
+    if (s.btnShortAction >= BTN_ACTION_COUNT) {
+        s.btnShortAction = BTN_ACTION_NEXT_PAGE;
+        needFix = true;
+    }
+    if (s.btnLongAction >= BTN_ACTION_COUNT) {
+        s.btnLongAction = BTN_ACTION_BACKLIGHT;
+        needFix = true;
+    }
     if (needFix) settingsSave(s);
     return true;
 }
@@ -56,6 +68,10 @@ void settingsReset(Settings &s) {
     s.showWeather = false;
     s.owmApiKey[0]   = '\0';
     s.owmLocation[0] = '\0';
+    s.webhookUrl[0]  = '\0';
+    s.webhookMethod  = 1;
+    s.btnShortAction = BTN_ACTION_NEXT_PAGE;
+    s.btnLongAction  = BTN_ACTION_BACKLIGHT;
     settingsSave(s);
 }
 
